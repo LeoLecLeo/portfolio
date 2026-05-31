@@ -1,37 +1,62 @@
+import { ArrowRight, Cpu, FileText, Sparkles } from "lucide-react";
+
+import { Pill } from "@/components/Pill";
 import { profile } from "@/data/profileData";
 
 export function Hero() {
   return (
-    <section className="mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-6 py-24">
-      <div className="max-w-4xl">
-        <p className="mb-6 text-sm font-medium uppercase tracking-[0.35em] text-blue-400">
+    <section className="relative px-6 pb-16 pt-20 md:pb-24 md:pt-28">
+      <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
+        <Pill className="mb-8">
+          <span className="flex size-4 items-center justify-center rounded-full bg-primary/20 text-primary">
+            <Sparkles className="size-2.5" aria-hidden="true" />
+          </span>
           Portfolio développeur IA
-        </p>
+        </Pill>
 
-        <h1 className="text-5xl font-bold tracking-tight text-white md:text-7xl">
-          {profile.role}
+        <h1 className="text-balance text-4xl font-semibold tracking-tight text-foreground md:text-6xl">
+          Je conçois des produits{" "}
+          <span className="text-primary">web & IA premium.</span>
         </h1>
 
-        <p className="mt-8 max-w-2xl text-lg leading-8 text-neutral-300">
-          Je conçois des applications web modernes, rapides et maintenables,
-          avec une attention particulière pour les systèmes IA utiles : LLM, RAG,
-          APIs, automatisation et interfaces produit.
+        <p className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
+          {profile.role}. Je construis des applications modernes, maintenables
+          et orientées produit, avec une attention particulière pour les
+          assistants IA, les systèmes RAG et les interfaces élégantes.
         </p>
 
-        <div className="mt-10 flex flex-wrap gap-4">
+        <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row">
           <a
             href="#projects"
-            className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-neutral-200"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
           >
             Voir mes projets
+            <ArrowRight className="size-4" aria-hidden="true" />
           </a>
 
           <a
             href={profile.cv}
-            className="rounded-full border border-neutral-700 px-6 py-3 text-sm font-semibold text-white transition hover:border-neutral-400 hover:bg-neutral-900"
+            className="inline-flex items-center justify-center rounded-xl border border-border/80 bg-card/60 px-5 py-3 text-sm font-medium text-foreground backdrop-blur-sm transition hover:bg-secondary/60"
           >
             Télécharger mon CV
           </a>
+        </div>
+
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-2">
+            <FileText className="size-4 text-primary/80" aria-hidden="true" />
+            Applications RAG
+          </span>
+
+          <span className="inline-flex items-center gap-2">
+            <Cpu className="size-4 text-primary/80" aria-hidden="true" />
+            Intégrations IA
+          </span>
+
+          <span className="inline-flex items-center gap-2">
+            <Sparkles className="size-4 text-primary/80" aria-hidden="true" />
+            UI premium
+          </span>
         </div>
       </div>
     </section>

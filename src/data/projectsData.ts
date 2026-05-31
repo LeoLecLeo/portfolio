@@ -20,7 +20,7 @@ export const projects = [
       "ChromaDB",
       "Tailwind CSS",
     ],
-    demoUrl: "http://localhost:3001",
+    demoUrl: "http://192.168.0.27:3001",
   },
   {
     title: "Analyseur de dépôt GitHub",
