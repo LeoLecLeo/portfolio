@@ -1,31 +1,31 @@
-import { Layers, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import { Brain, Code2, Cpu, Layers } from "lucide-react";
 
 import { Pill } from "@/components/Pill";
 
 const highlights = [
   {
+    icon: Code2,
+    title: "Développement logiciel",
+    description:
+      "Conception de projets structurés avec une logique claire, du code maintenable et une attention portée à l’architecture.",
+  },
+  {
+    icon: Brain,
+    title: "Intelligence artificielle",
+    description:
+      "Intégration de modèles IA, assistants intelligents, recherche sémantique et automatisation de tâches complexes.",
+  },
+  {
+    icon: Cpu,
+    title: "Sciences & modélisation",
+    description:
+      "Utilisation de bases en physique et mathématiques  pour aborder des problèmes techniques avec méthode et rigueur.",
+  },
+  {
     icon: Layers,
-    title: "Applications web",
+    title: "Applications complètes",
     description:
-      "Interfaces modernes, responsives et maintenables avec React, Next.js, TypeScript et Tailwind CSS.",
-  },
-  {
-    icon: Sparkles,
-    title: "Systèmes IA",
-    description:
-      "Intégration de LLM, assistants IA, recherche sémantique, RAG et workflows intelligents.",
-  },
-  {
-    icon: Zap,
-    title: "Backend & APIs",
-    description:
-      "APIs robustes, logique métier claire, traitement de documents et services connectés à des modèles IA.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Qualité produit",
-    description:
-      "Code structuré, expérience utilisateur soignée, composants réutilisables et attention aux détails.",
+      "Création d’interfaces, d’APIs et de systèmes connectés pour transformer une idée technique en projet utilisable.",
   },
 ];
 
@@ -38,20 +38,20 @@ export function WhatIBuild() {
             <Pill className="mb-5">Ce que je construis</Pill>
 
             <h2 className="text-balance text-3xl font-semibold tracking-tight md:text-4xl">
-              Des produits web propres, utiles et orientés IA.
+              Des projets techniques entre logiciel, IA et sciences appliquées.
             </h2>
 
             <p className="mt-5 text-pretty leading-relaxed text-muted-foreground">
-              Je construis des applications qui combinent interfaces modernes,
-              logique backend solide et intégration d’intelligence artificielle.
-              Mon objectif est de transformer une idée technique en produit
-              clair, utilisable et professionnel.
+              Je construis des projets concrets qui combinent développement
+              logiciel, intelligence artificielle, interfaces modernes et
+              raisonnement scientifique.
             </p>
 
             <p className="mt-4 text-pretty leading-relaxed text-muted-foreground">
-              J’accorde beaucoup d’importance à la structure du code, à la
-              maintenabilité, au design de l’expérience utilisateur et à la
-              cohérence visuelle des projets.
+              Mon objectif est de progresser vers un profil informatique
+              polyvalent, capable de comprendre un problème technique, de le
+              structurer et de développer une solution claire, fiable et
+              utilisable.
             </p>
           </div>
 

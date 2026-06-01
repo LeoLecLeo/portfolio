@@ -1,8 +1,8 @@
 export const profile = {
-  name: "Léole",
-  siteName: "Léole.dev",
-  role: "Développeur full-stack orienté intelligence artificielle",
-  email: "ton.email@example.com",
+  name: "Léo Lecuyer",
+  siteName: "Léo Lecuyer",
+  role: "Profil ingénieur informatique orienté IA, développement logiciel et sciences appliquées",
+  email: "leolecuyer@ik.me",
   github: "https://github.com/",
   linkedin: "https://linkedin.com/",
   cv: "/cv.pdf",

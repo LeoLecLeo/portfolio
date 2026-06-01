@@ -1,16 +1,9 @@
 export const projects = [
   {
-    title: "Portfolio développeur IA",
-    description:
-      "Site personnel premium conçu pour présenter mon profil, mes compétences et mes projets orientés développement web et intelligence artificielle.",
-    status: "En cours",
-    stack: ["Next.js", "TypeScript", "Tailwind CSS"],
-  },
-  {
     title: "Assistant IA documentaire",
     description:
-      "Application RAG permettant d’uploader un PDF, de poser une question en langage naturel et d’obtenir une réponse IA basée sur les sources du document.",
-    status: "v1",
+      "Application permettant d’uploader un PDF, de poser une question en langage naturel et d’obtenir une réponse générée par IA avec sources citées. Le projet combine frontend, backend, embeddings, recherche sémantique et intégration LLM.",
+    status: "V1",
     stack: [
       "Next.js",
       "TypeScript",
@@ -20,13 +13,33 @@ export const projects = [
       "ChromaDB",
       "Tailwind CSS",
     ],
-    demoUrl: "http://192.168.0.27:3001",
+    demoUrl: "http://localhost:3001",
   },
   {
-    title: "Analyseur de dépôt GitHub",
+    title: "Modèle IA scientifique",
     description:
-      "Outil IA capable d’analyser la structure d’un repository, détecter les technologies utilisées et proposer des améliorations.",
+      "Projet en cours visant à entraîner un modèle de machine learning sur un problème scientifique, avec préparation des données, visualisation des prédictions, analyse des erreurs et évaluation des performances.",
+    status: "En cours de développement",
+    stack: [
+      "Python",
+      "PyTorch",
+      "NumPy",
+      "pandas",
+      "scikit-learn",
+      "Matplotlib",
+    ],
+  },
+  {
+    title: "Simulateur scientifique interactif",
+    description:
+      "Projet prévu autour de la simulation ou de la visualisation d’un phénomène scientifique, afin de relier développement logiciel, mathématiques, physique et interface interactive.",
     status: "Prévu",
-    stack: ["GitHub API", "Next.js", "IA"],
+    stack: [
+      "Python",
+      "Mathématiques",
+      "Physique",
+      "Visualisation",
+      "Interface interactive",
+    ],
   },
 ];

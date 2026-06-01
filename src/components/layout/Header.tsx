@@ -25,7 +25,7 @@ export function Header() {
 
           <span className="text-sm font-semibold tracking-tight text-foreground">
             {profile.name}
-            <span className="text-muted-foreground"> / Dev IA</span>
+            <span className="text-muted-foreground"> / Ingénieur informatique</span>
           </span>
         </a>
 

@@ -11,18 +11,17 @@ export function Hero() {
           <span className="flex size-4 items-center justify-center rounded-full bg-primary/20 text-primary">
             <Sparkles className="size-2.5" aria-hidden="true" />
           </span>
-          Portfolio développeur IA
+          Portfolio informatique & IA
         </Pill>
 
         <h1 className="text-balance text-4xl font-semibold tracking-tight text-foreground md:text-6xl">
-          Je conçois des produits{" "}
-          <span className="text-primary">web & IA premium.</span>
+          Je construis des projets{" "}
+          <span className="text-primary">logiciels, IA et scientifiques.</span>
         </h1>
 
         <p className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
-          {profile.role}. Je construis des applications modernes, maintenables
-          et orientées produit, avec une attention particulière pour les
-          assistants IA, les systèmes RAG et les interfaces élégantes.
+          {profile.role}. Je développe des projets concrets mêlant interfaces
+          modernes, backend, intelligence artificielle, logique produit et raisonnement scientifique.
         </p>
 
         <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row">
@@ -44,18 +43,18 @@ export function Hero() {
 
         <div className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-2">
-            <FileText className="size-4 text-primary/80" aria-hidden="true" />
-            Applications RAG
+            <Cpu className="size-4 text-primary/80" aria-hidden="true" />
+            Développement logiciel
           </span>
 
           <span className="inline-flex items-center gap-2">
-            <Cpu className="size-4 text-primary/80" aria-hidden="true" />
-            Intégrations IA
+            <FileText className="size-4 text-primary/80" aria-hidden="true" />
+            Sciences & modélisation
           </span>
 
           <span className="inline-flex items-center gap-2">
             <Sparkles className="size-4 text-primary/80" aria-hidden="true" />
-            UI premium
+            IA appliquée
           </span>
         </div>
       </div>

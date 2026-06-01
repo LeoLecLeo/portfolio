@@ -20,12 +20,11 @@ export function Contact() {
             </Pill>
 
             <h2 className="text-balance text-3xl font-semibold tracking-tight md:text-5xl">
-              Discutons de votre prochain produit IA.
+              Ouvert à de nouvelles opportunités.
             </h2>
 
             <p className="mx-auto mt-5 max-w-xl text-pretty leading-relaxed text-muted-foreground md:text-lg">
-              Disponible pour des opportunités en développement web, full-stack
-              ou IA appliquée. N’hésitez pas à me contacter pour échanger.
+              Je recherche un environnement technique où je pourrai contribuer à des projets concrets, progresser dans un cadre professionnel et mettre en pratique mes compétences en développement logiciel, IA et sciences appliquées.
             </p>
 
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -34,7 +33,7 @@ export function Contact() {
                 className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
               >
                 <Mail className="size-4" aria-hidden="true" />
-                M’écrire un message
+                Me contacter
                 <ArrowRight className="size-4" aria-hidden="true" />
               </a>
 

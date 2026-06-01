@@ -1,27 +1,27 @@
-import { Brain, Code2, Database, Server } from "lucide-react";
+import { Brain, Code2, Cpu, Database } from "lucide-react";
 
 import { Pill } from "@/components/Pill";
 
 const skillGroups = [
   {
     icon: Code2,
-    title: "Frontend",
-    skills: ["Next.js", "React", "TypeScript", "Tailwind CSS"],
-  },
-  {
-    icon: Server,
-    title: "Backend",
-    skills: ["FastAPI", "Python", "REST API", "Architecture API"],
+    title: "Développement logiciel",
+    skills: ["Python", "TypeScript", "Architecture", "Git"],
   },
   {
     icon: Brain,
-    title: "IA & RAG",
-    skills: ["OpenAI", "LLM", "Embeddings", "Recherche sémantique"],
+    title: "Intelligence artificielle",
+    skills: ["LLM", "OpenAI", "Embeddings", "IA appliquée"],
+  },
+  {
+    icon: Cpu,
+    title: "Mathématiques & physique",
+    skills: ["Modélisation", "Analyse", "Simulation"],
   },
   {
     icon: Database,
-    title: "Données & outils",
-    skills: ["ChromaDB", "Git", "Vector store", "Pipelines"],
+    title: "Web, données & APIs",
+    skills: ["Next.js", "FastAPI", "REST API", "Vector store"],
   },
 ];
 
@@ -33,12 +33,14 @@ export function Skills() {
           <Pill className="mb-5">Compétences</Pill>
 
           <h2 className="text-balance text-3xl font-semibold tracking-tight md:text-4xl">
-            Une stack moderne pour construire des projets concrets.
+            Une base technique entre logiciel, IA et sciences appliquées.
           </h2>
 
           <p className="mt-4 text-pretty leading-relaxed text-muted-foreground">
-            Les technologies que j’utilise pour créer des applications web
-            solides, des interfaces propres et des fonctionnalités IA utiles.
+            Je développe mes compétences autour de projets concrets : construire
+            des applications, intégrer des modèles IA, structurer du backend et
+            exploiter mes bases scientifiques pour aborder des problèmes
+            techniques avec méthode.
           </p>
         </div>
 
