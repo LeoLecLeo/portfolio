@@ -13,7 +13,7 @@ export const projects = [
       "ChromaDB",
       "Tailwind CSS",
     ],
-    demoUrl: "http://localhost:3001",
+    demoUrl: "https://ai-document-assistant-two.vercel.app",
   },
   {
     title: "Modèle IA scientifique",
