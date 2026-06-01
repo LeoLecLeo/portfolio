@@ -13,8 +13,8 @@ export default function Home() {
         className="pointer-events-none absolute inset-0 -z-10"
         aria-hidden="true"
       >
-        <div className="absolute left-1/2 top-[-10%] h-[40rem] w-[40rem] -translate-x-1/2 rounded-full bg-primary/15 blur-[120px]" />
-        <div className="absolute right-[-10%] top-[30%] h-[28rem] w-[28rem] rounded-full bg-chart-2/10 blur-[120px]" />
+        <div className="absolute left-1/2 top-[-10%] h-160 w-160 -translate-x-1/2 rounded-full bg-primary/15 blur-[120px]" />
+        <div className="absolute right-[-10%] top-[30%] h-112 w-112 rounded-full bg-chart-2/10 blur-[120px]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,transparent_40%,oklch(0.16_0.012_240)_85%)]" />
       </div>
 
