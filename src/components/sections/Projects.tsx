@@ -79,8 +79,6 @@ export function Projects() {
                 <a
                   key={project.title}
                   href={project.demoUrl}
-                  target="_blank"
-                  rel="noreferrer"
                   className="group block cursor-pointer rounded-2xl border border-border/80 bg-card/60 p-6 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_8px_30px_-12px_rgba(0,0,0,0.6)] backdrop-blur-sm transition hover:-translate-y-1 hover:border-primary/40 hover:bg-card/80"
                 >
                   {cardContent}
