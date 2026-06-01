@@ -8,7 +8,7 @@ import { WhatIBuild } from "@/components/sections/WhatIBuild";
 
 export default function Home() {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+    <div className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
       <div
         className="pointer-events-none absolute inset-0 -z-10"
         aria-hidden="true"
