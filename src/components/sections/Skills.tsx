@@ -11,7 +11,7 @@ const skillGroups = [
   {
     icon: Brain,
     title: "Intelligence artificielle",
-    skills: ["LLM", "OpenAI", "Embeddings", "IA appliquée"],
+    skills: ["LLM", "VLM", "Machine Learning", "IA appliquée"],
   },
   {
     icon: Cpu,

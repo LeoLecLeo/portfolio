@@ -2,14 +2,15 @@ export const projects = [
   {
     title: "Assistant IA documentaire",
     description:
-      "Application permettant d’uploader un PDF, de poser une question en langage naturel et d’obtenir une réponse générée par IA avec sources citées. Le projet combine frontend, backend, embeddings, recherche sémantique et intégration LLM.",
-    status: "V1",
+      "Application permettant d’uploader un PDF, de poser une question en langage naturel et d’obtenir une réponse générée par IA avec sources citées. Le projet combine frontend, backend, embeddings, recherche sémantique, intégration LLM et fallback vision pour les documents difficiles à extraire.",
+    status: "v2",
     stack: [
       "Next.js",
       "TypeScript",
       "FastAPI",
       "Python",
       "OpenAI",
+      "OpenAI Vision",
       "ChromaDB",
       "Tailwind CSS",
     ],
