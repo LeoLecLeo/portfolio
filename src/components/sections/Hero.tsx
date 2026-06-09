@@ -32,13 +32,6 @@ export function Hero() {
             Voir mes projets
             <ArrowRight className="size-4" aria-hidden="true" />
           </a>
-
-          <a
-            href={profile.cv}
-            className="inline-flex items-center justify-center rounded-xl border border-border/80 bg-card/60 px-5 py-3 text-sm font-medium text-foreground backdrop-blur-sm transition hover:bg-secondary/60"
-          >
-            Télécharger mon CV
-          </a>
         </div>
 
         <div className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-muted-foreground">
