@@ -108,6 +108,23 @@ describe("mutable Newtonian simulation engine", () => {
     );
   });
 
+  it("copies positions without exposing the internal position buffer", () => {
+    const engine = new SimulationEngine(createInclinedBinaryConfig());
+    const copiedPositions = new Float64Array(engine.bodyCount * 3);
+    const initialInternalX = engine.state.positionsM[0];
+
+    engine.copyPositionsTo(copiedPositions);
+    expect(Array.from(copiedPositions)).toEqual(
+      Array.from(engine.state.positionsM)
+    );
+
+    copiedPositions[0] += 123;
+    expect(engine.state.positionsM[0]).toBe(initialInternalX);
+    expect(() =>
+      engine.copyPositionsTo(new Float64Array(copiedPositions.length - 1))
+    ).toThrow(/body count/);
+  });
+
   it("pauses before accepting a swept collision and preserves every body", () => {
     const engine = new SimulationEngine(
       config(

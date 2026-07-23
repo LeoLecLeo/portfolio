@@ -103,6 +103,10 @@ export class SimulationEngine {
     return this.#config.timeStepSeconds;
   }
 
+  get bodyCount(): number {
+    return this.#state.massesKg.length;
+  }
+
   get status(): SimulationStatus {
     return this.#status;
   }
@@ -142,6 +146,16 @@ export class SimulationEngine {
 
   diagnostics(): NewtonianDiagnostics {
     return computeNewtonianDiagnostics(this.#state);
+  }
+
+  copyPositionsTo(targetPositionsM: Float64Array): void {
+    if (targetPositionsM.length !== this.#state.positionsM.length) {
+      throw new RangeError(
+        "Position target does not match the simulation body count."
+      );
+    }
+
+    targetPositionsM.set(this.#state.positionsM);
   }
 
   advanceOneStep(): boolean {

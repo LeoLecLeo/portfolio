@@ -29,6 +29,7 @@ export class FixedStepScheduler {
   readonly #engine: SimulationEngine;
   readonly #config: FixedStepSchedulerConfig;
   #accumulatorSeconds = 0;
+  #discardNextFrameDelta = false;
 
   constructor(
     engine: SimulationEngine,
@@ -54,6 +55,13 @@ export class FixedStepScheduler {
 
   reset(): void {
     this.#accumulatorSeconds = 0;
+    this.rebaseFrameClock();
+  }
+
+  rebaseFrameClock(): void {
+    // The next renderer delta may span an intentional pause. Discard it
+    // without clearing the fractional fixed-step accumulator.
+    this.#discardNextFrameDelta = true;
   }
 
   tick(realDeltaSeconds: number): SchedulerTickResult {
@@ -66,6 +74,17 @@ export class FixedStepScheduler {
         stepsAdvanced: 0,
         simulatedSecondsAdvanced: 0,
         stopReason: "engine-not-running",
+        message: null,
+      };
+    }
+
+    if (this.#discardNextFrameDelta) {
+      this.#discardNextFrameDelta = false;
+
+      return {
+        stepsAdvanced: 0,
+        simulatedSecondsAdvanced: 0,
+        stopReason: null,
         message: null,
       };
     }

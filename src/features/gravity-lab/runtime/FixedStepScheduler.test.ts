@@ -4,10 +4,14 @@ import { createInclinedBinaryConfig } from "../presets/inclinedBinary";
 import { FixedStepScheduler } from "./FixedStepScheduler";
 import { SimulationEngine } from "./SimulationEngine";
 
-function createRunningScheduler(maxSubStepsPerTick = 8) {
+function createRunningScheduler(
+  maxSubStepsPerTick = 8,
+  simulatedStepsPerRealSecond = 60
+) {
   const engine = new SimulationEngine(createInclinedBinaryConfig());
   const scheduler = new FixedStepScheduler(engine, {
-    simulatedSecondsPerRealSecond: engine.timeStepSeconds * 60,
+    simulatedSecondsPerRealSecond:
+      engine.timeStepSeconds * simulatedStepsPerRealSecond,
     maxSubStepsPerTick,
     maxFrameDeltaSeconds: 0.25,
   });
@@ -75,5 +79,33 @@ describe("fixed-step scheduler", () => {
     expect(result.stepsAdvanced).toBe(0);
     expect(engine.status).toBe("paused");
     expect(engine.state.timeSeconds).toBe(0);
+  });
+
+  it("discards exactly one rebased frame without clearing the accumulator", () => {
+    const { engine, scheduler } = createRunningScheduler(8, 30);
+
+    expect(scheduler.tick(1 / 60).stepsAdvanced).toBe(0);
+    scheduler.rebaseFrameClock();
+
+    const rebasedFrame = scheduler.tick(2);
+    expect(rebasedFrame.stepsAdvanced).toBe(0);
+    expect(rebasedFrame.stopReason).toBeNull();
+    expect(engine.status).toBe("running");
+    expect(engine.state.timeSeconds).toBe(0);
+
+    const nextFrame = scheduler.tick(1 / 60);
+    expect(nextFrame.stepsAdvanced).toBe(1);
+    expect(engine.state.timeSeconds).toBe(engine.timeStepSeconds);
+  });
+
+  it("keeps frame-gap protection active after the rebased frame", () => {
+    const { engine, scheduler } = createRunningScheduler();
+
+    scheduler.rebaseFrameClock();
+    expect(scheduler.tick(2).stopReason).toBeNull();
+
+    const actualGap = scheduler.tick(2);
+    expect(actualGap.stopReason).toBe("frame-gap");
+    expect(engine.status).toBe("paused");
   });
 });
