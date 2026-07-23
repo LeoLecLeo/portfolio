@@ -1,0 +1,5 @@
+export const GRAVITATIONAL_CONSTANT_M3_KG_S2 = 6.6743e-11;
+export const ASTRONOMICAL_UNIT_M = 149_597_870_700;
+export const SOLAR_MASS_KG = 1.98847e30;
+export const SOLAR_RADIUS_M = 695_700_000;
+export const SECONDS_PER_DAY = 86_400;
