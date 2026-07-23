@@ -430,6 +430,9 @@ d’une transformation de scène générique avant l’éditeur public.
 
 ## 11. Feuille de route restante
 
+Le plan détaillé et la source de vérité documentaire de la phase 2 sont
+consignés dans [`PHASE_2_PLAN.md`](./PHASE_2_PLAN.md).
+
 ### Phase 2A — configuration et gardes scientifiques
 
 Résultat attendu :
