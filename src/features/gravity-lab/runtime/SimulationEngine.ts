@@ -2,19 +2,37 @@ import type {
   NewtonianDiagnostics,
   NewtonianSimulationConfig,
   NewtonianState,
+  NumericalCandidateFailure,
   SimulationStatus,
   SimulationStopEvent,
 } from "../core/types";
 import { validateSimulationConfig } from "../core/validation";
 import { vector3 } from "../core/vector3";
 import {
+  commitVelocityVerletCandidate,
+  completeVelocityVerletCandidate,
   createVelocityVerletWorkspace,
-  stepVelocityVerlet,
+  prepareVelocityVerletDrift,
   type VelocityVerletWorkspace,
 } from "../integrators/velocityVerlet";
 import { computeNewtonianDiagnostics } from "../physics/diagnostics";
 import { detectEncounterAcrossStep } from "../physics/encounters";
 import { computeNewtonianAccelerations } from "../physics/newtonian";
+import {
+  createNewtonianValidityWorkspace,
+  evaluateNewtonianValidityInto,
+  materializeNewtonianValidityReport,
+  type NewtonianValidityReport,
+  type NewtonianValidityWorkspace,
+} from "../physics/newtonianValidity";
+import {
+  createCandidateStateGuardWorkspace,
+  inspectCompletedVelocityVerletCandidate,
+  inspectVelocityVerletDriftCandidate,
+  materializeCandidateStateRejection,
+  type CandidateStateGuardWorkspace,
+  type CandidateStateRejection,
+} from "./candidateStateGuard";
 
 function cloneConfiguration(
   config: NewtonianSimulationConfig
@@ -86,8 +104,11 @@ export class SimulationEngine {
   readonly #config: NewtonianSimulationConfig;
   #state: NewtonianState;
   #workspace: VelocityVerletWorkspace;
+  #candidateGuardWorkspace: CandidateStateGuardWorkspace;
+  #telemetryValidityWorkspace: NewtonianValidityWorkspace;
   #status: SimulationStatus = "paused";
   #stopEvent: SimulationStopEvent | null = null;
+  #rejectedNewtonianValidity: NewtonianValidityReport | null = null;
 
   constructor(config: NewtonianSimulationConfig) {
     validateSimulationConfig(config);
@@ -96,6 +117,11 @@ export class SimulationEngine {
     this.#workspace = createVelocityVerletWorkspace(
       this.#config.bodies.length
     );
+    this.#candidateGuardWorkspace = createCandidateStateGuardWorkspace(
+      this.#config.bodies.length
+    );
+    this.#telemetryValidityWorkspace =
+      createNewtonianValidityWorkspace(this.#config.bodies.length);
     this.#applyInitialEncounterGuard();
   }
 
@@ -113,6 +139,10 @@ export class SimulationEngine {
 
   get stopEvent(): SimulationStopEvent | null {
     return this.#stopEvent;
+  }
+
+  get rejectedNewtonianValidity(): NewtonianValidityReport | null {
+    return this.#rejectedNewtonianValidity;
   }
 
   get state(): Readonly<NewtonianState> {
@@ -139,13 +169,35 @@ export class SimulationEngine {
     this.#workspace = createVelocityVerletWorkspace(
       this.#config.bodies.length
     );
+    this.#candidateGuardWorkspace = createCandidateStateGuardWorkspace(
+      this.#config.bodies.length
+    );
+    this.#telemetryValidityWorkspace =
+      createNewtonianValidityWorkspace(this.#config.bodies.length);
     this.#status = "paused";
     this.#stopEvent = null;
+    this.#rejectedNewtonianValidity = null;
     this.#applyInitialEncounterGuard();
   }
 
   diagnostics(): NewtonianDiagnostics {
     return computeNewtonianDiagnostics(this.#state);
+  }
+
+  newtonianValidity(): NewtonianValidityReport {
+    evaluateNewtonianValidityInto(
+      this.#state.massesKg,
+      this.#state.physicalRadiiM,
+      this.#state.fixed,
+      this.#state.positionsM,
+      this.#state.velocitiesMps,
+      this.#telemetryValidityWorkspace
+    );
+
+    return materializeNewtonianValidityReport(
+      this.#state.bodyIds,
+      this.#telemetryValidityWorkspace
+    );
   }
 
   copyPositionsTo(targetPositionsM: Float64Array): void {
@@ -164,34 +216,157 @@ export class SimulationEngine {
     }
 
     try {
-      const result = stepVelocityVerlet(
+      prepareVelocityVerletDrift(
+        this.#state,
+        this.#config.timeStepSeconds,
+        this.#workspace
+      );
+
+      let rejectionKind = inspectVelocityVerletDriftCandidate(
         this.#state,
         this.#config.timeStepSeconds,
         this.#config.encounterThresholds,
+        this.#workspace,
+        this.#candidateGuardWorkspace
+      );
+
+      if (rejectionKind !== null) {
+        this.#stopFromCandidateRejection();
+        return false;
+      }
+
+      completeVelocityVerletCandidate(
+        this.#state,
+        this.#config.timeStepSeconds,
         computeNewtonianAccelerations,
         this.#workspace
       );
 
-      if (!result.advanced) {
-        this.#stopFromEncounter(result.encounter);
+      rejectionKind = inspectCompletedVelocityVerletCandidate(
+        this.#state,
+        this.#workspace,
+        this.#candidateGuardWorkspace
+      );
+
+      if (rejectionKind !== null) {
+        this.#stopFromCandidateRejection();
         return false;
       }
 
+      commitVelocityVerletCandidate(
+        this.#state,
+        this.#config.timeStepSeconds,
+        this.#workspace
+      );
       return true;
     } catch (error) {
-      this.#status = "error";
-      this.#stopEvent = {
-        kind: "numerical-error",
-        timeSeconds: this.#state.timeSeconds,
-        attemptedTimeSeconds:
-          this.#state.timeSeconds + this.#config.timeStepSeconds,
-        message:
-          error instanceof Error
-            ? `Numerical integration stopped: ${error.message}`
-            : "Numerical integration stopped because of an unknown error.",
-      };
+      this.#stopFromNumericalError(
+        error instanceof Error
+          ? `Numerical integration stopped: ${error.message}`
+          : "Numerical integration stopped because of an unknown error."
+      );
       return false;
     }
+  }
+
+  #stopFromCandidateRejection(): void {
+    const rejection = materializeCandidateStateRejection(
+      this.#state.bodyIds,
+      this.#candidateGuardWorkspace
+    );
+
+    if (rejection === null) {
+      throw new RangeError(
+        "Cannot stop from an accepted candidate-state guard."
+      );
+    }
+
+    if (rejection.kind === "encounter") {
+      this.#stopFromEncounter(rejection.encounter);
+      return;
+    }
+
+    if (rejection.kind === "numerical-error") {
+      const bodyId = this.#state.bodyIds[rejection.bodyIndex];
+      this.#stopFromNumericalError(
+        `Numerical integration stopped because ${rejection.buffer} ` +
+          `contains a non-finite ${rejection.axis} component for ` +
+          `body "${bodyId}".`,
+        {
+          buffer: rejection.buffer,
+          vectorIndex: rejection.vectorIndex,
+          bodyIndex: rejection.bodyIndex,
+          bodyId,
+          axis: rejection.axis,
+        }
+      );
+      return;
+    }
+
+    this.#stopFromNewtonianDomainViolation(rejection);
+  }
+
+  #stopFromNumericalError(
+    message: string,
+    cause?: NumericalCandidateFailure
+  ): void {
+    const stableCause =
+      cause === undefined ? undefined : Object.freeze({ ...cause });
+
+    this.#status = "error";
+    this.#stopEvent = Object.freeze({
+      kind: "numerical-error",
+      timeSeconds: this.#state.timeSeconds,
+      attemptedTimeSeconds:
+        this.#state.timeSeconds + this.#config.timeStepSeconds,
+      ...(stableCause === undefined ? {} : { cause: stableCause }),
+      message,
+    });
+  }
+
+  #stopFromNewtonianDomainViolation(
+    rejection: CandidateStateRejection & {
+      kind: "newtonian-domain-violation";
+    }
+  ): void {
+    const { violation } = rejection;
+    const stableResponsibility = Object.freeze({
+      ...violation.responsibility,
+    });
+    const stableViolation = Object.freeze({
+      ...violation,
+      responsibility: stableResponsibility,
+    });
+    const responsible =
+      stableResponsibility.kind === "body"
+        ? `body "${stableResponsibility.bodyId}"`
+        : `pair "${stableResponsibility.firstBodyId}" / ` +
+          `"${stableResponsibility.secondBodyId}"`;
+    const frameText =
+      stableViolation.velocityFrame === undefined
+        ? ""
+        : ` in the ${stableViolation.velocityFrame} velocity frame`;
+    const betaPolicyText =
+      stableViolation.metric === "beta"
+        ? " The beta thresholds are a pedagogical policy based on the " +
+          "expected order of beta-squared corrections, not a universal " +
+          "error guarantee."
+        : "";
+
+    this.#status = "newtonian-domain-violation";
+    this.#rejectedNewtonianValidity = rejection.report;
+    this.#stopEvent = Object.freeze({
+      kind: "newtonian-domain-violation",
+      timeSeconds: this.#state.timeSeconds,
+      attemptedTimeSeconds:
+        this.#state.timeSeconds + this.#config.timeStepSeconds,
+      violation: stableViolation,
+      message:
+        `Newtonian-domain limit reached for ${stableViolation.metric} at ` +
+        `${responsible}${frameText} (${stableViolation.value}, limit ` +
+        `${stableViolation.limit}). The candidate was rejected and the last ` +
+        `valid state was preserved.${betaPolicyText}`,
+    });
   }
 
   #applyInitialEncounterGuard(): void {
@@ -222,7 +397,7 @@ export class SimulationEngine {
 
     if (encounter.kind === "collision") {
       this.#status = "collision";
-      this.#stopEvent = {
+      this.#stopEvent = Object.freeze({
         kind: "collision",
         timeSeconds: this.#state.timeSeconds,
         attemptedTimeSeconds,
@@ -233,12 +408,12 @@ export class SimulationEngine {
         message:
           `Collision detected between "${firstBodyId}" and "${secondBodyId}". ` +
           "The simulation was paused at the last valid state; no merge is modelled.",
-      };
+      });
       return;
     }
 
     this.#status = "unresolved-encounter";
-    this.#stopEvent = {
+    this.#stopEvent = Object.freeze({
       kind: "unresolved-encounter",
       timeSeconds: this.#state.timeSeconds,
       attemptedTimeSeconds,
@@ -251,6 +426,6 @@ export class SimulationEngine {
         `Encounter between "${firstBodyId}" and "${secondBodyId}" cannot be ` +
         "resolved safely with the current fixed time step. No gravitational " +
         "softening was applied.",
-    };
+    });
   }
 }

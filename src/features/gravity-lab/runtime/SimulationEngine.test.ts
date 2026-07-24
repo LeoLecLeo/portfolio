@@ -4,6 +4,7 @@ import type {
   CelestialBodyDefinition,
   NewtonianSimulationConfig,
 } from "../core/types";
+import { SPEED_OF_LIGHT_MPS } from "../core/units";
 import { vector3 } from "../core/vector3";
 import { createInclinedBinaryConfig } from "../presets/inclinedBinary";
 import { SimulationEngine } from "./SimulationEngine";
@@ -178,5 +179,135 @@ describe("mutable Newtonian simulation engine", () => {
     expect(Array.from(engine.state.positionsM)).toEqual(
       Array.from(lastValidPositions)
     );
+  });
+
+  it("preserves the structured cause of a candidate numerical failure", () => {
+    const engine = new SimulationEngine(
+      config([body("unstable", vector3(1, 2, 3))])
+    );
+    engine.state.accelerationsMps2[2] = Number.POSITIVE_INFINITY;
+
+    expect(engine.start()).toBe(true);
+    expect(engine.advanceOneStep()).toBe(false);
+    expect(engine.status).toBe("error");
+    expect(engine.stopEvent).toMatchObject({
+      kind: "numerical-error",
+      timeSeconds: 0,
+      attemptedTimeSeconds: 0.01,
+      cause: {
+        buffer: "candidate-positions",
+        vectorIndex: 2,
+        bodyIndex: 0,
+        bodyId: "unstable",
+        axis: "z",
+      },
+    });
+    expect(Object.isFrozen(engine.stopEvent)).toBe(true);
+    expect(
+      engine.stopEvent?.kind === "numerical-error"
+        ? Object.isFrozen(engine.stopEvent.cause)
+        : false
+    ).toBe(true);
+  });
+
+  it("rejects a dynamic Newtonian-domain crossing before commit", () => {
+    const initialRelativeSpeedMps = 0.0995 * SPEED_OF_LIGHT_MPS;
+    const engine = new SimulationEngine(
+      config(
+        [
+          {
+            ...body(
+              "left",
+              vector3(-1e8, 0, 0),
+              vector3(initialRelativeSpeedMps * 0.5, 0, 0)
+            ),
+            massKg: 1e33,
+          },
+          {
+            ...body(
+              "right",
+              vector3(1e8, 0, 0),
+              vector3(-initialRelativeSpeedMps * 0.5, 0, 0)
+            ),
+            massKg: 1e33,
+          },
+        ],
+        0.0670480593363
+      )
+    );
+    const lastValidPositions = engine.state.positionsM.slice();
+    const lastValidVelocities = engine.state.velocitiesMps.slice();
+    const lastValidAccelerations = engine.state.accelerationsMps2.slice();
+    const lastValidMasses = engine.state.massesKg.slice();
+    const lastValidRadii = engine.state.physicalRadiiM.slice();
+    const lastValidFixed = engine.state.fixed.slice();
+    const lastValidBodyIds = [...engine.state.bodyIds];
+    const lastValidStepCount = engine.state.stepCount;
+    const lastValidTimeSeconds = engine.state.timeSeconds;
+
+    expect(engine.newtonianValidity().beta.value).toBeLessThan(0.1);
+    expect(engine.start()).toBe(true);
+    expect(engine.advanceOneStep()).toBe(false);
+
+    expect(engine.status).toBe("newtonian-domain-violation");
+    expect(engine.stopEvent).toMatchObject({
+      kind: "newtonian-domain-violation",
+      timeSeconds: lastValidTimeSeconds,
+      attemptedTimeSeconds: 0.0670480593363,
+      violation: {
+        metric: "beta",
+        limit: 0.1,
+        velocityFrame: "relative",
+        responsibility: {
+          kind: "pair",
+          firstBodyId: "left",
+          secondBodyId: "right",
+        },
+      },
+    });
+    expect(
+      engine.stopEvent?.kind === "newtonian-domain-violation"
+        ? engine.stopEvent.violation.value
+        : 0
+    ).toBeGreaterThanOrEqual(0.1);
+    expect(Object.isFrozen(engine.stopEvent)).toBe(true);
+    expect(
+      engine.stopEvent?.kind === "newtonian-domain-violation"
+        ? Object.isFrozen(engine.stopEvent.violation)
+        : false
+    ).toBe(true);
+    expect(
+      engine.stopEvent?.kind === "newtonian-domain-violation"
+        ? Object.isFrozen(engine.stopEvent.violation.responsibility)
+        : false
+    ).toBe(true);
+    expect(Object.isFrozen(engine.rejectedNewtonianValidity)).toBe(true);
+    expect(Array.from(engine.state.positionsM)).toEqual(
+      Array.from(lastValidPositions)
+    );
+    expect(Array.from(engine.state.velocitiesMps)).toEqual(
+      Array.from(lastValidVelocities)
+    );
+    expect(Array.from(engine.state.accelerationsMps2)).toEqual(
+      Array.from(lastValidAccelerations)
+    );
+    expect(Array.from(engine.state.massesKg)).toEqual(
+      Array.from(lastValidMasses)
+    );
+    expect(Array.from(engine.state.physicalRadiiM)).toEqual(
+      Array.from(lastValidRadii)
+    );
+    expect(Array.from(engine.state.fixed)).toEqual(
+      Array.from(lastValidFixed)
+    );
+    expect(engine.state.bodyIds).toEqual(lastValidBodyIds);
+    expect(engine.state.stepCount).toBe(lastValidStepCount);
+    expect(engine.state.timeSeconds).toBe(lastValidTimeSeconds);
+    expect(engine.start()).toBe(false);
+
+    engine.reset();
+    expect(engine.status).toBe("paused");
+    expect(engine.stopEvent).toBeNull();
+    expect(engine.start()).toBe(true);
   });
 });

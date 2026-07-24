@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { NewtonianSimulationConfig } from "../core/types";
+import { SPEED_OF_LIGHT_MPS } from "../core/units";
 import { vector3 } from "../core/vector3";
 import { createInclinedBinaryConfig } from "../presets/inclinedBinary";
 import { GravityPrototypeRuntime } from "./GravityPrototypeRuntime";
@@ -17,6 +18,27 @@ describe("gravity prototype runtime", () => {
     expect(initialTelemetry.status).toBe("paused");
     expect(initialTelemetry.timeSeconds).toBe(0);
     expect(initialTelemetry.relativeEnergyDrift).toBe(0);
+    expect(initialTelemetry.precisionProfile).toBe("balanced");
+    expect(initialTelemetry.timeStepSeconds).toBeCloseTo(
+      974.5534120884115,
+      9
+    );
+    expect(initialTelemetry.recommendedTimeStepSeconds).toBeCloseTo(
+      1_588.2751266912621,
+      9
+    );
+    expect(initialTelemetry.newtonianValidity).toMatchObject({
+      overallLevel: "recommended",
+      velocityFrame: "barycentric",
+      hasExternalConstraint: false,
+      beta: {
+        responsible: {
+          kind: "pair",
+          firstBodyId: "binary-a",
+          secondBodyId: "binary-b",
+        },
+      },
+    });
 
     runtime.resume();
     runtime.advanceFrame(1);
@@ -282,5 +304,111 @@ describe("gravity prototype runtime", () => {
     expect(runtime.telemetry().timeSeconds).toBe(
       timeAtStop + config.timeStepSeconds
     );
+  });
+
+  it("publishes a dynamic Newtonian-domain stop while retaining valid telemetry", () => {
+    const relativeSpeedMps = 0.0995 * SPEED_OF_LIGHT_MPS;
+    const timeStepSeconds = 0.0670480593363;
+    const domainCrossingConfig: NewtonianSimulationConfig = {
+      bodies: [
+        {
+          id: "left",
+          name: "Left",
+          massKg: 1e33,
+          physicalRadiusM: 0,
+          fixed: false,
+          initialPositionM: vector3(-1e8, 0, 0),
+          initialVelocityMps: vector3(relativeSpeedMps * 0.5, 0, 0),
+        },
+        {
+          id: "right",
+          name: "Right",
+          massKg: 1e33,
+          physicalRadiusM: 0,
+          fixed: false,
+          initialPositionM: vector3(1e8, 0, 0),
+          initialVelocityMps: vector3(-relativeSpeedMps * 0.5, 0, 0),
+        },
+      ],
+      timeStepSeconds,
+      encounterThresholds: {
+        maxRelativeDisplacementPerStep: 0.02,
+        maxDynamicalStep: 0.02,
+      },
+    };
+    const runtime = new GravityPrototypeRuntime(domainCrossingConfig, {
+      simulatedSecondsPerRealSecond: timeStepSeconds * 60,
+      maxSubStepsPerTick: 1,
+      maxFrameDeltaSeconds: 0.25,
+    });
+
+    expect(runtime.resume()).toBe(true);
+    runtime.advanceFrame(0);
+    expect(runtime.advanceFrame(1 / 60)).toBe(true);
+
+    const telemetry = runtime.telemetry();
+    expect(telemetry.status).toBe("newtonian-domain-violation");
+    expect(telemetry.newtonianDomainMessage).toMatch(
+      /last valid state was preserved/
+    );
+    expect(telemetry.newtonianDomainViolation).toMatchObject({
+      metric: "beta",
+      value: expect.any(Number),
+      limit: 0.1,
+      velocityFrame: "relative",
+      responsibility: {
+        kind: "pair",
+        firstBodyId: "left",
+        secondBodyId: "right",
+      },
+    });
+    expect(telemetry.timeSeconds).toBe(0);
+    expect(telemetry.newtonianValidity.beta.value).toBeLessThan(0.1);
+    expect(telemetry.rejectedNewtonianValidity).toMatchObject({
+      overallLevel: "hard-error",
+      beta: {
+        level: "hard-error",
+        responsible: {
+          kind: "pair",
+          firstBodyId: "left",
+          secondBodyId: "right",
+          frame: "relative",
+        },
+      },
+    });
+    expect(runtime.resume()).toBe(false);
+
+    runtime.reset();
+    expect(runtime.telemetry().status).toBe("paused");
+    expect(runtime.telemetry().rejectedNewtonianValidity).toBeNull();
+  });
+
+  it("keeps the physical step independent from scheduler time speed", () => {
+    const config = createInclinedBinaryConfig();
+    const slow = new GravityPrototypeRuntime(config, {
+      simulatedSecondsPerRealSecond: config.timeStepSeconds * 2,
+      maxSubStepsPerTick: 32,
+      maxFrameDeltaSeconds: 0.25,
+    });
+    const fast = new GravityPrototypeRuntime(config, {
+      simulatedSecondsPerRealSecond: config.timeStepSeconds * 200,
+      maxSubStepsPerTick: 32,
+      maxFrameDeltaSeconds: 0.25,
+    });
+
+    expect(slow.telemetry().timeStepSeconds).toBe(
+      config.timeStepSeconds
+    );
+    expect(fast.telemetry().timeStepSeconds).toBe(
+      config.timeStepSeconds
+    );
+    expect(slow.telemetry().precisionProfile).toBeNull();
+    expect(slow.telemetry().recommendedTimeStepSeconds).toBeNull();
+    expect(
+      slow.telemetry().timeStepBudgetAssessment.exceedsBudget
+    ).toBe(false);
+    expect(
+      fast.telemetry().timeStepBudgetAssessment.exceedsBudget
+    ).toBe(true);
   });
 });

@@ -72,7 +72,44 @@ export type SimulationStatus =
   | "running"
   | "collision"
   | "unresolved-encounter"
+  | "newtonian-domain-violation"
   | "error";
+
+export type ScientificMetric =
+  | "beta"
+  | "chi-pair"
+  | "chi-self"
+  | "psi";
+
+export type ScientificVelocityFrame =
+  | "barycentric"
+  | "scenario"
+  | "relative";
+
+export type ScientificResponsibility =
+  | Readonly<{
+      kind: "body";
+      bodyId: string;
+    }>
+  | Readonly<{
+      kind: "pair";
+      firstBodyId: string;
+      secondBodyId: string;
+    }>;
+
+export type NumericalCandidateBuffer =
+  | "candidate-positions"
+  | "half-step-velocities"
+  | "candidate-velocities"
+  | "candidate-accelerations";
+
+export type NumericalCandidateFailure = Readonly<{
+  buffer: NumericalCandidateBuffer;
+  vectorIndex: number;
+  bodyIndex: number;
+  bodyId: string;
+  axis: "x" | "y" | "z";
+}>;
 
 export type SimulationStopEvent =
   | Readonly<{
@@ -100,9 +137,19 @@ export type SimulationStopEvent =
       kind: "numerical-error";
       timeSeconds: number;
       attemptedTimeSeconds: number;
+      cause?: NumericalCandidateFailure;
+      message: string;
+    }>
+  | Readonly<{
+      kind: "newtonian-domain-violation";
+      timeSeconds: number;
+      attemptedTimeSeconds: number;
+      violation: Readonly<{
+        metric: ScientificMetric;
+        value: number;
+        limit: number;
+        responsibility: ScientificResponsibility;
+        velocityFrame?: ScientificVelocityFrame;
+      }>;
       message: string;
     }>;
-
-export type IntegratorStepResult =
-  | Readonly<{ advanced: true }>
-  | Readonly<{ advanced: false; encounter: EncounterDetection }>;

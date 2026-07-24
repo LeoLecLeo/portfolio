@@ -286,6 +286,12 @@ séparer explicitement les données physiques, la politique numérique et la
 présentation, même si elles sont regroupées dans un seul descripteur de
 scénario.
 
+La tranche 2A instancie les volets physique et numérique de ce contrat. Elle ne
+crée pas un descripteur de présentation vide : le déplacement des noms,
+couleurs, transformation de scène et caméra hors du prototype binaire appartient
+à la fondation générique 2B.1. Cette séparation complète reste donc un état
+cible, sans autoriser le code scientifique 2A à dépendre de React.
+
 ### 5.3 Session active
 
 **Décision validée**
@@ -393,9 +399,29 @@ Il doit :
   l’interdiction de dérive silencieuse ;
 - tester les allers-retours unité utilisateur → SI → unité utilisateur.
 
-Le catalogue initial d’unités et la grammaire exacte des nombres restent des
-propositions à valider. Ils ne doivent pas être choisis implicitement pendant
-l’implémentation.
+La phase 2A approuve la grammaire suivante :
+
+- espaces périphériques ignorés sans modifier la chaîne brute conservée ;
+- signe optionnel, point ou virgule comme séparateur décimal unique, exposant
+  scientifique `e` ou `E` avec signe optionnel ;
+- un séparateur unique est toujours décimal : aucun séparateur de milliers
+  n’est pris en charge ;
+- rejet des chaînes partielles, séparateurs mixtes ou répétés, groupements par
+  espaces, `NaN`, `Infinity`, dépassements et sous-flux non nuls vers zéro.
+
+Le catalogue initial approuvé contient :
+
+- masse : kilogramme, masse terrestre, masse jovienne et masse solaire ;
+- distance ou rayon : mètre, kilomètre, unité astronomique, rayon terrestre,
+  rayon jovien et rayon solaire ;
+- vitesse : mètre par seconde et kilomètre par seconde ;
+- temps : seconde, heure, jour et année julienne.
+
+Les conversions Terre et Jupiter utilisent les valeurs usuelles
+`5.9722e24 kg`, `1.89813e27 kg`, `6_371_000 m` et `69_911_000 m`. L’année
+julienne vaut exactement `31_557_600 s`. L’unité astronomique et les valeurs
+solaires déjà employées par le prototype restent inchangées. Ces facteurs sont
+des conventions d’affichage, pas des constantes physiques exactes.
 
 ### 6.2 Validation structurée
 
@@ -425,7 +451,10 @@ doit néanmoins réutiliser ou préserver toutes les garanties actuelles de
 - aucune superposition physique initiale.
 
 Une validation finale du scénario canonique reste obligatoire même si le
-brouillon a déjà été validé champ par champ.
+brouillon a déjà été validé champ par champ. Elle vérifie également que les
+accélérations et diagnostics initiaux restent finis et que le premier drift au
+pas retenu ne déborde pas, même lorsque toutes les entrées prises isolément
+sont des nombres finis.
 
 ### 6.3 Profils de précision et pas recommandé
 
@@ -439,30 +468,32 @@ brouillon a déjà été validé champ par champ.
 - Le budget dur existant de 32 sous-pas par frame reste une garde de sécurité
   tant qu’une autre valeur n’a pas été explicitement validée.
 
-**Proposition à valider**
+Les trois cibles approuvées sont :
 
-Les trois cibles proposées sont :
-
-| Profil | Cible proposée |
+| Profil | Cible |
 | --- | ---: |
 | Rapide | `q = 0.01` |
 | Équilibré | `q = 0.005` |
 | Précis | `q = 0.0025` |
 
-Le rôle exact de `q` reste à définir. Il faut décider s’il :
+Le profil pilote uniquement l’estimation initiale du pas. Les gardes runtime
+restent distinctes à `q_v = 0.02` et `q_g = 0.02`.
 
-- pilote uniquement l’estimation initiale du pas ;
-- remplace aussi les seuils de garde `q_v` et `q_g` ;
-- ou utilise des valeurs distinctes pour recommandation et arrêt.
+Pour chaque paire dont au moins un corps est mobile, l’estimateur confronte :
 
-Les seuils actuels du binaire, `q_v = 0.02` et `q_g = 0.02`, restent la
-référence du prototype existant jusqu’à cette décision.
+```text
+tau_v       = distance / vitesse relative
+tau_g       = sqrt(distance³ / (G × somme des masses))
+tau_contact = distance libre / vitesse radiale de rapprochement
+```
 
-L’estimateur devra au minimum confronter les temps de traversée relative et les
-temps dynamiques gravitationnels pour toutes les paires pertinentes. Sa formule,
-ses fallbacks pour vitesse relative nulle, paire fixe-fixe et configuration à un
-seul corps, ainsi que ses critères de convergence devront être documentés et
-testés avant de devenir normatifs.
+`tau_contact` n’est pertinent que lorsque les corps se rapprochent. Le pas
+recommandé vaut `q × min(tau_v, tau_g, tau_contact)` sur toutes les paires
+pertinentes. Une configuration sans paire dynamique ne reçoit aucun pas inventé
+et exige un plafond explicite. Sinon, le pas appliqué est le minimum entre la
+recommandation et un plafond explicite éventuel. Une évaluation de coût reçoit
+séparément la vitesse temporelle, le delta de frame de référence et le budget ;
+elle produit un diagnostic sans jamais agrandir silencieusement le pas.
 
 ### 6.4 Validité du domaine newtonien
 
@@ -477,23 +508,32 @@ testés avant de devenir normatifs.
   candidat arrête cette session au dernier état valide avec un statut distinct.
 - Aucune bascule automatique vers un modèle relativiste n’a lieu.
 
-**Proposition à valider**
+La phase 2A approuve quatre niveaux :
 
-| Indicateur | Zone recommandée | Avertissement | Refus/pause |
-| --- | ---: | ---: | ---: |
-| `β = v/c` | `< 0.01` | `>= 0.03` | `>= 0.1` |
-| Champ ou compacité sans dimension | `< 1e-4` | `>= 1e-3` | `>= 1e-2` |
+| Indicateur | Recommandé | Prudence | Avertissement fort | Refus/pause |
+| --- | ---: | ---: | ---: | ---: |
+| `β = v/c` | `< 0.01` | `[0.01, 0.03)` | `[0.03, 0.1)` | `>= 0.1` |
+| `chi_pair`, `chi_self`, `psi` | `< 1e-4` | `[1e-4, 1e-3)` | `[1e-3, 1e-2)` | `>= 1e-2` |
 
-Avant implémentation, il faut définir :
+Sans corps fixe, les vitesses individuelles sont mesurées dans le référentiel
+barycentrique. En présence d’au moins un corps fixe, elles sont mesurées dans
+le référentiel des coordonnées et le rapport signale une contrainte externe.
+Les vitesses relatives de toutes les paires sont toujours évaluées ; la pire
+mesure et son corps ou sa paire responsable sont conservés.
 
-- le référentiel utilisé pour mesurer `v` ;
-- le sens des zones intermédiaires non couvertes par le tableau ;
-- la mesure exacte du champ faible ;
-- le traitement d’un corps isolé mais compact ;
-- la combinaison éventuelle de la compacité par paire
-  `G(m_i + m_j)/(r_ij c²)`, d’une auto-compacité liée au rayon physique et d’un
-  potentiel local cumulé ;
-- les codes, messages et transitions de statut associés.
+Les trois mesures de champ faible restent séparées :
+
+```text
+chi_pair(i,j) = G × (m_i + m_j) / (r_ij × c²)
+chi_self(i)   = G × m_i / (R_i × c²), uniquement si R_i > 0
+psi_i         = somme(j ≠ i) G × m_j / (r_ij × c²)
+```
+
+Un rayon nul représente un point idéalisé : `chi_self` est alors inconnu, jamais
+infini, et produit un avertissement explicite. Les seuils de `β` constituent
+une politique pédagogique fondée sur l’ordre attendu des corrections en
+`β²`, et non une garantie universelle d’erreur. La vitesse de la lumière vaut
+exactement `299_792_458 m/s`.
 
 La constante `c` et toute nouvelle unité scientifique doivent résider dans la
 couche d’unités, jamais dans React.
@@ -506,11 +546,26 @@ La phase 2A doit créer un point de contrôle entre le calcul complet d’un ét
 candidat et sa copie dans l’état courant. Le candidat doit comprendre les
 positions, vitesses et accélérations nécessaires aux nouvelles gardes.
 
-Deux formes d’API sont acceptables à étudier :
+L’implémentation 2A retient une séparation explicite et générique :
 
-1. séparer explicitement préparation du candidat, validation et commit ;
-2. injecter une garde de candidat dans l’intégrateur avant les opérations
-   `.set(...)`.
+```text
+préparer le drift
+→ vérifier positions et demi-vitesses finies
+→ collision balayée
+→ gardes q_v / q_g
+→ calculer accélérations et vitesses candidates
+→ vérifier le candidat complet fini
+→ validité du domaine newtonien
+→ commit unique
+```
+
+La finitude du drift précède toute interprétation géométrique. La collision
+précède les gardes `q`, et les gardes `q` précèdent le domaine scientifique car
+un candidat insuffisamment résolu n’est pas une base fiable pour ce diagnostic.
+Le calcul des forces vient après la collision afin qu’un contact exact soit
+classé comme collision plutôt que masqué par une accélération singulière.
+Velocity Verlet ne connaît ni les seuils de rencontre, ni ceux du domaine
+newtonien ; `SimulationEngine` orchestre les contrôles puis appelle le commit.
 
 Le choix doit préserver les buffers réutilisables et éviter une copie complète
 supplémentaire à chaque pas. Les tests doivent prouver qu’un refus conserve
@@ -520,7 +575,10 @@ dernier état valide.
 Le chemin nominal de garde candidat ne doit pas allouer d’objets ou de messages
 à chaque pas. Un diagnostic structuré complet est matérialisé lors d’une
 transition vers un avertissement, d’un arrêt ou à la cadence réduite prévue pour
-la télémétrie.
+la télémétrie. Lors d’un refus newtonien, les quatre mesures du candidat et
+leurs responsables restent disponibles séparément. Une cause primaire suit
+l’ordre diagnostique déterministe `beta`, `chi_pair`, `chi_self`, `psi`, sans
+fabriquer de score commun entre grandeurs physiquement différentes.
 
 ### 6.6 Panneau de diagnostic en lecture seule
 
@@ -705,19 +763,13 @@ par anticipation.
 
 ## 10. Propositions à résoudre
 
-Les décisions suivantes ne doivent pas être transformées en code ou en seuils de
-test avant approbation :
+Les décisions 2A relatives au parsing, aux unités, aux profils et au domaine
+newtonien ont été approuvées le 23 juillet 2026 et sont désormais décrites en
+section 6. Les propositions restantes ne doivent pas être transformées en code
+ou en seuils de test avant approbation :
 
 | Sujet | Proposition actuelle | Bloque |
 | --- | --- | --- |
-| Référentiel de `β` | Référentiel barycentrique ou référentiel explicite du scénario | Gardes de validité 2A |
-| Mesure de champ faible | Compacité par paire, éventuellement complétée par auto-compacité et potentiel local | Gardes de validité 2A |
-| Seuils relativistes | Tableau de la section 6.4 | Critères d’acceptation 2A |
-| Zones intermédiaires | Statut sans correction silencieuse, à nommer précisément | Messages et statuts 2A |
-| Profils de pas | `0.01`, `0.005`, `0.0025` | Estimateur et convergence 2A |
-| Relation profils/gardes | Recommandation seulement ou remplacement de `q_v` et `q_g` | Politique numérique 2A |
-| Grammaire de saisie | Point, virgule, notation scientifique et séparateurs à définir strictement | Parsing 2A |
-| Catalogue d’unités | Unités minimales de masse, distance, vitesse et temps à choisir | Conversions et UI 2A/2B |
 | Réglages directs | Propriété et persistance du nom, de la couleur, de la caméra, de la vitesse temporelle et de la visibilité des trajectoires | Cycle Apply/Cancel/Reset 2B |
 | Édition pendant l’exécution | Autoriser les chaînes du brouillon à évoluer, tout en interdisant Apply ; politique séparée pour ajout/suppression | Interaction 2B |
 | Éligibilité d’Apply | Autoriser tout état non-running, y compris après arrêt scientifique, ou exiger strictement `paused` ; ne jamais appliquer pendant l’exécution | Interaction 2B |

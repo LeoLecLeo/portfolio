@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import type { EncounterThresholds } from "../core/types";
 import { SOLAR_MASS_KG } from "../core/units";
-import { detectEncounterAcrossStep } from "./encounters";
+import {
+  createEncounterInspectionWorkspace,
+  detectEncounterAcrossStep,
+  inspectEncounterAcrossStep,
+  materializeEncounterDetection,
+} from "./encounters";
 
 const permissiveThresholds: EncounterThresholds = {
   maxRelativeDisplacementPerStep: 1,
@@ -94,5 +99,93 @@ describe("collision and unresolved-encounter detection", () => {
     );
 
     expect(detection).toBeNull();
+  });
+
+  it("reuses a mutable inspection workspace and clears stale results", () => {
+    const workspace = createEncounterInspectionWorkspace();
+    const previous = new Float64Array([-10, 0, 0, 10, 0, 0]);
+    const candidate = new Float64Array([-9, 0, 0, 9, 0, 0]);
+    const masses = new Float64Array([1, 1]);
+    const radii = new Float64Array([0, 0]);
+    const fixed = new Uint8Array([0, 0]);
+
+    const unresolved = inspectEncounterAcrossStep(
+      previous,
+      candidate,
+      masses,
+      radii,
+      fixed,
+      1,
+      scientificThresholds,
+      workspace
+    );
+
+    expect(unresolved).toBe(workspace);
+    expect(workspace.kind).toBe("unresolved-encounter");
+    expect(materializeEncounterDetection(workspace)?.kind).toBe(
+      "unresolved-encounter"
+    );
+
+    const safe = inspectEncounterAcrossStep(
+      previous,
+      previous,
+      masses,
+      radii,
+      fixed,
+      0.01,
+      permissiveThresholds,
+      workspace
+    );
+
+    expect(safe).toBe(workspace);
+    expect(workspace.kind).toBe("none");
+    expect(workspace.firstBodyIndex).toBe(-1);
+    expect(materializeEncounterDetection(workspace)).toBeNull();
+  });
+
+  it("gives any collision global priority over an earlier q violation", () => {
+    const workspace = createEncounterInspectionWorkspace();
+
+    inspectEncounterAcrossStep(
+      new Float64Array([
+        -1_000, 0, 0,
+        -900, 0, 0,
+        -1, 0, 0,
+        1, 0, 0,
+      ]),
+      new Float64Array([
+        -1_000, 0, 0,
+        -890, 0, 0,
+        1, 0, 0,
+        -1, 0, 0,
+      ]),
+      new Float64Array([1, 1, 1, 1]),
+      new Float64Array([0, 0, 0.1, 0.1]),
+      new Uint8Array([0, 0, 0, 0]),
+      1,
+      scientificThresholds,
+      workspace
+    );
+
+    expect(workspace.kind).toBe("collision");
+    expect(workspace.firstBodyIndex).toBe(2);
+    expect(workspace.secondBodyIndex).toBe(3);
+  });
+
+  it("still detects a collision for a fixed-fixed pair", () => {
+    const workspace = createEncounterInspectionWorkspace();
+
+    inspectEncounterAcrossStep(
+      new Float64Array([-1, 0, 0, 1, 0, 0]),
+      new Float64Array([1, 0, 0, -1, 0, 0]),
+      new Float64Array([1, 1]),
+      new Float64Array([0.1, 0.1]),
+      new Uint8Array([1, 1]),
+      0.01,
+      permissiveThresholds,
+      workspace
+    );
+
+    expect(workspace.kind).toBe("collision");
   });
 });

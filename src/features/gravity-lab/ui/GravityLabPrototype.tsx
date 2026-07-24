@@ -22,6 +22,65 @@ function formatSimulationTime(timeSeconds: number): string {
   return `${days.toFixed(3)} j (${formatScientific(timeSeconds, 3)} s)`;
 }
 
+function profileLabel(
+  profile: PrototypeTelemetry["precisionProfile"]
+): string {
+  if (profile === null) {
+    return "Configuration directe non compilée";
+  }
+
+  switch (profile) {
+    case "fast":
+      return "Rapide";
+    case "balanced":
+      return "Équilibré";
+    case "precise":
+      return "Précis";
+  }
+}
+
+function velocityFrameLabel(
+  frame: PrototypeTelemetry["newtonianValidity"]["beta"]["responsible"]["frame"]
+): string {
+  switch (frame) {
+    case "barycentric":
+      return "référentiel barycentrique";
+    case "scenario":
+      return "référentiel du scénario";
+    case "relative":
+      return "vitesse relative de la paire";
+  }
+}
+
+function validityLevelLabel(
+  level: PrototypeTelemetry["newtonianValidity"]["overallLevel"]
+): string {
+  switch (level) {
+    case "recommended":
+      return "Domaine recommandé";
+    case "caution":
+      return "Prudence";
+    case "strong-warning":
+      return "Avertissement fort";
+    case "hard-error":
+      return "Hors domaine";
+  }
+}
+
+function responsibilityLabel(
+  responsible:
+    | Readonly<{ kind: "body"; bodyId: string }>
+    | Readonly<{
+        kind: "pair";
+        firstBodyId: string;
+        secondBodyId: string;
+      }>
+): string {
+  return responsible.kind === "body"
+    ? responsible.bodyId
+    : `${responsible.firstBodyId} / ${responsible.secondBodyId}`;
+}
+
 function statusLabel(status: PrototypeTelemetry["status"]): string {
   switch (status) {
     case "running":
@@ -32,6 +91,8 @@ function statusLabel(status: PrototypeTelemetry["status"]): string {
       return "Collision détectée";
     case "unresolved-encounter":
       return "Rencontre non résolue";
+    case "newtonian-domain-violation":
+      return "Domaine newtonien dépassé";
     case "error":
       return "Erreur numérique";
   }
@@ -88,8 +149,15 @@ export function GravityLabPrototype() {
   const notice =
     telemetry.collisionMessage ??
     telemetry.unresolvedEncounterMessage ??
+    telemetry.newtonianDomainMessage ??
     telemetry.numericalErrorMessage ??
     telemetry.schedulerMessage;
+  const validity =
+    telemetry.rejectedNewtonianValidity ?? telemetry.newtonianValidity;
+  const unknownSelfCompactness =
+    validity.unknownSelfCompactnessBodyIds.length === 0
+      ? null
+      : `inconnue pour ${validity.unknownSelfCompactnessBodyIds.join(", ")}`;
 
   return (
     <section
@@ -100,7 +168,7 @@ export function GravityLabPrototype() {
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              Prototype technique 1B
+              Prototype scientifique 2A
             </p>
             <h2
               id="gravity-prototype-title"
@@ -201,6 +269,125 @@ export function GravityLabPrototype() {
           </dl>
         </div>
 
+        <div className="border-t border-border/80 pt-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Validité du modèle
+          </p>
+          {telemetry.rejectedNewtonianValidity !== null ? (
+            <p className="mt-2 text-xs text-destructive">
+              Mesures du candidat rejeté ; la scène conserve le dernier état
+              valide.
+            </p>
+          ) : null}
+          <dl className="mt-3 space-y-3 text-sm">
+            <div className="flex items-start justify-between gap-4">
+              <dt className="text-muted-foreground">Profil</dt>
+              <dd className="text-right font-medium">
+                {profileLabel(telemetry.precisionProfile)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Pas physique fixe</dt>
+              <dd className="mt-0.5 break-all font-mono text-xs">
+                {formatScientific(telemetry.timeStepSeconds, 6)} s
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Pas recommandé</dt>
+              <dd className="mt-0.5 break-all font-mono text-xs">
+                {telemetry.recommendedTimeStepSeconds === null
+                  ? telemetry.precisionProfile === null
+                    ? "non disponible — configuration directe"
+                    : "non contraint — plafond explicite"
+                  : `${formatScientific(
+                      telemetry.recommendedTimeStepSeconds,
+                      6
+                    )} s`}
+              </dd>
+            </div>
+            {telemetry.timeStepBudgetAssessment.exceedsBudget ? (
+              <div>
+                <dt className="text-destructive">Budget de sous-pas</dt>
+                <dd className="mt-0.5 text-xs text-destructive">
+                  {
+                    telemetry.timeStepBudgetAssessment
+                      .requiredSubStepsAtMaximumFrame
+                  }{" "}
+                  sous-pas seraient requis au delta maximal ; le pas n’a pas
+                  été agrandi.
+                </dd>
+              </div>
+            ) : null}
+            <div>
+              <dt className="text-muted-foreground">
+                β maximal ·{" "}
+                {responsibilityLabel(validity.beta.responsible)}
+              </dt>
+              <dd className="mt-0.5 break-all font-mono text-xs">
+                {formatScientific(validity.beta.value, 6)}
+                {" · "}
+                {velocityFrameLabel(validity.beta.responsible.frame)}
+                {validity.hasExternalConstraint
+                  ? " · contrainte externe présente"
+                  : ""}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">
+                χ paire
+                {validity.chiPair === null
+                  ? ""
+                  : ` · ${responsibilityLabel(
+                      validity.chiPair.responsible
+                    )}`}
+              </dt>
+              <dd className="mt-0.5 break-all font-mono text-xs">
+                {validity.chiPair === null
+                  ? "sans paire"
+                  : formatScientific(validity.chiPair.value, 6)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">
+                χ propre
+                {validity.chiSelf === null
+                  ? ""
+                  : ` · ${responsibilityLabel(
+                      validity.chiSelf.responsible
+                    )}`}
+              </dt>
+              <dd className="mt-0.5 break-all font-mono text-xs">
+                {validity.chiSelf === null
+                  ? unknownSelfCompactness ?? "sans valeur connue"
+                  : `${formatScientific(validity.chiSelf.value, 6)}${
+                      unknownSelfCompactness === null
+                        ? ""
+                        : ` · ${unknownSelfCompactness}`
+                    }`}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">
+                ψ local · {responsibilityLabel(validity.psi.responsible)}
+              </dt>
+              <dd className="mt-0.5 break-all font-mono text-xs">
+                {formatScientific(validity.psi.value, 6)}
+              </dd>
+            </div>
+            <div className="flex items-start justify-between gap-4">
+              <dt className="text-muted-foreground">Synthèse</dt>
+              <dd className="text-right font-medium">
+                {validityLevelLabel(validity.overallLevel)}
+              </dd>
+            </div>
+          </dl>
+          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+            Les seuils β sont une politique pédagogique fondée sur l’ordre
+            attendu des corrections en β², et non une garantie universelle
+            d’erreur.
+          </p>
+        </div>
+
         <div
           aria-live="polite"
           className={
@@ -217,8 +404,9 @@ export function GravityLabPrototype() {
           Calculs internes en unités SI. Les sphères sont volontairement
           agrandies pour rester visibles&nbsp;: leurs rayons graphiques ne
           servent jamais à la détection physique. La télémétrie est
-          échantillonnée dans la boucle puis publiée vers React au plus à{" "}
-          {(1 / TELEMETRY_INTERVAL_SECONDS).toFixed(0)} Hz.
+          échantillonnée dans la boucle avec une publication périodique à{" "}
+          {(1 / TELEMETRY_INTERVAL_SECONDS).toFixed(0)} Hz, complétée par les
+          actions et arrêts urgents.
         </p>
       </aside>
     </section>

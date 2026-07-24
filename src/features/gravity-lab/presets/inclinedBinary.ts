@@ -1,4 +1,21 @@
-import type { NewtonianSimulationConfig } from "../core/types";
+import {
+  compileScenarioDraft,
+  type ScenarioCompilationOptions,
+} from "../core/scenarioCompiler";
+import {
+  createDraftNumberFromSi,
+  DISTANCE_DRAFT_UNIT_CONVERTER,
+  MASS_DRAFT_UNIT_CONVERTER,
+  SPEED_DRAFT_UNIT_CONVERTER,
+  TIME_DRAFT_UNIT_CONVERTER,
+  type AppliedScenario,
+  type BodyDraft,
+  type ScenarioDraft,
+} from "../core/scenario";
+import type {
+  CelestialBodyDefinition,
+  NewtonianSimulationConfig,
+} from "../core/types";
 import {
   ASTRONOMICAL_UNIT_M,
   GRAVITATIONAL_CONSTANT_M3_KG_S2,
@@ -20,6 +37,7 @@ export const INCLINED_BINARY_PERIOD_SECONDS =
   INCLINED_BINARY_ORBITAL_SPEED_MPS;
 export const INCLINED_BINARY_TIME_STEP_SECONDS =
   INCLINED_BINARY_PERIOD_SECONDS / INCLINED_BINARY_STEPS_PER_PERIOD;
+export const INCLINED_BINARY_PRECISION_PROFILE = "balanced" as const;
 
 const ORBITAL_PHASE_RADIANS = (35 * Math.PI) / 180;
 const INCLINATION_RADIANS = (30 * Math.PI) / 180;
@@ -106,4 +124,96 @@ export function createInclinedBinaryConfig(
       maxDynamicalStep: 0.02,
     },
   };
+}
+
+function bodyDefinitionToDraft(
+  body: CelestialBodyDefinition
+): BodyDraft {
+  return {
+    id: body.id,
+    name: body.name,
+    fixed: body.fixed,
+    mass: createDraftNumberFromSi(
+      body.massKg,
+      "solar-mass",
+      MASS_DRAFT_UNIT_CONVERTER
+    ),
+    physicalRadius: createDraftNumberFromSi(
+      body.physicalRadiusM,
+      "solar-radius",
+      DISTANCE_DRAFT_UNIT_CONVERTER
+    ),
+    initialPosition: {
+      x: createDraftNumberFromSi(
+        body.initialPositionM.x,
+        "au",
+        DISTANCE_DRAFT_UNIT_CONVERTER
+      ),
+      y: createDraftNumberFromSi(
+        body.initialPositionM.y,
+        "au",
+        DISTANCE_DRAFT_UNIT_CONVERTER
+      ),
+      z: createDraftNumberFromSi(
+        body.initialPositionM.z,
+        "au",
+        DISTANCE_DRAFT_UNIT_CONVERTER
+      ),
+    },
+    initialVelocity: {
+      x: createDraftNumberFromSi(
+        body.initialVelocityMps.x,
+        "km/s",
+        SPEED_DRAFT_UNIT_CONVERTER
+      ),
+      y: createDraftNumberFromSi(
+        body.initialVelocityMps.y,
+        "km/s",
+        SPEED_DRAFT_UNIT_CONVERTER
+      ),
+      z: createDraftNumberFromSi(
+        body.initialVelocityMps.z,
+        "km/s",
+        SPEED_DRAFT_UNIT_CONVERTER
+      ),
+    },
+  };
+}
+
+export function createInclinedBinaryDraft(
+  minimumStepsPerPeriod = INCLINED_BINARY_STEPS_PER_PERIOD
+): ScenarioDraft {
+  const config = createInclinedBinaryConfig(minimumStepsPerPeriod);
+
+  return {
+    bodies: config.bodies.map(bodyDefinitionToDraft),
+    precisionProfile: INCLINED_BINARY_PRECISION_PROFILE,
+    maximumTimeStep: createDraftNumberFromSi(
+      config.timeStepSeconds,
+      "s",
+      TIME_DRAFT_UNIT_CONVERTER
+    ),
+  };
+}
+
+export function createInclinedBinaryAppliedScenario(
+  budget?: ScenarioCompilationOptions["budget"],
+  minimumStepsPerPeriod = INCLINED_BINARY_STEPS_PER_PERIOD
+): AppliedScenario {
+  const result = compileScenarioDraft(
+    createInclinedBinaryDraft(minimumStepsPerPeriod),
+    budget === undefined ? {} : { budget }
+  );
+
+  if (!result.ok) {
+    const summary = result.report.errors
+      .map((diagnostic) => `${diagnostic.code}: ${diagnostic.message}`)
+      .join("; ");
+
+    throw new RangeError(
+      `The inclined binary preset did not compile: ${summary}`
+    );
+  }
+
+  return result.scenario;
 }

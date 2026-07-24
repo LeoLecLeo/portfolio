@@ -1,9 +1,4 @@
-import type {
-  EncounterThresholds,
-  IntegratorStepResult,
-  NewtonianState,
-} from "../core/types";
-import { detectEncounterAcrossStep } from "../physics/encounters";
+import type { NewtonianState } from "../core/types";
 
 export type AccelerationEvaluator = (
   massesKg: Float64Array,
@@ -21,6 +16,12 @@ export type VelocityVerletWorkspace = Readonly<{
 export function createVelocityVerletWorkspace(
   bodyCount: number
 ): VelocityVerletWorkspace {
+  if (!Number.isInteger(bodyCount) || bodyCount < 1) {
+    throw new RangeError(
+      "Velocity Verlet body count must be a positive integer."
+    );
+  }
+
   const vectorLength = bodyCount * 3;
 
   return {
@@ -31,24 +32,18 @@ export function createVelocityVerletWorkspace(
   };
 }
 
-function assertFiniteBuffer(values: Float64Array, label: string): void {
-  for (const value of values) {
-    if (!Number.isFinite(value)) {
-      throw new RangeError(`${label} contains a non-finite value.`);
-    }
-  }
-}
-
-export function stepVelocityVerlet(
+export function assertVelocityVerletWorkspaceMatchesState(
   state: NewtonianState,
-  timeStepSeconds: number,
-  thresholds: EncounterThresholds,
-  accelerationEvaluator: AccelerationEvaluator,
   workspace: VelocityVerletWorkspace
-): IntegratorStepResult {
-  const vectorLength = state.positionsM.length;
+): void {
+  const bodyCount = state.massesKg.length;
+  const vectorLength = bodyCount * 3;
 
   if (
+    state.fixed.length !== bodyCount ||
+    state.positionsM.length !== vectorLength ||
+    state.velocitiesMps.length !== vectorLength ||
+    state.accelerationsMps2.length !== vectorLength ||
     workspace.candidatePositionsM.length !== vectorLength ||
     workspace.halfStepVelocitiesMps.length !== vectorLength ||
     workspace.candidateVelocitiesMps.length !== vectorLength ||
@@ -58,6 +53,48 @@ export function stepVelocityVerlet(
       "Velocity Verlet workspace does not match the simulation state."
     );
   }
+}
+
+export function findFirstNonFiniteFloat64Index(
+  values: Float64Array
+): number {
+  for (let index = 0; index < values.length; index += 1) {
+    if (!Number.isFinite(values[index])) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+export function assertFiniteFloat64Buffer(
+  values: Float64Array,
+  label: string
+): void {
+  const invalidIndex = findFirstNonFiniteFloat64Index(values);
+
+  if (invalidIndex !== -1) {
+    throw new RangeError(
+      `${label} contains a non-finite value at index ${invalidIndex}.`
+    );
+  }
+}
+
+function assertPositiveFiniteTimeStep(timeStepSeconds: number): void {
+  if (!Number.isFinite(timeStepSeconds) || timeStepSeconds <= 0) {
+    throw new RangeError(
+      "Velocity Verlet time step must be finite and greater than zero."
+    );
+  }
+}
+
+export function prepareVelocityVerletDrift(
+  state: NewtonianState,
+  timeStepSeconds: number,
+  workspace: VelocityVerletWorkspace
+): void {
+  assertPositiveFiniteTimeStep(timeStepSeconds);
+  assertVelocityVerletWorkspaceMatchesState(state, workspace);
 
   const halfTimeStep = timeStepSeconds * 0.5;
 
@@ -83,26 +120,24 @@ export function stepVelocityVerlet(
         halfStepVelocity * timeStepSeconds;
     }
   }
+}
 
-  const encounter = detectEncounterAcrossStep(
-    state.positionsM,
-    workspace.candidatePositionsM,
-    state.massesKg,
-    state.physicalRadiiM,
-    state.fixed,
-    timeStepSeconds,
-    thresholds
-  );
-
-  if (encounter !== null) {
-    return { advanced: false, encounter };
-  }
+export function completeVelocityVerletCandidate(
+  state: NewtonianState,
+  timeStepSeconds: number,
+  accelerationEvaluator: AccelerationEvaluator,
+  workspace: VelocityVerletWorkspace
+): void {
+  assertPositiveFiniteTimeStep(timeStepSeconds);
+  assertVelocityVerletWorkspaceMatchesState(state, workspace);
 
   accelerationEvaluator(
     state.massesKg,
     workspace.candidatePositionsM,
     workspace.candidateAccelerationsMps2
   );
+
+  const halfTimeStep = timeStepSeconds * 0.5;
 
   for (let bodyIndex = 0; bodyIndex < state.massesKg.length; bodyIndex += 1) {
     const offset = bodyIndex * 3;
@@ -117,19 +152,19 @@ export function stepVelocityVerlet(
             workspace.candidateAccelerationsMps2[vectorIndex] * halfTimeStep;
     }
   }
+}
 
-  assertFiniteBuffer(workspace.candidatePositionsM, "Candidate positions");
-  assertFiniteBuffer(workspace.candidateVelocitiesMps, "Candidate velocities");
-  assertFiniteBuffer(
-    workspace.candidateAccelerationsMps2,
-    "Candidate accelerations"
-  );
+export function commitVelocityVerletCandidate(
+  state: NewtonianState,
+  timeStepSeconds: number,
+  workspace: VelocityVerletWorkspace
+): void {
+  assertPositiveFiniteTimeStep(timeStepSeconds);
+  assertVelocityVerletWorkspaceMatchesState(state, workspace);
 
   state.positionsM.set(workspace.candidatePositionsM);
   state.velocitiesMps.set(workspace.candidateVelocitiesMps);
   state.accelerationsMps2.set(workspace.candidateAccelerationsMps2);
   state.stepCount += 1;
   state.timeSeconds = state.stepCount * timeStepSeconds;
-
-  return { advanced: true };
 }
