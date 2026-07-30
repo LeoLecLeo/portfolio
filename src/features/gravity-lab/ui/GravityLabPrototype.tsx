@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 
 import { GravityCanvas } from "../rendering/GravityCanvas";
 import {
@@ -16,6 +22,11 @@ import {
   createInclinedBinaryAppliedScenario,
   INCLINED_BINARY_SCHEDULER_CONFIG,
 } from "../presets/inclinedBinary";
+import {
+  createGravityLabState,
+  gravityLabReducer,
+} from "./gravityLabReducer";
+import { MAX_NEWTONIAN_BODIES } from "../core/types";
 
 const SECONDS_PER_DAY = 86_400;
 
@@ -130,12 +141,16 @@ export function GravityLabPrototype({
         sessionRequest ?? createInitialSessionRequest()
       )
   );
-  const [hostSnapshot, setHostSnapshot] = useState(host.snapshot);
+  const [labState, dispatch] = useReducer(
+    gravityLabReducer,
+    host.snapshot,
+    createGravityLabState
+  );
   const [renderRevision, setRenderRevision] = useState(0);
   const [rendererReady, setRendererReady] = useState(false);
   const initialRendererStartHandled = useRef(false);
-  const telemetry = hostSnapshot.telemetry;
-  const session = hostSnapshot.session;
+  const telemetry = labState.sessionTelemetry;
+  const session = labState.activeSession;
 
   useEffect(() => {
     if (
@@ -146,7 +161,10 @@ export function GravityLabPrototype({
     }
 
     previousExternalRequest.current = sessionRequest;
-    setHostSnapshot(host.replace(sessionRequest));
+    dispatch({
+      type: "session-replaced",
+      snapshot: host.replace(sessionRequest),
+    });
     setRenderRevision((current) => current + 1);
   }, [host, sessionRequest]);
 
@@ -155,7 +173,10 @@ export function GravityLabPrototype({
       const published = host.publishTelemetry(source, next);
 
       if (published !== null) {
-        setHostSnapshot(published);
+        dispatch({
+          type: "session-updated",
+          snapshot: published,
+        });
       }
     },
     [host]
@@ -174,24 +195,44 @@ export function GravityLabPrototype({
       initialExternalRequest.current === sessionRequest &&
       host.snapshot.revision === 0
     ) {
-      setHostSnapshot(host.resume());
+      dispatch({
+        type: "session-updated",
+        snapshot: host.resume(),
+      });
     }
   }, [host, sessionRequest]);
 
   const pause = useCallback(() => {
-    setHostSnapshot(host.pause());
+    dispatch({
+      type: "session-updated",
+      snapshot: host.pause(),
+    });
     setRenderRevision((current) => current + 1);
   }, [host]);
 
   const resume = useCallback(() => {
-    setHostSnapshot(host.resume());
+    dispatch({
+      type: "session-updated",
+      snapshot: host.resume(),
+    });
     setRenderRevision((current) => current + 1);
   }, [host]);
 
   const reset = useCallback(() => {
-    setHostSnapshot(host.reset());
+    dispatch({
+      type: "session-updated",
+      snapshot: host.reset(),
+    });
     setRenderRevision((current) => current + 1);
   }, [host]);
+
+  const addBody = useCallback(() => {
+    dispatch({ type: "add-body" });
+  }, []);
+
+  const cancelDraft = useCallback(() => {
+    dispatch({ type: "cancel-draft" });
+  }, []);
 
   const notice =
     telemetry.collisionMessage ??
@@ -238,6 +279,84 @@ export function GravityLabPrototype({
       </div>
 
       <aside className="flex flex-col gap-4 rounded-xl border border-border/80 bg-card/70 p-5 shadow-xl shadow-black/10">
+        <div>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Corps du brouillon
+            </p>
+            <span className="text-xs text-muted-foreground">
+              {labState.draft.bodies.length}/{MAX_NEWTONIAN_BODIES}
+            </span>
+          </div>
+          <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto">
+            {labState.draft.bodies.map((body) => {
+              const selected =
+                body.id === labState.selectedDraftBodyId;
+
+              return (
+                <li
+                  key={body.id}
+                  className="grid grid-cols-[minmax(0,1fr)_auto] gap-2"
+                >
+                  <button
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() =>
+                      dispatch({
+                        type: "select-draft-body",
+                        bodyId: body.id,
+                      })
+                    }
+                    className={
+                      selected
+                        ? "truncate rounded-lg border border-primary bg-primary/10 px-3 py-2 text-left text-sm font-medium"
+                        : "truncate rounded-lg border border-border bg-secondary/50 px-3 py-2 text-left text-sm hover:bg-secondary"
+                    }
+                  >
+                    {body.name}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Supprimer ${body.name}`}
+                    disabled={labState.draft.bodies.length === 1}
+                    onClick={() =>
+                      dispatch({
+                        type: "remove-body",
+                        bodyId: body.id,
+                      })
+                    }
+                    className="rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    ×
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={addBody}
+              disabled={
+                labState.draft.bodies.length >= MAX_NEWTONIAN_BODIES
+              }
+              className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              Ajouter un corps
+            </button>
+            <button
+              type="button"
+              onClick={cancelDraft}
+              className="rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-secondary"
+            >
+              Annuler les modifications
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Sélection de session : {labState.selectedSessionBodyId}
+          </p>
+        </div>
+
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             Commandes
