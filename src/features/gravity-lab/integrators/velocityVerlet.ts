@@ -162,9 +162,24 @@ export function commitVelocityVerletCandidate(
   assertPositiveFiniteTimeStep(timeStepSeconds);
   assertVelocityVerletWorkspaceMatchesState(state, workspace);
 
+  const nextStepCount = state.stepCount + 1;
+  const nextTimeSeconds = nextStepCount * timeStepSeconds;
+
+  if (!Number.isSafeInteger(nextStepCount)) {
+    throw new RangeError(
+      "Velocity Verlet step count would exceed the safe integer range."
+    );
+  }
+
+  if (!Number.isFinite(nextTimeSeconds)) {
+    throw new RangeError(
+      "Velocity Verlet simulation time would become non-finite."
+    );
+  }
+
   state.positionsM.set(workspace.candidatePositionsM);
   state.velocitiesMps.set(workspace.candidateVelocitiesMps);
   state.accelerationsMps2.set(workspace.candidateAccelerationsMps2);
-  state.stepCount += 1;
-  state.timeSeconds = state.stepCount * timeStepSeconds;
+  state.stepCount = nextStepCount;
+  state.timeSeconds = nextTimeSeconds;
 }

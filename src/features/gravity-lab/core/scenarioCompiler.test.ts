@@ -5,11 +5,13 @@ import {
   MASS_DRAFT_UNIT_CONVERTER,
   SPEED_DRAFT_UNIT_CONVERTER,
   TIME_DRAFT_UNIT_CONVERTER,
+  appliedScenarioToDraft,
   appliedScenarioToSimulationConfig,
   changeDraftNumberUnit,
   createDraftNumber,
   createDraftNumberFromSi,
   isAppliedScenario,
+  tryCreateDraftNumberFromSi,
   updateDraftNumberRawText,
   type BodyDraft,
   type ScenarioDraft,
@@ -87,6 +89,19 @@ function dynamicDraft(
   };
 }
 
+function deepFreezeForTest<T>(value: T): T {
+  if (value !== null && typeof value === "object") {
+    for (const child of Object.values(
+      value as Record<string, unknown>
+    )) {
+      deepFreezeForTest(child);
+    }
+    Object.freeze(value);
+  }
+
+  return value;
+}
+
 describe("scenario draft helpers", () => {
   it("exposes immutable unit-conversion policies", () => {
     expect(Object.isFrozen(MASS_DRAFT_UNIT_CONVERTER)).toBe(true);
@@ -139,17 +154,20 @@ describe("scenario draft helpers", () => {
 
     expect(invalid.siValue).toBeNull();
     expect(invalid.lastValidSiValue).toBe(5);
-    expect(
-      changeDraftNumberUnit(
-        createDraftNumber(
-          "invalid",
-          "kg",
-          MASS_DRAFT_UNIT_CONVERTER
-        ),
-        "solar-mass",
-        MASS_DRAFT_UNIT_CONVERTER
-      ).changed
-    ).toBe(false);
+    const unitChange = changeDraftNumberUnit(
+      invalid,
+      "solar-mass",
+      MASS_DRAFT_UNIT_CONVERTER
+    );
+    expect(unitChange).toMatchObject({
+      changed: false,
+      field: invalid,
+      reason: "current-value-invalid",
+      issue: null,
+    });
+    expect(unitChange.field).toBe(invalid);
+    expect(unitChange.field.rawText).toBe("5 kg");
+    expect(unitChange.field.errors).toEqual(invalid.errors);
 
     const result = compileScenarioDraft(
       dynamicDraft({
@@ -169,6 +187,53 @@ describe("scenario draft helpers", () => {
         }),
       ])
     );
+  });
+
+  it("returns a structured failure when display-unit conversion underflows", () => {
+    const results = [
+      tryCreateDraftNumberFromSi(
+        Number.MIN_VALUE,
+        "solar-mass",
+        MASS_DRAFT_UNIT_CONVERTER
+      ),
+      tryCreateDraftNumberFromSi(
+        Number.MIN_VALUE,
+        "au",
+        DISTANCE_DRAFT_UNIT_CONVERTER
+      ),
+      tryCreateDraftNumberFromSi(
+        Number.MIN_VALUE,
+        "km/s",
+        SPEED_DRAFT_UNIT_CONVERTER
+      ),
+      tryCreateDraftNumberFromSi(
+        Number.MIN_VALUE,
+        "julian-year",
+        TIME_DRAFT_UNIT_CONVERTER
+      ),
+    ];
+
+    for (const result of results) {
+      expect(result).toMatchObject({
+        ok: false,
+        issue: { code: "parse.unit-conversion-underflow" },
+        siValue: Number.MIN_VALUE,
+      });
+    }
+  });
+
+  it("rejects a non-zero parsed value that underflows while converting to SI", () => {
+    const result = createDraftNumber("0.5", "tiny", {
+      toSi: (value) => value * Number.MIN_VALUE,
+      fromSi: (value) => value / Number.MIN_VALUE,
+    });
+
+    expect(result.siValue).toBeNull();
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        code: "parse.unit-conversion-underflow",
+      }),
+    ]);
   });
 });
 
@@ -274,6 +339,132 @@ describe("scenario draft compilation", () => {
         >[0]
       )
     ).toThrow(/canonical compiler/);
+  });
+
+  it("rejects frozen applied-scenario lookalikes that violate invariants", () => {
+    const valid = createInclinedBinaryAppliedScenario();
+    const zeroBodies = deepFreezeForTest({
+      ...valid,
+      physics: { bodies: [] },
+    });
+    const shallowOnly = Object.freeze({
+      ...valid,
+      physics: { bodies: valid.physics.bodies },
+    });
+    const incompleteValidity = deepFreezeForTest({
+      ...valid,
+      initialValidity: {
+        beta: valid.initialValidity.beta,
+      },
+    });
+    const unvalidatedLookalike = deepFreezeForTest({
+      ...valid,
+      physics: {
+        bodies: valid.physics.bodies.map((source, index) =>
+          index === 0 ? { ...source, massKg: -1 } : source
+        ),
+      },
+    });
+
+    expect(isAppliedScenario(zeroBodies)).toBe(false);
+    expect(isAppliedScenario(shallowOnly)).toBe(false);
+    expect(isAppliedScenario(incompleteValidity)).toBe(false);
+    expect(isAppliedScenario(unvalidatedLookalike)).toBe(false);
+  });
+
+  it("round-trips any valid applied scenario through an explicit unit policy", () => {
+    const initial = compileScenarioDraft({
+      bodies: [
+        body("earth", distance("0"), {
+          name: "Earth",
+          mass: mass("1", "earth-mass"),
+          physicalRadius: distance("1", "earth-radius"),
+          initialVelocity: {
+            x: speed("1.25", "km/s"),
+            y: speed("-0.75", "km/s"),
+            z: speed("0.125", "km/s"),
+          },
+        }),
+        body("jupiter", distance("0.01", "au"), {
+          name: "Jupiter",
+          mass: mass("0.25", "jupiter-mass"),
+          physicalRadius: distance("0.5", "jupiter-radius"),
+          initialVelocity: {
+            x: speed("-0.4", "km/s"),
+            y: speed("2.5", "km/s"),
+            z: speed("-0.2", "km/s"),
+          },
+        }),
+        body("probe", distance("-0.02", "au"), {
+          name: "Probe",
+          mass: mass("0.125", "earth-mass"),
+          physicalRadius: distance("10", "km"),
+          initialVelocity: {
+            x: speed("0.1", "km/s"),
+            y: speed("-3.2", "km/s"),
+            z: speed("0.8", "km/s"),
+          },
+        }),
+      ],
+      precisionProfile: "precise",
+      maximumTimeStep: time("0.5", "hour"),
+    });
+
+    expect(initial.ok).toBe(true);
+    if (!initial.ok) {
+      throw new Error(JSON.stringify(initial.report.errors));
+    }
+
+    const reconstructed = appliedScenarioToDraft(initial.scenario, {
+      mass: "earth-mass",
+      physicalRadius: "earth-radius",
+      position: "au",
+      velocity: "km/s",
+      time: "day",
+    });
+    const recompiled = compileScenarioDraft(reconstructed);
+
+    expect(reconstructed.bodies.map(({ id }) => id)).toEqual([
+      "earth",
+      "jupiter",
+      "probe",
+    ]);
+    expect(reconstructed.bodies).not.toBe(
+      initial.scenario.physics.bodies
+    );
+    expect(reconstructed.bodies[0]).not.toBe(
+      initial.scenario.physics.bodies[0]
+    );
+    expect(reconstructed.bodies[0].initialPosition).not.toBe(
+      initial.scenario.physics.bodies[0].initialPositionM
+    );
+    expect(reconstructed.bodies[0].mass.unit).toBe("earth-mass");
+    expect(reconstructed.bodies[0].initialPosition.x.unit).toBe("au");
+    expect(reconstructed.bodies[0].initialVelocity.x.unit).toBe(
+      "km/s"
+    );
+    expect(reconstructed.maximumTimeStep?.unit).toBe("day");
+    expect(recompiled.ok).toBe(true);
+    if (recompiled.ok) {
+      expect(recompiled.scenario.physics).toEqual(
+        initial.scenario.physics
+      );
+      expect(recompiled.scenario.numericalPolicy).toEqual(
+        initial.scenario.numericalPolicy
+      );
+      expect(recompiled.scenario.initialValidity).toEqual(
+        initial.scenario.initialValidity
+      );
+    }
+
+    (
+      reconstructed.bodies[0].mass as unknown as {
+        rawText: string;
+      }
+    ).rawText = "999";
+    expect(initial.scenario.physics.bodies[0].massKg).toBe(
+      EARTH_MASS_KG
+    );
   });
 
   it("does not clamp a value above the product limit", () => {

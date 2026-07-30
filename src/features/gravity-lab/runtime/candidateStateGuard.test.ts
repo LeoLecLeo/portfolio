@@ -419,6 +419,49 @@ describe("candidate-state rejection materialization", () => {
     }
   });
 
+  it("selects chi-self directly when self compactness is the terminal cause", () => {
+    const targetChiSelf = 0.02;
+    const massKg =
+      (targetChiSelf *
+        SPEED_OF_LIGHT_MPS *
+        SPEED_OF_LIGHT_MPS) /
+      GRAVITATIONAL_CONSTANT_M3_KG_S2;
+    const state = createState([0, 0, 0], {
+      massesKg: [massKg],
+      physicalRadiiM: [1],
+    });
+    const verlet = createVelocityVerletWorkspace(1);
+    const guard = createCandidateStateGuardWorkspace(1);
+    setCandidate(verlet, [0, 0, 0]);
+
+    expect(
+      inspectCompletedVelocityVerletCandidate(state, verlet, guard)
+    ).toBe("newtonian-domain-violation");
+    const rejection = materializeCandidateStateRejection(
+      state.bodyIds,
+      guard
+    );
+
+    expect(rejection?.kind).toBe("newtonian-domain-violation");
+    if (rejection?.kind === "newtonian-domain-violation") {
+      expect(rejection.violation).toMatchObject({
+        metric: "chi-self",
+        limit: 0.01,
+        responsibility: {
+          kind: "body",
+          bodyId: "body-0",
+        },
+      });
+      expect(rejection.report.beta.value).toBe(0);
+      expect(rejection.report.chiPair).toBeNull();
+      expect(rejection.report.chiSelf?.value).toBeCloseTo(
+        targetChiSelf,
+        14
+      );
+      expect(rejection.report.psi.value).toBe(0);
+    }
+  });
+
   it("reports cumulative psi without hiding lower pair compactness", () => {
     const gravitationalLengthPerKg =
       GRAVITATIONAL_CONSTANT_M3_KG_S2 /

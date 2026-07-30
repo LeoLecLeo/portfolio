@@ -153,6 +153,84 @@ describe("fixed time-step recommendation", () => {
     }
   });
 
+  it("treats infinite traversal scales from subnormal speeds as non-limiting", () => {
+    const recommendation = recommendTimeStep(
+      [
+        body("left", 0, 0, { massKg: 1 }),
+        body("right", 1, -Number.MIN_VALUE, {
+          massKg: 1,
+        }),
+      ],
+      "balanced"
+    );
+
+    expect(recommendation.relativeTraversal?.seconds).toBe(
+      Number.POSITIVE_INFINITY
+    );
+    expect(recommendation.timeToContact?.seconds).toBe(
+      Number.POSITIVE_INFINITY
+    );
+    expect(
+      recommendation.gravitationalDynamical?.seconds
+    ).toBeTypeOf("number");
+    expect(
+      recommendation.gravitationalDynamical?.seconds
+    ).toBeLessThan(Number.POSITIVE_INFINITY);
+    expect(recommendation.kind).toBe("bounded");
+    if (recommendation.kind === "bounded") {
+      expect(recommendation.limiter.kind).toBe(
+        "gravitational-dynamical"
+      );
+    }
+  });
+
+  it("returns unconstrained when every quasi-static timescale is infinite", () => {
+    const recommendation = recommendTimeStep(
+      [
+        body("left", 0, 0, { massKg: Number.MIN_VALUE }),
+        body("right", 1e18, -Number.MIN_VALUE, {
+          massKg: Number.MIN_VALUE,
+        }),
+      ],
+      "precise"
+    );
+
+    expect(recommendation).toMatchObject({
+      kind: "unconstrained",
+      recommendedTimeStepSeconds: null,
+      limiter: null,
+    });
+    expect(recommendation.relativeTraversal?.seconds).toBe(
+      Number.POSITIVE_INFINITY
+    );
+    expect(recommendation.gravitationalDynamical?.seconds).toBe(
+      Number.POSITIVE_INFINITY
+    );
+    expect(recommendation.timeToContact?.seconds).toBe(
+      Number.POSITIVE_INFINITY
+    );
+  });
+
+  it("still rejects invalid negative and NaN inputs", () => {
+    expect(() =>
+      recommendTimeStep(
+        [body("invalid-mass", 0, 0, { massKg: -1 })],
+        "fast"
+      )
+    ).toThrow(/greater than zero/);
+    expect(() =>
+      recommendTimeStep(
+        [
+          {
+            ...body("invalid-velocity", 0),
+            initialVelocityMps: vector3(Number.NaN, 0, 0),
+          },
+        ],
+        "fast"
+      )
+    ).toThrow(/finite/);
+  });
+
   it("does not invent a timescale for one body or a fixed-fixed system", () => {
     const isolated = recommendTimeStep(
       [body("isolated", 0, 100)],

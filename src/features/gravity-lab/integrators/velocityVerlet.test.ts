@@ -319,6 +319,28 @@ describe("Velocity Verlet scientific behaviour", () => {
     expect(state.timeSeconds).toBe(0.5);
   });
 
+  it("rejects an unsafe next step count before mutating state", () => {
+    const state = createSingleBodyState();
+    const workspace = createVelocityVerletWorkspace(1);
+    state.stepCount = Number.MAX_SAFE_INTEGER;
+    state.timeSeconds = Number.MAX_SAFE_INTEGER;
+    workspace.candidatePositionsM.set([10, 20, 30]);
+    workspace.candidateVelocitiesMps.set([40, 50, 60]);
+    workspace.candidateAccelerationsMps2.set([70, 80, 90]);
+    const positions = state.positionsM.slice();
+    const velocities = state.velocitiesMps.slice();
+    const accelerations = state.accelerationsMps2.slice();
+
+    expect(() =>
+      commitVelocityVerletCandidate(state, 1, workspace)
+    ).toThrow(/safe integer range/);
+    expect(state.positionsM).toEqual(positions);
+    expect(state.velocitiesMps).toEqual(velocities);
+    expect(state.accelerationsMps2).toEqual(accelerations);
+    expect(state.stepCount).toBe(Number.MAX_SAFE_INTEGER);
+    expect(state.timeSeconds).toBe(Number.MAX_SAFE_INTEGER);
+  });
+
   it("keeps fixed bodies stationary throughout candidate preparation", () => {
     const state = createSingleBodyState();
     state.fixed[0] = 1;

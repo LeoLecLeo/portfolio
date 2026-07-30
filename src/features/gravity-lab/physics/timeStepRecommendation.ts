@@ -207,7 +207,7 @@ export function recommendTimeStep(
         const traversalSeconds = separationM / relativeSpeedMps;
 
         if (
-          !Number.isFinite(traversalSeconds) ||
+          Number.isNaN(traversalSeconds) ||
           traversalSeconds <= 0
         ) {
           throw new RangeError(
@@ -232,7 +232,7 @@ export function recommendTimeStep(
         Math.sqrt(separationM / gravitationalParameter);
 
       if (
-        !Number.isFinite(dynamicalSeconds) ||
+        Number.isNaN(dynamicalSeconds) ||
         dynamicalSeconds <= 0
       ) {
         throw new RangeError(
@@ -275,7 +275,7 @@ export function recommendTimeStep(
           clearanceM / -radialRelativeSpeedMps;
 
         if (
-          !Number.isFinite(contactSeconds) ||
+          Number.isNaN(contactSeconds) ||
           contactSeconds <= 0
         ) {
           throw new RangeError(
@@ -311,7 +311,10 @@ export function recommendTimeStep(
     limiter = timeToContact;
   }
 
-  if (limiter === null) {
+  if (
+    limiter === null ||
+    limiter.seconds === Number.POSITIVE_INFINITY
+  ) {
     return {
       kind: "unconstrained",
       profile,

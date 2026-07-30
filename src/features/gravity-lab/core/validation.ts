@@ -44,6 +44,7 @@ export type ValidationDiagnosticCode =
   | "parse.non-finite"
   | "parse.underflow"
   | "parse.si-conversion-non-finite"
+  | "parse.unit-conversion-underflow"
   | "config.body-count"
   | "body.id-required"
   | "body.id-duplicate"

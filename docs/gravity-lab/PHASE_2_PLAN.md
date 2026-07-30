@@ -450,6 +450,23 @@ doit néanmoins réutiliser ou préserver toutes les garanties actuelles de
 - seuils de rencontre finis, strictement positifs et inférieurs ou égaux à 1 ;
 - aucune superposition physique initiale.
 
+Les limites numériques suivantes sont des **décisions produit approuvées** et
+leurs valeurs ne doivent pas être modifiées implicitement :
+
+| Grandeur | Limite publique |
+| --- | ---: |
+| Masse d’un corps | `1e33 kg` |
+| Rayon physique d’un corps | `1e18 m` |
+| Valeur absolue de chaque composante de position | `1e18 m` |
+
+Ces bornes ne sont pas des limites universelles de la mécanique newtonienne.
+Elles délimitent volontairement le domaine public du laboratoire afin de
+protéger le conditionnement et la précision numériques. La borne de position
+limite notamment, par décision produit, les translations absolues acceptées,
+même lorsqu’une configuration translatée pourrait décrire des mouvements
+relatifs équivalents. Toute valeur hors domaine doit être refusée explicitement,
+jamais corrigée ou écrêtée silencieusement.
+
 Une validation finale du scénario canonique reste obligatoire même si le
 brouillon a déjà été validé champ par champ. Elle vérifie également que les
 accélérations et diagnostics initiaux restent finis et que le premier drift au

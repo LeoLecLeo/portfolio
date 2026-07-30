@@ -6,7 +6,11 @@ import type {
 } from "../core/types";
 import { SPEED_OF_LIGHT_MPS } from "../core/units";
 import { vector3 } from "../core/vector3";
-import { createInclinedBinaryConfig } from "../presets/inclinedBinary";
+import {
+  createInclinedBinaryConfig,
+  INCLINED_BINARY_PERIOD_SECONDS,
+  INCLINED_BINARY_STEPS_PER_PERIOD,
+} from "../presets/inclinedBinary";
 import { SimulationEngine } from "./SimulationEngine";
 
 function body(
@@ -209,6 +213,98 @@ describe("mutable Newtonian simulation engine", () => {
         : false
     ).toBe(true);
   });
+
+  it("checks time overflow before committing any candidate field", () => {
+    const engine = new SimulationEngine(
+      config(
+        [
+          body(
+            "slow",
+            vector3(0, 0, 0),
+            vector3(Number.MIN_VALUE, 0, 0)
+          ),
+        ],
+        Number.MAX_VALUE
+      )
+    );
+
+    expect(engine.start()).toBe(true);
+    expect(engine.advanceOneStep()).toBe(true);
+    expect(engine.state.timeSeconds).toBe(Number.MAX_VALUE);
+    expect(engine.state.stepCount).toBe(1);
+
+    const lastValid = {
+      bodyIds: [...engine.state.bodyIds],
+      massesKg: engine.state.massesKg.slice(),
+      physicalRadiiM: engine.state.physicalRadiiM.slice(),
+      fixed: engine.state.fixed.slice(),
+      positionsM: engine.state.positionsM.slice(),
+      velocitiesMps: engine.state.velocitiesMps.slice(),
+      accelerationsMps2: engine.state.accelerationsMps2.slice(),
+      timeSeconds: engine.state.timeSeconds,
+      stepCount: engine.state.stepCount,
+    };
+
+    expect(engine.advanceOneStep()).toBe(false);
+    expect(engine.status).toBe("error");
+    expect(engine.stopEvent?.message).toMatch(
+      /simulation time would become non-finite/
+    );
+    expect(engine.state.bodyIds).toEqual(lastValid.bodyIds);
+    expect(engine.state.massesKg).toEqual(lastValid.massesKg);
+    expect(engine.state.physicalRadiiM).toEqual(
+      lastValid.physicalRadiiM
+    );
+    expect(engine.state.fixed).toEqual(lastValid.fixed);
+    expect(engine.state.positionsM).toEqual(lastValid.positionsM);
+    expect(engine.state.velocitiesMps).toEqual(
+      lastValid.velocitiesMps
+    );
+    expect(engine.state.accelerationsMps2).toEqual(
+      lastValid.accelerationsMps2
+    );
+    expect(engine.state.timeSeconds).toBe(lastValid.timeSeconds);
+    expect(engine.state.stepCount).toBe(lastValid.stepCount);
+  });
+
+  it(
+    "runs a long inclined-binary integration through the real engine",
+    () => {
+      const engine = new SimulationEngine(
+        createInclinedBinaryConfig()
+      );
+      const initialEnergy = engine.diagnostics().totalEnergyJ;
+      const periods = 10;
+      const totalSteps =
+        periods * INCLINED_BINARY_STEPS_PER_PERIOD;
+
+      expect(engine.start()).toBe(true);
+      for (let stepIndex = 0; stepIndex < totalSteps; stepIndex += 1) {
+        if (!engine.advanceOneStep()) {
+          throw new Error(
+            `Engine stopped at step ${stepIndex}: ${engine.stopEvent?.message}`
+          );
+        }
+      }
+
+      const finalEnergy = engine.diagnostics().totalEnergyJ;
+      const relativeEnergyError =
+        Math.abs(finalEnergy - initialEnergy) /
+        Math.abs(initialEnergy);
+
+      expect(engine.status).toBe("running");
+      expect(engine.state.stepCount).toBe(totalSteps);
+      expect(
+        Math.abs(
+          engine.state.timeSeconds -
+            periods * INCLINED_BINARY_PERIOD_SECONDS
+        ) /
+          (periods * INCLINED_BINARY_PERIOD_SECONDS)
+      ).toBeLessThan(1e-12);
+      expect(relativeEnergyError).toBeLessThan(1e-4);
+    },
+    15_000
+  );
 
   it("rejects a dynamic Newtonian-domain crossing before commit", () => {
     const initialRelativeSpeedMps = 0.0995 * SPEED_OF_LIGHT_MPS;
