@@ -3,12 +3,25 @@ import { describe, expect, it } from "vitest";
 import type { NewtonianSimulationConfig } from "../core/types";
 import { SPEED_OF_LIGHT_MPS } from "../core/units";
 import { vector3 } from "../core/vector3";
-import { createInclinedBinaryConfig } from "../presets/inclinedBinary";
+import {
+  createInclinedBinaryAppliedScenario,
+  createInclinedBinaryConfig,
+  INCLINED_BINARY_SCHEDULER_CONFIG,
+} from "../presets/inclinedBinary";
 import { GravityPrototypeRuntime } from "./GravityPrototypeRuntime";
+
+function createBinaryRuntime(): GravityPrototypeRuntime {
+  return new GravityPrototypeRuntime(
+    createInclinedBinaryAppliedScenario(
+      INCLINED_BINARY_SCHEDULER_CONFIG
+    ),
+    INCLINED_BINARY_SCHEDULER_CONFIG
+  );
+}
 
 describe("gravity prototype runtime", () => {
   it("publishes diagnostics and resets the exact initial positions", () => {
-    const runtime = new GravityPrototypeRuntime();
+    const runtime = createBinaryRuntime();
     const initialPosition = { x: 0, y: 0, z: 0 };
     const advancedPosition = { x: 0, y: 0, z: 0 };
     const resetPosition = { x: 0, y: 0, z: 0 };
@@ -53,7 +66,7 @@ describe("gravity prototype runtime", () => {
   });
 
   it("reports an excessive frame gap without attempting catch-up", () => {
-    const runtime = new GravityPrototypeRuntime();
+    const runtime = createBinaryRuntime();
 
     runtime.resume();
     runtime.advanceFrame(1 / 60);
@@ -252,7 +265,7 @@ describe("gravity prototype runtime", () => {
   });
 
   it("still pauses on a real frame gap while actively running", () => {
-    const runtime = new GravityPrototypeRuntime();
+    const runtime = createBinaryRuntime();
 
     runtime.resume();
     runtime.advanceFrame(0);
@@ -267,7 +280,7 @@ describe("gravity prototype runtime", () => {
   });
 
   it("does not hide a real gap after a redundant resume call", () => {
-    const runtime = new GravityPrototypeRuntime();
+    const runtime = createBinaryRuntime();
 
     expect(runtime.resume()).toBe(true);
     runtime.advanceFrame(0);

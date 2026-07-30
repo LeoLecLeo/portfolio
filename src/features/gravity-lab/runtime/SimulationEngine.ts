@@ -210,6 +210,10 @@ export class SimulationEngine {
     targetPositionsM.set(this.#state.positionsM);
   }
 
+  copyBodyIds(): readonly string[] {
+    return Object.freeze([...this.#state.bodyIds]);
+  }
+
   advanceOneStep(): boolean {
     if (this.#status !== "running") {
       return false;

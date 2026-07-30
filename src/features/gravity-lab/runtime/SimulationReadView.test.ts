@@ -50,4 +50,22 @@ describe("controlled simulation read view", () => {
       view.writePositionM(view.bodyCount, { x: 0, y: 0, z: 0 })
     ).toThrow(/outside the read view/);
   });
+
+  it("provides a stable identifier-to-index rendering boundary", () => {
+    const engine = new SimulationEngine(createInclinedBinaryConfig());
+    const view = new SimulationReadView(engine);
+    const byIndex = { x: 0, y: 0, z: 0 };
+    const byId = { x: 0, y: 0, z: 0 };
+
+    expect(view.bodyIds).toEqual(["binary-a", "binary-b"]);
+    expect(Object.isFrozen(view.bodyIds)).toBe(true);
+    expect(view.bodyIndexOf("binary-b")).toBe(1);
+    expect(view.bodyIndexOf("missing")).toBeNull();
+    view.writePositionM(1, byIndex);
+    view.writePositionMById("binary-b", byId);
+    expect(byId).toEqual(byIndex);
+    expect(() =>
+      view.writePositionMById("missing", byId)
+    ).toThrow(/outside the read view/);
+  });
 });

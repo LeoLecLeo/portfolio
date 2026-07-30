@@ -9,15 +9,32 @@ export type MutablePosition3 = {
 export class SimulationReadView {
   readonly #engine: SimulationEngine;
   readonly #positionsM: Float64Array;
+  readonly #bodyIds: readonly string[];
+  readonly #bodyIndexById: ReadonlyMap<string, number>;
 
   constructor(engine: SimulationEngine) {
     this.#engine = engine;
+    this.#bodyIds = engine.copyBodyIds();
+    this.#bodyIndexById = new Map(
+      this.#bodyIds.map((bodyId, bodyIndex) => [
+        bodyId,
+        bodyIndex,
+      ])
+    );
     this.#positionsM = new Float64Array(engine.bodyCount * 3);
     this.sync();
   }
 
   get bodyCount(): number {
-    return this.#engine.bodyCount;
+    return this.#bodyIds.length;
+  }
+
+  get bodyIds(): readonly string[] {
+    return this.#bodyIds;
+  }
+
+  bodyIndexOf(bodyId: string): number | null {
+    return this.#bodyIndexById.get(bodyId) ?? null;
   }
 
   sync(): void {
@@ -37,5 +54,17 @@ export class SimulationReadView {
     target.x = this.#positionsM[offset];
     target.y = this.#positionsM[offset + 1];
     target.z = this.#positionsM[offset + 2];
+  }
+
+  writePositionMById(bodyId: string, target: MutablePosition3): void {
+    const bodyIndex = this.bodyIndexOf(bodyId);
+
+    if (bodyIndex === null) {
+      throw new RangeError(
+        `Body "${bodyId}" is outside the read view.`
+      );
+    }
+
+    this.writePositionM(bodyIndex, target);
   }
 }

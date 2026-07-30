@@ -1,15 +1,32 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { GravityCanvas } from "../rendering/GravityCanvas";
 import {
-  GravityPrototypeRuntime,
   TELEMETRY_INTERVAL_SECONDS,
   type PrototypeTelemetry,
 } from "../runtime/GravityPrototypeRuntime";
+import {
+  GravityLabSessionHost,
+  type GravityLabSession,
+  type GravityLabSessionRequest,
+} from "../runtime/GravityLabSession";
+import {
+  createInclinedBinaryAppliedScenario,
+  INCLINED_BINARY_SCHEDULER_CONFIG,
+} from "../presets/inclinedBinary";
 
 const SECONDS_PER_DAY = 86_400;
+
+function createInitialSessionRequest(): GravityLabSessionRequest {
+  return {
+    appliedScenario: createInclinedBinaryAppliedScenario(
+      INCLINED_BINARY_SCHEDULER_CONFIG
+    ),
+    schedulerConfig: INCLINED_BINARY_SCHEDULER_CONFIG,
+  };
+}
 
 function formatScientific(value: number, fractionDigits = 5): string {
   return Number.isFinite(value)
@@ -98,53 +115,83 @@ function statusLabel(status: PrototypeTelemetry["status"]): string {
   }
 }
 
-export function GravityLabPrototype() {
-  const [runtime] = useState(() => new GravityPrototypeRuntime());
-  const [telemetry, setTelemetry] = useState<PrototypeTelemetry>(() =>
-    runtime.telemetry()
+export type GravityLabPrototypeProps = Readonly<{
+  sessionRequest?: GravityLabSessionRequest;
+}>;
+
+export function GravityLabPrototype({
+  sessionRequest,
+}: GravityLabPrototypeProps = {}) {
+  const initialExternalRequest = useRef(sessionRequest);
+  const previousExternalRequest = useRef(sessionRequest);
+  const [host] = useState(
+    () =>
+      new GravityLabSessionHost(
+        sessionRequest ?? createInitialSessionRequest()
+      )
   );
+  const [hostSnapshot, setHostSnapshot] = useState(host.snapshot);
   const [renderRevision, setRenderRevision] = useState(0);
   const [rendererReady, setRendererReady] = useState(false);
+  const initialRendererStartHandled = useRef(false);
+  const telemetry = hostSnapshot.telemetry;
+  const session = hostSnapshot.session;
 
   useEffect(() => {
-    if (!rendererReady) {
+    if (
+      sessionRequest === undefined ||
+      sessionRequest === previousExternalRequest.current
+    ) {
       return;
     }
 
-    runtime.resume();
+    previousExternalRequest.current = sessionRequest;
+    setHostSnapshot(host.replace(sessionRequest));
+    setRenderRevision((current) => current + 1);
+  }, [host, sessionRequest]);
 
-    return () => {
-      runtime.pause();
-    };
-  }, [rendererReady, runtime]);
+  const publishTelemetry = useCallback(
+    (source: GravityLabSession, next: PrototypeTelemetry) => {
+      const published = host.publishTelemetry(source, next);
 
-  const publishTelemetry = useCallback((next: PrototypeTelemetry) => {
-    setTelemetry(next);
-  }, []);
+      if (published !== null) {
+        setHostSnapshot(published);
+      }
+    },
+    [host]
+  );
 
   const startWhenRendererIsReady = useCallback(() => {
-    runtime.resume();
-    setTelemetry(runtime.telemetry());
     setRendererReady(true);
-  }, [runtime]);
+
+    if (initialRendererStartHandled.current) {
+      return;
+    }
+
+    initialRendererStartHandled.current = true;
+
+    if (
+      initialExternalRequest.current === sessionRequest &&
+      host.snapshot.revision === 0
+    ) {
+      setHostSnapshot(host.resume());
+    }
+  }, [host, sessionRequest]);
 
   const pause = useCallback(() => {
-    runtime.pause();
-    setTelemetry(runtime.telemetry());
+    setHostSnapshot(host.pause());
     setRenderRevision((current) => current + 1);
-  }, [runtime]);
+  }, [host]);
 
   const resume = useCallback(() => {
-    runtime.resume();
-    setTelemetry(runtime.telemetry());
+    setHostSnapshot(host.resume());
     setRenderRevision((current) => current + 1);
-  }, [runtime]);
+  }, [host]);
 
   const reset = useCallback(() => {
-    runtime.reset();
-    setTelemetry(runtime.telemetry());
+    setHostSnapshot(host.reset());
     setRenderRevision((current) => current + 1);
-  }, [runtime]);
+  }, [host]);
 
   const notice =
     telemetry.collisionMessage ??
@@ -183,7 +230,7 @@ export function GravityLabPrototype() {
         </div>
 
         <GravityCanvas
-          runtime={runtime}
+          session={session}
           onTelemetry={publishTelemetry}
           onReady={startWhenRendererIsReady}
           renderRevision={renderRevision}

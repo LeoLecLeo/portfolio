@@ -17,10 +17,6 @@ import {
   type TimeStepBudgetAssessment,
 } from "../physics/timeStepRecommendation";
 import {
-  createInclinedBinaryAppliedScenario,
-  INCLINED_BINARY_PERIOD_SECONDS,
-} from "../presets/inclinedBinary";
-import {
   FixedStepScheduler,
   type FixedStepSchedulerConfig,
 } from "./FixedStepScheduler";
@@ -29,11 +25,19 @@ import { SimulationReadView } from "./SimulationReadView";
 
 export const TELEMETRY_INTERVAL_SECONDS = 0.2;
 
-const DEFAULT_SCHEDULER_CONFIG: FixedStepSchedulerConfig = {
-  simulatedSecondsPerRealSecond: INCLINED_BINARY_PERIOD_SECONDS / 24,
-  maxSubStepsPerTick: 32,
-  maxFrameDeltaSeconds: 0.25,
-};
+function createGenericSchedulerConfig(
+  timeStepSeconds: number
+): FixedStepSchedulerConfig {
+  const scaled = timeStepSeconds * 60;
+
+  return {
+    simulatedSecondsPerRealSecond: Number.isFinite(scaled)
+      ? scaled
+      : timeStepSeconds,
+    maxSubStepsPerTick: 32,
+    maxFrameDeltaSeconds: 0.25,
+  };
+}
 
 export type PrototypeTelemetry = Readonly<{
   timeSeconds: number;
@@ -70,6 +74,7 @@ export class GravityPrototypeRuntime {
   readonly #recommendedTimeStepSeconds: number | null;
   readonly #timeStepBudgetAssessment: TimeStepBudgetAssessment;
   #schedulerMessage: string | null = null;
+  #disposed = false;
 
   /**
    * AppliedScenario is the normal product path. The raw SI configuration
@@ -77,15 +82,17 @@ export class GravityPrototypeRuntime {
    * it intentionally exposes no inferred precision profile.
    */
   constructor(
-    source?: NewtonianSimulationConfig | AppliedScenario,
-    schedulerConfig: FixedStepSchedulerConfig = DEFAULT_SCHEDULER_CONFIG
+    source: NewtonianSimulationConfig | AppliedScenario,
+    schedulerConfig?: FixedStepSchedulerConfig
   ) {
-    const scenario =
-      source ?? createInclinedBinaryAppliedScenario(schedulerConfig);
+    const scenario = source;
     const applied = isAppliedScenario(scenario);
     const config = applied
       ? appliedScenarioToSimulationConfig(scenario)
       : scenario;
+    const resolvedSchedulerConfig =
+      schedulerConfig ??
+      createGenericSchedulerConfig(config.timeStepSeconds);
 
     this.#engine = new SimulationEngine(config);
     const recommendation = applied
@@ -98,11 +105,11 @@ export class GravityPrototypeRuntime {
       recommendation?.recommendedTimeStepSeconds ?? null;
     this.#timeStepBudgetAssessment = assessTimeStepBudget(
       config.timeStepSeconds,
-      schedulerConfig
+      resolvedSchedulerConfig
     );
     this.#scheduler = new FixedStepScheduler(
       this.#engine,
-      schedulerConfig
+      resolvedSchedulerConfig
     );
     this.#readView = new SimulationReadView(this.#engine);
     this.#initialTotalEnergyJ = this.#engine.diagnostics().totalEnergyJ;
@@ -117,10 +124,18 @@ export class GravityPrototypeRuntime {
   }
 
   get isRunning(): boolean {
-    return this.#engine.status === "running";
+    return !this.#disposed && this.#engine.status === "running";
+  }
+
+  get isDisposed(): boolean {
+    return this.#disposed;
   }
 
   resume(): boolean {
+    if (this.#disposed) {
+      return false;
+    }
+
     const started = this.#engine.start();
 
     if (started) {
@@ -136,6 +151,10 @@ export class GravityPrototypeRuntime {
   }
 
   reset(): void {
+    if (this.#disposed) {
+      return;
+    }
+
     this.#engine.reset();
     this.#scheduler.reset();
     this.#readView.sync();
@@ -143,7 +162,7 @@ export class GravityPrototypeRuntime {
   }
 
   advanceFrame(realDeltaSeconds: number): boolean {
-    if (!this.isRunning) {
+    if (this.#disposed || !this.isRunning) {
       return false;
     }
 
@@ -215,5 +234,15 @@ export class GravityPrototypeRuntime {
           : null,
       schedulerMessage: this.#schedulerMessage,
     };
+  }
+
+  dispose(): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    this.#engine.pause();
+    this.#scheduler.reset();
+    this.#disposed = true;
   }
 }

@@ -11,25 +11,22 @@ import {
 import type { Mesh } from "three";
 
 import {
-  GravityPrototypeRuntime,
   TELEMETRY_INTERVAL_SECONDS,
   type PrototypeTelemetry,
 } from "../runtime/GravityPrototypeRuntime";
-import { INCLINED_BINARY_SEPARATION_M } from "../presets/inclinedBinary";
-
-const SCENE_BINARY_SEPARATION = 8;
-const SCENE_UNITS_PER_METER =
-  SCENE_BINARY_SEPARATION / INCLINED_BINARY_SEPARATION_M;
-const BODY_COLORS = ["#67e8f9", "#a5b4fc", "#f0abfc", "#fcd34d"];
+import type { GravityLabSession } from "../runtime/GravityLabSession";
 
 type GravityCanvasProps = Readonly<{
-  runtime: GravityPrototypeRuntime;
-  onTelemetry: (telemetry: PrototypeTelemetry) => void;
+  session: GravityLabSession;
+  onTelemetry: (
+    source: GravityLabSession,
+    telemetry: PrototypeTelemetry
+  ) => void;
   onReady: () => void;
   renderRevision: number;
 }>;
 
-type BinarySceneProps = Omit<GravityCanvasProps, "onReady">;
+type GravitySceneProps = Omit<GravityCanvasProps, "onReady">;
 
 function FixedCamera() {
   const camera = useThree((state) => state.camera);
@@ -42,32 +39,34 @@ function FixedCamera() {
   return null;
 }
 
-function BinaryScene({
-  runtime,
+function GravityScene({
+  session,
   onTelemetry,
   renderRevision,
-}: BinarySceneProps) {
+}: GravitySceneProps) {
+  const runtime = session.runtime;
   const invalidate = useThree((state) => state.invalidate);
-  const bodyIndices = useMemo(
-    () => Array.from({ length: runtime.bodyCount }, (_, index) => index),
-    [runtime]
-  );
+  const bodies = useMemo(() => session.bodies, [session]);
   const meshRefs = useRef<Array<Mesh | null>>([]);
   const telemetryElapsedSeconds = useRef(0);
 
   useEffect(() => {
+    meshRefs.current.length = bodies.length;
+    telemetryElapsedSeconds.current = 0;
     invalidate();
-  }, [invalidate, renderRevision]);
+  }, [bodies.length, invalidate, renderRevision, session]);
 
   useFrame((state, deltaSeconds) => {
     const urgentTelemetry = runtime.advanceFrame(deltaSeconds);
 
-    for (let bodyIndex = 0; bodyIndex < runtime.bodyCount; bodyIndex += 1) {
+    for (let bodyIndex = 0; bodyIndex < bodies.length; bodyIndex += 1) {
       const mesh = meshRefs.current[bodyIndex];
 
       if (mesh !== null && mesh !== undefined) {
-        runtime.positions.writePositionM(bodyIndex, mesh.position);
-        mesh.position.multiplyScalar(SCENE_UNITS_PER_METER);
+        session.writeScenePosition(
+          bodies[bodyIndex].bodyId,
+          mesh.position
+        );
       }
     }
 
@@ -83,7 +82,7 @@ function BinaryScene({
         telemetryElapsedSeconds.current >= TELEMETRY_INTERVAL_SECONDS)
     ) {
       telemetryElapsedSeconds.current %= TELEMETRY_INTERVAL_SECONDS;
-      onTelemetry(runtime.telemetry());
+      onTelemetry(session, runtime.telemetry());
     }
 
     if (runtime.isRunning) {
@@ -110,17 +109,19 @@ function BinaryScene({
         <meshBasicMaterial color="#94a3b8" />
       </mesh>
 
-      {bodyIndices.map((bodyIndex) => {
+      {bodies.map((body, bodyIndex) => {
         const setMeshRef: RefCallback<Mesh> = (mesh) => {
           meshRefs.current[bodyIndex] = mesh;
         };
 
         return (
-          <mesh key={bodyIndex} ref={setMeshRef}>
-            <sphereGeometry args={[0.58, 32, 32]} />
+          <mesh key={body.bodyId} ref={setMeshRef} name={body.name}>
+            <sphereGeometry
+              args={[body.graphicRadiusScene, 32, 32]}
+            />
             <meshStandardMaterial
-              color={BODY_COLORS[bodyIndex % BODY_COLORS.length]}
-              emissive={BODY_COLORS[bodyIndex % BODY_COLORS.length]}
+              color={body.color}
+              emissive={body.color}
               emissiveIntensity={0.5}
               roughness={0.5}
             />
@@ -132,7 +133,7 @@ function BinaryScene({
 }
 
 export const GravityCanvas = memo(function GravityCanvas({
-  runtime,
+  session,
   onTelemetry,
   onReady,
   renderRevision,
@@ -140,7 +141,7 @@ export const GravityCanvas = memo(function GravityCanvas({
   return (
     <div
       role="img"
-      aria-label="Deux étoiles mobiles orbitent autour d’un barycentre marqué par un anneau, dans un plan incliné par rapport aux axes tridimensionnels."
+      aria-label={`Simulation gravitationnelle tridimensionnelle de ${session.bodies.length} corps célestes.`}
       className="h-[65svh] min-h-72 max-h-[28rem] w-full overflow-hidden rounded-xl border border-border/80 bg-black/30 md:h-[70svh] md:max-h-[36rem]"
     >
       <Canvas
@@ -148,8 +149,7 @@ export const GravityCanvas = memo(function GravityCanvas({
         dpr={[1, 1.5]}
         fallback={
           <div className="grid h-full place-items-center p-8 text-center text-sm text-muted-foreground">
-            Visualisation tridimensionnelle de deux étoiles en orbite autour
-            de leur barycentre commun.
+            Visualisation tridimensionnelle du scénario gravitationnel.
           </div>
         }
         frameloop="demand"
@@ -159,8 +159,8 @@ export const GravityCanvas = memo(function GravityCanvas({
           state.invalidate();
         }}
       >
-        <BinaryScene
-          runtime={runtime}
+        <GravityScene
+          session={session}
           onTelemetry={onTelemetry}
           renderRevision={renderRevision}
         />

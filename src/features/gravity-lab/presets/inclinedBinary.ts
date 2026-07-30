@@ -23,6 +23,7 @@ import {
   SOLAR_RADIUS_M,
 } from "../core/units";
 import { vector3, type Vector3 } from "../core/vector3";
+import type { FixedStepSchedulerConfig } from "../runtime/FixedStepScheduler";
 
 export const INCLINED_BINARY_STEPS_PER_PERIOD = 2_048;
 export const INCLINED_BINARY_SEPARATION_M = 0.2 * ASTRONOMICAL_UNIT_M;
@@ -38,6 +39,13 @@ export const INCLINED_BINARY_PERIOD_SECONDS =
 export const INCLINED_BINARY_TIME_STEP_SECONDS =
   INCLINED_BINARY_PERIOD_SECONDS / INCLINED_BINARY_STEPS_PER_PERIOD;
 export const INCLINED_BINARY_PRECISION_PROFILE = "balanced" as const;
+export const INCLINED_BINARY_SCHEDULER_CONFIG: FixedStepSchedulerConfig =
+  Object.freeze({
+    simulatedSecondsPerRealSecond:
+      INCLINED_BINARY_PERIOD_SECONDS / 24,
+    maxSubStepsPerTick: 32,
+    maxFrameDeltaSeconds: 0.25,
+  });
 
 const ORBITAL_PHASE_RADIANS = (35 * Math.PI) / 180;
 const INCLINATION_RADIANS = (30 * Math.PI) / 180;
