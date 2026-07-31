@@ -9,6 +9,7 @@ import { GravityLabSessionHost } from "../runtime/GravityLabSession";
 import {
   createGravityLabState,
   gravityLabReducer,
+  hasUnappliedScenarioChanges,
   type GravityLabState,
 } from "./gravityLabReducer";
 import { applyGravityLabDraft } from "./gravityLabApplication";
@@ -99,6 +100,12 @@ describe("gravity-lab draft application", () => {
       Object.isFrozen(applied.appliedScenario.presentation.bodies[0])
     ).toBe(true);
     expect(previousSession.runtime.isDisposed).toBe(true);
+    expect(
+      hasUnappliedScenarioChanges(
+        applied.draft,
+        applied.appliedScenario
+      )
+    ).toBe(false);
   });
 
   it("publishes the replacement as one coherent reducer transition", () => {

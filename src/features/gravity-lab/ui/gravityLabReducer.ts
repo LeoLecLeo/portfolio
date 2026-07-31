@@ -145,6 +145,74 @@ export function bodyColorError(color: string): string | null {
     : "La couleur doit utiliser le format #RRGGBB.";
 }
 
+export function hasUnappliedScenarioChanges(
+  draft: ScenarioDraft,
+  appliedScenario: AppliedScenario
+): boolean {
+  if (
+    draft.precisionProfile !==
+      appliedScenario.numericalPolicy.precisionProfile ||
+    draft.bodies.length !== appliedScenario.physics.bodies.length
+  ) {
+    return true;
+  }
+
+  const draftMaximumTimeStepSeconds =
+    draft.maximumTimeStep?.siValue ?? null;
+
+  if (
+    (draft.maximumTimeStep !== null &&
+      draftMaximumTimeStepSeconds === null) ||
+    draftMaximumTimeStepSeconds !==
+      appliedScenario.numericalPolicy.maximumTimeStepSeconds
+  ) {
+    return true;
+  }
+
+  const presentationByBodyId = new Map(
+    appliedScenario.presentation.bodies.map((body) => [
+      body.bodyId,
+      body,
+    ])
+  );
+
+  return draft.bodies.some((body, bodyIndex) => {
+    const appliedBody = appliedScenario.physics.bodies[bodyIndex];
+    const presentation = presentationByBodyId.get(body.id);
+
+    return (
+      appliedBody === undefined ||
+      presentation === undefined ||
+      body.id !== appliedBody.id ||
+      body.name !== appliedBody.name ||
+      body.color !== presentation.color ||
+      body.fixed !== appliedBody.fixed ||
+      body.mass.siValue === null ||
+      body.mass.siValue !== appliedBody.massKg ||
+      body.physicalRadius.siValue === null ||
+      body.physicalRadius.siValue !== appliedBody.physicalRadiusM ||
+      body.initialPosition.x.siValue === null ||
+      body.initialPosition.x.siValue !==
+        appliedBody.initialPositionM.x ||
+      body.initialPosition.y.siValue === null ||
+      body.initialPosition.y.siValue !==
+        appliedBody.initialPositionM.y ||
+      body.initialPosition.z.siValue === null ||
+      body.initialPosition.z.siValue !==
+        appliedBody.initialPositionM.z ||
+      body.initialVelocity.x.siValue === null ||
+      body.initialVelocity.x.siValue !==
+        appliedBody.initialVelocityMps.x ||
+      body.initialVelocity.y.siValue === null ||
+      body.initialVelocity.y.siValue !==
+        appliedBody.initialVelocityMps.y ||
+      body.initialVelocity.z.siValue === null ||
+      body.initialVelocity.z.siValue !==
+        appliedBody.initialVelocityMps.z
+    );
+  });
+}
+
 function draftFromApplied(
   appliedScenario: AppliedScenario
 ): ScenarioDraft {

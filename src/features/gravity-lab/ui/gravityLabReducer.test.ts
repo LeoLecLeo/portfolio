@@ -13,6 +13,7 @@ import {
   bodyNameError,
   createGravityLabState,
   gravityLabReducer,
+  hasUnappliedScenarioChanges,
   type GravityLabState,
 } from "./gravityLabReducer";
 
@@ -32,6 +33,72 @@ function addBody(state: GravityLabState): GravityLabState {
 }
 
 describe("gravity-lab draft reducer", () => {
+  it("distinguishes a synchronized draft from unapplied changes", () => {
+    const initial = initialState();
+
+    expect(
+      hasUnappliedScenarioChanges(
+        initial.draft,
+        initial.appliedScenario
+      )
+    ).toBe(false);
+
+    const changed = gravityLabReducer(initial, {
+      type: "edit-body-name",
+      bodyId: initial.selectedDraftBodyId,
+      name: "Nom non appliqué",
+    });
+    expect(
+      hasUnappliedScenarioChanges(
+        changed.draft,
+        changed.appliedScenario
+      )
+    ).toBe(true);
+
+    const cancelled = gravityLabReducer(changed, {
+      type: "cancel-draft",
+    });
+    expect(
+      hasUnappliedScenarioChanges(
+        cancelled.draft,
+        cancelled.appliedScenario
+      )
+    ).toBe(false);
+  });
+
+  it("treats invalid input as unapplied without using its valid history", () => {
+    const initial = initialState();
+    const invalid = gravityLabReducer(initial, {
+      type: "edit-number-raw",
+      bodyId: initial.selectedDraftBodyId,
+      field: "mass",
+      rawText: "5 kg",
+    });
+
+    expect(
+      hasUnappliedScenarioChanges(
+        invalid.draft,
+        invalid.appliedScenario
+      )
+    ).toBe(true);
+  });
+
+  it("does not report a display-unit change when the SI value is unchanged", () => {
+    const initial = initialState();
+    const changedUnit = gravityLabReducer(initial, {
+      type: "change-mass-unit",
+      bodyId: initial.selectedDraftBodyId,
+      unit: "solar-mass",
+    });
+
+    expect(
+      hasUnappliedScenarioChanges(
+        changedUnit.draft,
+        changedUnit.appliedScenario
+      )
+    ).toBe(false);
+  });
+
   it("adds explicit bodies up to the approved limit of 16", () => {
     let state = initialState();
 

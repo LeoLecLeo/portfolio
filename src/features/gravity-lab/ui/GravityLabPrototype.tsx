@@ -26,6 +26,8 @@ import {
 import {
   createGravityLabState,
   gravityLabReducer,
+  hasUnappliedScenarioChanges,
+  type GravityLabAction,
 } from "./gravityLabReducer";
 import { MAX_NEWTONIAN_BODIES } from "../core/types";
 import { BodyDraftEditor } from "./BodyDraftEditor";
@@ -157,6 +159,8 @@ export function GravityLabPrototype({
   const [applicationFailure, setApplicationFailure] = useState<
     string | null
   >(null);
+  const [applicationConfirmation, setApplicationConfirmation] =
+    useState<string | null>(null);
   const initialRendererStartHandled = useRef(false);
   const telemetry = labState.sessionTelemetry;
   const session = labState.activeSession;
@@ -167,6 +171,14 @@ export function GravityLabPrototype({
         labState.activeSession.schedulerConfig
       ),
     [labState.activeSession, labState.draft]
+  );
+  const hasUnappliedChanges = useMemo(
+    () =>
+      hasUnappliedScenarioChanges(
+        labState.draft,
+        labState.appliedScenario
+      ),
+    [labState.appliedScenario, labState.draft]
   );
 
   useEffect(() => {
@@ -182,6 +194,8 @@ export function GravityLabPrototype({
       type: "session-replaced",
       snapshot: host.replace(sessionRequest),
     });
+    setApplicationFailure(null);
+    setApplicationConfirmation(null);
     setRenderRevision((current) => current + 1);
   }, [host, sessionRequest]);
 
@@ -243,13 +257,20 @@ export function GravityLabPrototype({
     setRenderRevision((current) => current + 1);
   }, [host]);
 
-  const addBody = useCallback(() => {
-    dispatch({ type: "add-body" });
+  const updateDraft = useCallback((action: GravityLabAction) => {
+    setApplicationFailure(null);
+    setApplicationConfirmation(null);
+    dispatch(action);
   }, []);
+
+  const addBody = useCallback(() => {
+    updateDraft({ type: "add-body" });
+  }, [updateDraft]);
 
   const cancelDraft = useCallback(() => {
     dispatch({ type: "cancel-draft" });
     setApplicationFailure(null);
+    setApplicationConfirmation(null);
   }, []);
 
   const selectSessionBody = useCallback(
@@ -276,6 +297,9 @@ export function GravityLabPrototype({
 
     dispatch(result.action);
     setApplicationFailure(null);
+    setApplicationConfirmation(
+      "Scénario appliqué : une nouvelle session a été créée à t = 0 et mise en pause."
+    );
     setRenderRevision((current) => current + 1);
   }, [host, labState]);
 
@@ -301,13 +325,13 @@ export function GravityLabPrototype({
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              Prototype scientifique 2A
+              Laboratoire newtonien · phase 2B
             </p>
             <h2
               id="gravity-prototype-title"
               className="mt-1 text-2xl font-semibold tracking-tight"
             >
-              Système binaire incliné
+              Simulation active
             </h2>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -327,15 +351,38 @@ export function GravityLabPrototype({
 
       <aside className="flex flex-col gap-4 rounded-xl border border-border/80 bg-card/70 p-5 shadow-xl shadow-black/10">
         <div>
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Corps du brouillon
             </p>
-            <span className="text-xs text-muted-foreground">
-              {labState.draft.bodies.length}/{MAX_NEWTONIAN_BODIES}
-            </span>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <span
+                id="draft-state-message"
+                role="status"
+                className={
+                  hasUnappliedChanges
+                    ? "rounded-full border border-amber-400/50 bg-amber-400/10 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-300"
+                    : "rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300"
+                }
+              >
+                {hasUnappliedChanges
+                  ? "Modifications non appliquées"
+                  : "Synchronisé avec le scénario appliqué"}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {labState.draft.bodies.length}/{MAX_NEWTONIAN_BODIES}
+              </span>
+            </div>
           </div>
-          <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto">
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+            {hasUnappliedChanges
+              ? "La simulation active utilise encore le dernier scénario appliqué."
+              : "Les valeurs éditées correspondent au scénario de la session active."}
+          </p>
+          <ul
+            aria-label="Corps du brouillon"
+            className="mt-3 max-h-48 space-y-2 overflow-y-auto"
+          >
             {labState.draft.bodies.map((body) => {
               const selected =
                 body.id === labState.selectedDraftBodyId;
@@ -367,7 +414,7 @@ export function GravityLabPrototype({
                     aria-label={`Supprimer ${body.name}`}
                     disabled={labState.draft.bodies.length === 1}
                     onClick={() =>
-                      dispatch({
+                      updateDraft({
                         type: "remove-body",
                         bodyId: body.id,
                       })
@@ -380,7 +427,7 @@ export function GravityLabPrototype({
               );
             })}
           </ul>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             <button
               type="button"
               onClick={addBody}
@@ -394,7 +441,8 @@ export function GravityLabPrototype({
             <button
               type="button"
               onClick={cancelDraft}
-              className="rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-secondary"
+              disabled={!hasUnappliedChanges}
+              className="rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-45"
             >
               Annuler les modifications
             </button>
@@ -402,7 +450,9 @@ export function GravityLabPrototype({
           <button
             type="button"
             onClick={applyDraft}
+            aria-describedby="draft-state-message"
             disabled={
+              !hasUnappliedChanges ||
               !draftValidation.ok ||
               telemetry.status === "running"
             }
@@ -410,6 +460,14 @@ export function GravityLabPrototype({
           >
             Appliquer et réinitialiser
           </button>
+          {hasUnappliedChanges &&
+          draftValidation.ok &&
+          telemetry.status === "running" ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Mettez la simulation en pause avant d’appliquer les
+              modifications.
+            </p>
+          ) : null}
           {draftValidation.report.errors.length > 0 ? (
             <div
               role="alert"
@@ -441,6 +499,15 @@ export function GravityLabPrototype({
               {applicationFailure}
             </p>
           )}
+          {applicationConfirmation === null ? null : (
+            <p
+              role="status"
+              aria-live="polite"
+              className="mt-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-300"
+            >
+              {applicationConfirmation}
+            </p>
+          )}
           <p
             aria-live="polite"
             className="mt-2 text-xs text-muted-foreground"
@@ -459,14 +526,14 @@ export function GravityLabPrototype({
           draft={labState.draft}
           validationReport={draftValidation.report}
           selectedBodyId={labState.selectedDraftBodyId}
-          dispatch={dispatch}
+          dispatch={updateDraft}
         />
 
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             Commandes
           </p>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             <button
               type="button"
               onClick={pause}
@@ -486,7 +553,7 @@ export function GravityLabPrototype({
             <button
               type="button"
               onClick={reset}
-              className="col-span-2 rounded-lg border border-border bg-transparent px-3 py-2.5 text-sm font-medium transition-colors hover:bg-secondary"
+              className="rounded-lg border border-border bg-transparent px-3 py-2.5 text-sm font-medium transition-colors hover:bg-secondary sm:col-span-2"
             >
               Réinitialiser en pause
             </button>

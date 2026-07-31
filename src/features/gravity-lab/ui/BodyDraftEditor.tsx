@@ -62,7 +62,7 @@ function NumberEditor<Unit extends string>({
       <label htmlFor={id} className="text-xs font-medium">
         {label}
       </label>
-      <div className="grid grid-cols-[minmax(0,1fr)_8rem] gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_8rem]">
         <input
           id={id}
           type="text"
@@ -115,7 +115,15 @@ export function BodyDraftEditor({
   );
 
   if (bodyIndex === -1) {
-    return null;
+    return (
+      <p
+        role="alert"
+        className="rounded-lg border border-destructive/60 bg-destructive/10 p-3 text-sm text-destructive"
+      >
+        Aucun corps du brouillon n’est sélectionné. Sélectionnez un corps
+        dans la liste pour poursuivre l’édition.
+      </p>
+    );
   }
 
   const body = validationReport.analyzedDraft.bodies[bodyIndex];
