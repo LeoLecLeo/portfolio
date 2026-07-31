@@ -36,21 +36,31 @@ describe("gravity preset catalog", () => {
   });
 
   it("creates independent valid immutable scenarios on every call", () => {
-    const first = INCLINED_BINARY_PRESET.createScenario();
-    const second = INCLINED_BINARY_PRESET.createScenario();
+    for (const preset of GRAVITY_PRESETS) {
+      const first = preset.createScenario();
+      const second = preset.createScenario();
 
-    expect(first).not.toBe(second);
-    expect(first.physics).not.toBe(second.physics);
-    expect(first.physics.bodies).not.toBe(second.physics.bodies);
-    expect(first.physics.bodies[0]).not.toBe(second.physics.bodies[0]);
-    expect(first.physics.bodies[0].initialPositionM).not.toBe(
-      second.physics.bodies[0].initialPositionM
-    );
-    expect(first.presentation).not.toBe(second.presentation);
-    expect(isAppliedScenario(first)).toBe(true);
-    expect(isAppliedScenario(second)).toBe(true);
-    expect(Object.isFrozen(first)).toBe(true);
-    expect(Object.isFrozen(second)).toBe(true);
+      expect(first).not.toBe(second);
+      expect(first.physics).not.toBe(second.physics);
+      expect(first.physics.bodies).not.toBe(second.physics.bodies);
+      expect(first.physics.bodies[0]).not.toBe(
+        second.physics.bodies[0]
+      );
+      expect(first.physics.bodies[0].initialPositionM).not.toBe(
+        second.physics.bodies[0].initialPositionM
+      );
+      expect(first.presentation).not.toBe(second.presentation);
+      expect(first.physics.bodies.map(({ id }) => id)).toEqual(
+        second.physics.bodies.map(({ id }) => id)
+      );
+      expect(
+        new Set(first.physics.bodies.map(({ id }) => id)).size
+      ).toBe(first.physics.bodies.length);
+      expect(isAppliedScenario(first)).toBe(true);
+      expect(isAppliedScenario(second)).toBe(true);
+      expect(Object.isFrozen(first)).toBe(true);
+      expect(Object.isFrozen(second)).toBe(true);
+    }
   });
 
   it("preserves the existing inclined-binary scientific scenario exactly", () => {
