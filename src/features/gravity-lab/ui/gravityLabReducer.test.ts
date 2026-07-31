@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { appliedScenarioToDraft } from "../core/scenario";
+import { compileScenarioDraft } from "../core/scenarioCompiler";
 import {
   createInclinedBinaryAppliedScenario,
   INCLINED_BINARY_SCHEDULER_CONFIG,
@@ -8,6 +9,8 @@ import {
 import { GravityLabSessionHost } from "../runtime/GravityLabSession";
 import {
   EDITOR_DRAFT_UNIT_POLICY,
+  bodyColorError,
+  bodyNameError,
   createGravityLabState,
   gravityLabReducer,
   type GravityLabState,
@@ -181,5 +184,206 @@ describe("gravity-lab draft reducer", () => {
         ({ id }) => id === cancelled.selectedDraftBodyId
       )
     ).toBe(true);
+  });
+
+  it("edits every selected-body field only in the draft", () => {
+    const initial = initialState();
+    const bodyId = initial.selectedDraftBodyId;
+    const appliedScenario = initial.appliedScenario;
+    const activeSession = initial.activeSession;
+    let state = gravityLabReducer(initial, {
+      type: "edit-body-name",
+      bodyId,
+      name: "Étoile éditée",
+    });
+    state = gravityLabReducer(state, {
+      type: "edit-body-color",
+      bodyId,
+      color: "#12AbEf",
+    });
+    state = gravityLabReducer(state, {
+      type: "edit-number-raw",
+      bodyId,
+      field: "mass",
+      rawText: "2e30",
+    });
+    state = gravityLabReducer(state, {
+      type: "edit-number-raw",
+      bodyId,
+      field: "physicalRadius",
+      rawText: "7e8",
+    });
+    state = gravityLabReducer(state, {
+      type: "edit-number-raw",
+      bodyId,
+      field: "position-z",
+      rawText: "42",
+    });
+    state = gravityLabReducer(state, {
+      type: "edit-number-raw",
+      bodyId,
+      field: "velocity-y",
+      rawText: "-1250",
+    });
+    state = gravityLabReducer(state, {
+      type: "set-body-fixed",
+      bodyId,
+      fixed: true,
+    });
+    const body = state.draft.bodies.find(({ id }) => id === bodyId);
+
+    expect(body).toMatchObject({
+      id: bodyId,
+      name: "Étoile éditée",
+      color: "#12AbEf",
+      fixed: true,
+      mass: { rawText: "2e30", siValue: 2e30 },
+      physicalRadius: { rawText: "7e8", siValue: 7e8 },
+      initialPosition: { z: { rawText: "42", siValue: 42 } },
+      initialVelocity: {
+        y: { rawText: "-1250", siValue: -1250 },
+      },
+    });
+    expect(state.appliedScenario).toBe(appliedScenario);
+    expect(state.activeSession).toBe(activeSession);
+  });
+
+  it("preserves invalid raw values and their field errors", () => {
+    const initial = initialState();
+    const bodyId = initial.selectedDraftBodyId;
+    let state = gravityLabReducer(initial, {
+      type: "edit-number-raw",
+      bodyId,
+      field: "mass",
+      rawText: "5 kg",
+    });
+    state = gravityLabReducer(state, {
+      type: "edit-body-name",
+      bodyId,
+      name: "   ",
+    });
+    state = gravityLabReducer(state, {
+      type: "edit-body-color",
+      bodyId,
+      color: "#12ZZ00",
+    });
+    const body = state.draft.bodies.find(({ id }) => id === bodyId);
+
+    expect(body?.mass.rawText).toBe("5 kg");
+    expect(body?.mass.siValue).toBeNull();
+    expect(body?.mass.errors).toEqual([
+      expect.objectContaining({ code: "parse.invalid-syntax" }),
+    ]);
+    expect(bodyNameError(body?.name ?? "")).not.toBeNull();
+    expect(bodyColorError(body?.color ?? "")).not.toBeNull();
+  });
+
+  it("changes units without changing the canonical physical value", () => {
+    const initial = initialState();
+    const bodyId = initial.selectedDraftBodyId;
+    const original = initial.draft.bodies.find(
+      ({ id }) => id === bodyId
+    );
+    let state = gravityLabReducer(initial, {
+      type: "change-mass-unit",
+      bodyId,
+      unit: "solar-mass",
+    });
+    state = gravityLabReducer(state, {
+      type: "change-distance-unit",
+      bodyId,
+      field: "position-x",
+      unit: "au",
+    });
+    state = gravityLabReducer(state, {
+      type: "change-speed-unit",
+      bodyId,
+      field: "velocity-z",
+      unit: "km/s",
+    });
+    const changed = state.draft.bodies.find(
+      ({ id }) => id === bodyId
+    );
+
+    expect(changed?.mass.unit).toBe("solar-mass");
+    expect(changed?.mass.siValue).toBe(original?.mass.siValue);
+    expect(changed?.initialPosition.x.unit).toBe("au");
+    expect(changed?.initialPosition.x.siValue).toBe(
+      original?.initialPosition.x.siValue
+    );
+    expect(changed?.initialVelocity.z.unit).toBe("km/s");
+    expect(changed?.initialVelocity.z.siValue).toBe(
+      original?.initialVelocity.z.siValue
+    );
+  });
+
+  it("does not replace invalid text with history during a unit change", () => {
+    const initial = initialState();
+    const bodyId = initial.selectedDraftBodyId;
+    const invalid = gravityLabReducer(initial, {
+      type: "edit-number-raw",
+      bodyId,
+      field: "mass",
+      rawText: "5 kg",
+    });
+    const before = invalid.draft.bodies.find(
+      ({ id }) => id === bodyId
+    )?.mass;
+    const after = gravityLabReducer(invalid, {
+      type: "change-mass-unit",
+      bodyId,
+      unit: "solar-mass",
+    });
+    const field = after.draft.bodies.find(
+      ({ id }) => id === bodyId
+    )?.mass;
+
+    expect(field).toBe(before);
+    expect(field?.rawText).toBe("5 kg");
+    expect(field?.siValue).toBeNull();
+  });
+
+  it("reports a fixed body with non-zero velocity without correcting it", () => {
+    const initial = initialState();
+    const bodyId = initial.selectedDraftBodyId;
+    const beforeVelocity = initial.draft.bodies.find(
+      ({ id }) => id === bodyId
+    )?.initialVelocity;
+    const fixed = gravityLabReducer(initial, {
+      type: "set-body-fixed",
+      bodyId,
+      fixed: true,
+    });
+    const result = compileScenarioDraft(fixed.draft);
+    const bodyIndex = fixed.draft.bodies.findIndex(
+      ({ id }) => id === bodyId
+    );
+    const analyzed =
+      result.report.analyzedDraft.bodies[bodyIndex];
+
+    expect(result.ok).toBe(false);
+    expect(result.report.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "body.fixed-velocity",
+          path: `/bodies/${bodyIndex}/initialVelocity`,
+        }),
+      ])
+    );
+    expect(analyzed.initialVelocity.x.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "body.fixed-velocity" }),
+      ])
+    );
+    for (const axis of ["x", "y", "z"] as const) {
+      expect(analyzed.initialVelocity[axis].rawText).toBe(
+        beforeVelocity?.[axis].rawText
+      );
+      expect(analyzed.initialVelocity[axis].siValue).toBe(
+        beforeVelocity?.[axis].siValue
+      );
+    }
+    expect(fixed.appliedScenario).toBe(initial.appliedScenario);
+    expect(fixed.activeSession).toBe(initial.activeSession);
   });
 });

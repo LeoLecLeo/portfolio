@@ -27,6 +27,7 @@ import {
   gravityLabReducer,
 } from "./gravityLabReducer";
 import { MAX_NEWTONIAN_BODIES } from "../core/types";
+import { BodyDraftEditor } from "./BodyDraftEditor";
 
 const SECONDS_PER_DAY = 86_400;
 
@@ -356,6 +357,12 @@ export function GravityLabPrototype({
             Sélection de session : {labState.selectedSessionBodyId}
           </p>
         </div>
+
+        <BodyDraftEditor
+          draft={labState.draft}
+          selectedBodyId={labState.selectedDraftBodyId}
+          dispatch={dispatch}
+        />
 
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">

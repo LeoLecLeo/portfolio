@@ -61,6 +61,7 @@ function body(
   return {
     id,
     name: id,
+    color: "#67e8f9",
     fixed: false,
     mass: mass("1e20"),
     physicalRadius: distance("1e6"),

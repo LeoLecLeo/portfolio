@@ -1,4 +1,5 @@
 import {
+  defaultBodyDraftColor,
   isAppliedScenario,
   type AppliedScenario,
 } from "../core/scenario";
@@ -12,13 +13,6 @@ import type { MutablePosition3 } from "./SimulationReadView";
 
 const TARGET_SCENE_RADIUS = 4;
 const FALLBACK_PHYSICAL_EXTENT_M = 1;
-const BODY_COLORS = Object.freeze([
-  "#67e8f9",
-  "#a5b4fc",
-  "#f0abfc",
-  "#fcd34d",
-]);
-
 export type SceneTransform = Readonly<{
   originM: Vector3;
   sceneUnitsPerMeter: number;
@@ -124,7 +118,7 @@ export class GravityLabSession {
         Object.freeze({
           bodyId: body.id,
           name: body.name,
-          color: BODY_COLORS[index % BODY_COLORS.length],
+          color: defaultBodyDraftColor(index),
           graphicRadiusScene: 0.58,
         })
       )

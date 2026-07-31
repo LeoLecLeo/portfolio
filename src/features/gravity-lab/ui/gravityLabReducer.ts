@@ -3,13 +3,21 @@ import {
   MASS_DRAFT_UNIT_CONVERTER,
   SPEED_DRAFT_UNIT_CONVERTER,
   appliedScenarioToDraft,
+  changeDraftNumberUnit,
   createDraftNumber,
+  defaultBodyDraftColor,
+  updateDraftNumberRawText,
   type AppliedScenario,
   type BodyDraft,
   type ScenarioDraft,
   type ScenarioDraftUnitPolicy,
 } from "../core/scenario";
 import { MAX_NEWTONIAN_BODIES } from "../core/types";
+import type {
+  DistanceUnit,
+  MassUnit,
+  SpeedUnit,
+} from "../core/units";
 import type { PrototypeTelemetry } from "../runtime/GravityPrototypeRuntime";
 import type {
   GravityLabHostSnapshot,
@@ -58,7 +66,73 @@ export type GravityLabAction =
     }>
   | Readonly<{
       type: "cancel-draft";
+    }>
+  | Readonly<{
+      type: "edit-body-name";
+      bodyId: string;
+      name: string;
+    }>
+  | Readonly<{
+      type: "edit-body-color";
+      bodyId: string;
+      color: string;
+    }>
+  | Readonly<{
+      type: "set-body-fixed";
+      bodyId: string;
+      fixed: boolean;
+    }>
+  | Readonly<{
+      type: "edit-number-raw";
+      bodyId: string;
+      field: DraftNumericField;
+      rawText: string;
+    }>
+  | Readonly<{
+      type: "change-mass-unit";
+      bodyId: string;
+      unit: MassUnit;
+    }>
+  | Readonly<{
+      type: "change-distance-unit";
+      bodyId: string;
+      field: DraftDistanceField;
+      unit: DistanceUnit;
+    }>
+  | Readonly<{
+      type: "change-speed-unit";
+      bodyId: string;
+      field: DraftSpeedField;
+      unit: SpeedUnit;
     }>;
+
+export type DraftDistanceField =
+  | "physicalRadius"
+  | "position-x"
+  | "position-y"
+  | "position-z";
+
+export type DraftSpeedField =
+  | "velocity-x"
+  | "velocity-y"
+  | "velocity-z";
+
+export type DraftNumericField =
+  | "mass"
+  | DraftDistanceField
+  | DraftSpeedField;
+
+export function bodyNameError(name: string): string | null {
+  return name.trim().length === 0
+    ? "Le nom affiché est obligatoire."
+    : null;
+}
+
+export function bodyColorError(color: string): string | null {
+  return /^#[0-9A-Fa-f]{6}$/.test(color)
+    ? null
+    : "La couleur doit utiliser le format #RRGGBB.";
+}
 
 function draftFromApplied(
   appliedScenario: AppliedScenario
@@ -100,6 +174,7 @@ function createExplicitBodyDraft(
   return {
     id,
     name: `Corps ${ordinal}`,
+    color: defaultBodyDraftColor(existingBodyCount),
     fixed: false,
     mass,
     physicalRadius: radius,
@@ -114,6 +189,90 @@ function createExplicitBodyDraft(
       z: velocity("0"),
     },
   };
+}
+
+function updateBody(
+  state: GravityLabState,
+  bodyId: string,
+  update: (body: BodyDraft) => BodyDraft
+): GravityLabState {
+  const bodyIndex = state.draft.bodies.findIndex(
+    ({ id }) => id === bodyId
+  );
+
+  if (bodyIndex === -1) {
+    return state;
+  }
+
+  const bodies = [...state.draft.bodies];
+  bodies[bodyIndex] = update(bodies[bodyIndex]);
+
+  return {
+    ...state,
+    draft: {
+      ...state.draft,
+      bodies,
+    },
+  };
+}
+
+function updateNumberRaw(
+  body: BodyDraft,
+  field: DraftNumericField,
+  rawText: string
+): BodyDraft {
+  switch (field) {
+    case "mass":
+      return {
+        ...body,
+        mass: updateDraftNumberRawText(
+          body.mass,
+          rawText,
+          MASS_DRAFT_UNIT_CONVERTER
+        ),
+      };
+    case "physicalRadius":
+      return {
+        ...body,
+        physicalRadius: updateDraftNumberRawText(
+          body.physicalRadius,
+          rawText,
+          DISTANCE_DRAFT_UNIT_CONVERTER
+        ),
+      };
+    case "position-x":
+    case "position-y":
+    case "position-z": {
+      const axis = field.at(-1) as "x" | "y" | "z";
+      return {
+        ...body,
+        initialPosition: {
+          ...body.initialPosition,
+          [axis]: updateDraftNumberRawText(
+            body.initialPosition[axis],
+            rawText,
+            DISTANCE_DRAFT_UNIT_CONVERTER
+          ),
+        },
+      };
+    }
+    case "velocity-x":
+    case "velocity-y":
+    case "velocity-z": {
+      const axis = field.at(-1) as "x" | "y" | "z";
+      return {
+        ...body,
+        initialVelocity: {
+          ...body.initialVelocity,
+          [axis]: updateDraftNumberRawText(
+            body.initialVelocity[axis],
+            rawText,
+            SPEED_DRAFT_UNIT_CONVERTER
+          ),
+        },
+      };
+    }
+  }
 }
 
 function nextUniqueBodyId(
@@ -245,6 +404,84 @@ export function gravityLabReducer(
         selectedDraftBodyId,
       };
     }
+
+    case "edit-body-name":
+      return updateBody(state, action.bodyId, (body) => ({
+        ...body,
+        name: action.name,
+      }));
+
+    case "edit-body-color":
+      return updateBody(state, action.bodyId, (body) => ({
+        ...body,
+        color: action.color,
+      }));
+
+    case "set-body-fixed":
+      return updateBody(state, action.bodyId, (body) => ({
+        ...body,
+        fixed: action.fixed,
+      }));
+
+    case "edit-number-raw":
+      return updateBody(state, action.bodyId, (body) =>
+        updateNumberRaw(body, action.field, action.rawText)
+      );
+
+    case "change-mass-unit":
+      return updateBody(state, action.bodyId, (body) => ({
+        ...body,
+        mass: changeDraftNumberUnit(
+          body.mass,
+          action.unit,
+          MASS_DRAFT_UNIT_CONVERTER
+        ).field,
+      }));
+
+    case "change-distance-unit":
+      return updateBody(state, action.bodyId, (body) => {
+        if (action.field === "physicalRadius") {
+          return {
+            ...body,
+            physicalRadius: changeDraftNumberUnit(
+              body.physicalRadius,
+              action.unit,
+              DISTANCE_DRAFT_UNIT_CONVERTER
+            ).field,
+          };
+        }
+
+        const axis = action.field.at(-1) as "x" | "y" | "z";
+
+        return {
+          ...body,
+          initialPosition: {
+            ...body.initialPosition,
+            [axis]: changeDraftNumberUnit(
+              body.initialPosition[axis],
+              action.unit,
+              DISTANCE_DRAFT_UNIT_CONVERTER
+            ).field,
+          },
+        };
+      });
+
+    case "change-speed-unit":
+      return updateBody(state, action.bodyId, (body) => {
+        const axis = action.field.at(-1) as "x" | "y" | "z";
+
+        return {
+          ...body,
+          initialVelocity: {
+            ...body.initialVelocity,
+            [axis]: changeDraftNumberUnit(
+              body.initialVelocity[axis],
+              action.unit,
+              SPEED_DRAFT_UNIT_CONVERTER
+            ).field,
+          },
+        };
+      });
 
     case "cancel-draft": {
       const draft = draftFromApplied(state.appliedScenario);

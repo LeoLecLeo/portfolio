@@ -4,6 +4,7 @@ import {
 } from "../core/scenarioCompiler";
 import {
   createDraftNumberFromSi,
+  defaultBodyDraftColor,
   DISTANCE_DRAFT_UNIT_CONVERTER,
   MASS_DRAFT_UNIT_CONVERTER,
   SPEED_DRAFT_UNIT_CONVERTER,
@@ -135,11 +136,13 @@ export function createInclinedBinaryConfig(
 }
 
 function bodyDefinitionToDraft(
-  body: CelestialBodyDefinition
+  body: CelestialBodyDefinition,
+  bodyIndex: number
 ): BodyDraft {
   return {
     id: body.id,
     name: body.name,
+    color: defaultBodyDraftColor(bodyIndex),
     fixed: body.fixed,
     mass: createDraftNumberFromSi(
       body.massKg,

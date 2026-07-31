@@ -446,6 +446,7 @@ export function changeDraftNumberUnit<Unit extends string>(
 export type BodyDraft = Readonly<{
   id: string;
   name: string;
+  color: string;
   fixed: boolean;
   mass: DraftNumber<MassUnit>;
   physicalRadius: DraftNumber<DistanceUnit>;
@@ -466,6 +467,25 @@ export type ScenarioDraft = Readonly<{
   precisionProfile: PrecisionProfile;
   maximumTimeStep: DraftNumber<TimeUnit> | null;
 }>;
+
+export const DEFAULT_BODY_DRAFT_COLORS = Object.freeze([
+  "#67e8f9",
+  "#a5b4fc",
+  "#f0abfc",
+  "#fcd34d",
+]);
+
+export function defaultBodyDraftColor(bodyIndex: number): string {
+  if (!Number.isInteger(bodyIndex) || bodyIndex < 0) {
+    throw new RangeError(
+      "A default draft color needs a non-negative body index."
+    );
+  }
+
+  return DEFAULT_BODY_DRAFT_COLORS[
+    bodyIndex % DEFAULT_BODY_DRAFT_COLORS.length
+  ];
+}
 
 export type ScenarioDraftUnitPolicy = Readonly<{
   mass: MassUnit;
@@ -809,9 +829,10 @@ export function appliedScenarioToDraft(
   }
 
   return {
-    bodies: scenario.physics.bodies.map((body) => ({
+    bodies: scenario.physics.bodies.map((body, bodyIndex) => ({
       id: body.id,
       name: body.name,
+      color: defaultBodyDraftColor(bodyIndex),
       fixed: body.fixed,
       mass: createDraftNumberFromSi(
         body.massKg,

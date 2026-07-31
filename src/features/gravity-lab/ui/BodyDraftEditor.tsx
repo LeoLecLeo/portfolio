@@ -1,0 +1,354 @@
+"use client";
+
+import { useMemo, type Dispatch } from "react";
+
+import {
+  type DraftNumber,
+  type ScenarioDraft,
+} from "../core/scenario";
+import { compileScenarioDraft } from "../core/scenarioCompiler";
+import type {
+  DistanceUnit,
+  MassUnit,
+  SpeedUnit,
+} from "../core/units";
+import {
+  bodyColorError,
+  bodyNameError,
+  type DraftDistanceField,
+  type DraftNumericField,
+  type DraftSpeedField,
+  type GravityLabAction,
+} from "./gravityLabReducer";
+
+const MASS_UNITS: readonly MassUnit[] = [
+  "kg",
+  "earth-mass",
+  "jupiter-mass",
+  "solar-mass",
+];
+const DISTANCE_UNITS: readonly DistanceUnit[] = [
+  "m",
+  "km",
+  "au",
+  "earth-radius",
+  "jupiter-radius",
+  "solar-radius",
+];
+const SPEED_UNITS: readonly SpeedUnit[] = ["m/s", "km/s"];
+
+type NumberEditorProps<Unit extends string> = Readonly<{
+  id: string;
+  label: string;
+  field: DraftNumber<Unit>;
+  units: readonly Unit[];
+  onRawText: (rawText: string) => void;
+  onUnit: (unit: Unit) => void;
+}>;
+
+function NumberEditor<Unit extends string>({
+  id,
+  label,
+  field,
+  units,
+  onRawText,
+  onUnit,
+}: NumberEditorProps<Unit>) {
+  const errorId = `${id}-errors`;
+  const hasErrors = field.errors.length > 0;
+
+  return (
+    <div className="space-y-1">
+      <label htmlFor={id} className="text-xs font-medium">
+        {label}
+      </label>
+      <div className="grid grid-cols-[minmax(0,1fr)_8rem] gap-2">
+        <input
+          id={id}
+          type="text"
+          inputMode="decimal"
+          value={field.rawText}
+          aria-invalid={hasErrors}
+          aria-describedby={hasErrors ? errorId : undefined}
+          onChange={(event) => onRawText(event.target.value)}
+          className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5 font-mono text-xs aria-[invalid=true]:border-destructive"
+        />
+        <select
+          aria-label={`Unité — ${label}`}
+          value={field.unit}
+          onChange={(event) => onUnit(event.target.value as Unit)}
+          className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5 text-xs"
+        >
+          {units.map((unit) => (
+            <option key={unit} value={unit}>
+              {unit}
+            </option>
+          ))}
+        </select>
+      </div>
+      {hasErrors ? (
+        <ul id={errorId} className="space-y-0.5 text-xs text-destructive">
+          {field.errors.map((error, index) => (
+            <li key={`${error.code}-${index}`}>{error.message}</li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+export type BodyDraftEditorProps = Readonly<{
+  draft: ScenarioDraft;
+  selectedBodyId: string;
+  dispatch: Dispatch<GravityLabAction>;
+}>;
+
+export function BodyDraftEditor({
+  draft,
+  selectedBodyId,
+  dispatch,
+}: BodyDraftEditorProps) {
+  const compilation = useMemo(
+    () => compileScenarioDraft(draft),
+    [draft]
+  );
+  const bodyIndex = draft.bodies.findIndex(
+    ({ id }) => id === selectedBodyId
+  );
+
+  if (bodyIndex === -1) {
+    return null;
+  }
+
+  const body = compilation.report.analyzedDraft.bodies[bodyIndex];
+  const prefix = `draft-body-${bodyIndex}`;
+  const nameError = bodyNameError(body.name);
+  const colorError = bodyColorError(body.color);
+  const editRaw = (field: DraftNumericField, rawText: string) =>
+    dispatch({
+      type: "edit-number-raw",
+      bodyId: body.id,
+      field,
+      rawText,
+    });
+  const changeDistanceUnit = (
+    field: DraftDistanceField,
+    unit: DistanceUnit
+  ) =>
+    dispatch({
+      type: "change-distance-unit",
+      bodyId: body.id,
+      field,
+      unit,
+    });
+  const changeSpeedUnit = (
+    field: DraftSpeedField,
+    unit: SpeedUnit
+  ) =>
+    dispatch({
+      type: "change-speed-unit",
+      bodyId: body.id,
+      field,
+      unit,
+    });
+
+  return (
+    <fieldset className="space-y-4 border-t border-border/80 pt-4">
+      <legend className="px-1 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        Corps sélectionné
+      </legend>
+
+      <div className="space-y-1">
+        <span className="text-xs font-medium">Identifiant technique</span>
+        <output
+          aria-label="Identifiant technique"
+          className="block rounded-md border border-border bg-muted/40 px-2 py-1.5 font-mono text-xs"
+        >
+          {body.id}
+        </output>
+      </div>
+
+      <div className="space-y-1">
+        <label htmlFor={`${prefix}-name`} className="text-xs font-medium">
+          Nom
+        </label>
+        <input
+          id={`${prefix}-name`}
+          type="text"
+          value={body.name}
+          aria-invalid={nameError !== null}
+          aria-describedby={
+            nameError === null ? undefined : `${prefix}-name-error`
+          }
+          onChange={(event) =>
+            dispatch({
+              type: "edit-body-name",
+              bodyId: body.id,
+              name: event.target.value,
+            })
+          }
+          className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm aria-[invalid=true]:border-destructive"
+        />
+        {nameError === null ? null : (
+          <p
+            id={`${prefix}-name-error`}
+            className="text-xs text-destructive"
+          >
+            {nameError}
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-1">
+        <label htmlFor={`${prefix}-color`} className="text-xs font-medium">
+          Couleur
+        </label>
+        <div className="grid grid-cols-[minmax(0,1fr)_2.5rem] gap-2">
+          <input
+            id={`${prefix}-color`}
+            type="text"
+            value={body.color}
+            aria-invalid={colorError !== null}
+            aria-describedby={
+              colorError === null
+                ? undefined
+                : `${prefix}-color-error`
+            }
+            onChange={(event) =>
+              dispatch({
+                type: "edit-body-color",
+                bodyId: body.id,
+                color: event.target.value,
+              })
+            }
+            className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5 font-mono text-xs aria-[invalid=true]:border-destructive"
+          />
+          <span
+            aria-hidden="true"
+            className="rounded-md border border-border"
+            style={{
+              backgroundColor:
+                colorError === null ? body.color : "transparent",
+            }}
+          />
+        </div>
+        {colorError === null ? null : (
+          <p
+            id={`${prefix}-color-error`}
+            className="text-xs text-destructive"
+          >
+            {colorError}
+          </p>
+        )}
+      </div>
+
+      <fieldset className="space-y-3 rounded-lg border border-border/80 p-3">
+        <legend className="px-1 text-xs font-semibold">
+          Propriétés physiques
+        </legend>
+        <NumberEditor
+          id={`${prefix}-mass`}
+          label="Masse"
+          field={body.mass}
+          units={MASS_UNITS}
+          onRawText={(rawText) => editRaw("mass", rawText)}
+          onUnit={(unit) =>
+            dispatch({
+              type: "change-mass-unit",
+              bodyId: body.id,
+              unit,
+            })
+          }
+        />
+        <NumberEditor
+          id={`${prefix}-radius`}
+          label="Rayon physique"
+          field={body.physicalRadius}
+          units={DISTANCE_UNITS}
+          onRawText={(rawText) =>
+            editRaw("physicalRadius", rawText)
+          }
+          onUnit={(unit) =>
+            changeDistanceUnit("physicalRadius", unit)
+          }
+        />
+      </fieldset>
+
+      <fieldset className="space-y-3 rounded-lg border border-border/80 p-3">
+        <legend className="px-1 text-xs font-semibold">
+          Position initiale
+        </legend>
+        {(["x", "y", "z"] as const).map((axis) => (
+          <NumberEditor
+            key={axis}
+            id={`${prefix}-position-${axis}`}
+            label={axis.toUpperCase()}
+            field={body.initialPosition[axis]}
+            units={DISTANCE_UNITS}
+            onRawText={(rawText) =>
+              editRaw(`position-${axis}`, rawText)
+            }
+            onUnit={(unit) =>
+              changeDistanceUnit(`position-${axis}`, unit)
+            }
+          />
+        ))}
+      </fieldset>
+
+      <fieldset className="space-y-3 rounded-lg border border-border/80 p-3">
+        <legend className="px-1 text-xs font-semibold">
+          Vitesse initiale
+        </legend>
+        {(["x", "y", "z"] as const).map((axis) => (
+          <NumberEditor
+            key={axis}
+            id={`${prefix}-velocity-${axis}`}
+            label={`V${axis}`}
+            field={body.initialVelocity[axis]}
+            units={SPEED_UNITS}
+            onRawText={(rawText) =>
+              editRaw(`velocity-${axis}`, rawText)
+            }
+            onUnit={(unit) =>
+              changeSpeedUnit(`velocity-${axis}`, unit)
+            }
+          />
+        ))}
+      </fieldset>
+
+      <fieldset className="space-y-2 rounded-lg border border-border/80 p-3">
+        <legend className="px-1 text-xs font-semibold">Mobilité</legend>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="radio"
+            name={`${prefix}-mobility`}
+            checked={!body.fixed}
+            onChange={() =>
+              dispatch({
+                type: "set-body-fixed",
+                bodyId: body.id,
+                fixed: false,
+              })
+            }
+          />
+          Mobile
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="radio"
+            name={`${prefix}-mobility`}
+            checked={body.fixed}
+            onChange={() =>
+              dispatch({
+                type: "set-body-fixed",
+                bodyId: body.id,
+                fixed: true,
+              })
+            }
+          />
+          Fixe
+        </label>
+      </fieldset>
+    </fieldset>
+  );
+}
