@@ -515,6 +515,12 @@ export type AppliedScenario = Readonly<{
   physics: Readonly<{
     bodies: readonly CelestialBodyDefinition[];
   }>;
+  presentation: Readonly<{
+    bodies: readonly Readonly<{
+      bodyId: string;
+      color: string;
+    }>[];
+  }>;
   numericalPolicy: Readonly<{
     precisionProfile: PrecisionProfile;
     qTarget: number;
@@ -684,12 +690,37 @@ function hasBudgetAssessmentShape(
   );
 }
 
+function hasPresentationShape(
+  value: unknown,
+  physicsBodies: readonly unknown[]
+): boolean {
+  return (
+    isRecord(value) &&
+    hasExactOwnKeys(value, ["bodies"]) &&
+    Array.isArray(value.bodies) &&
+    value.bodies.length === physicsBodies.length &&
+    value.bodies.every((entry, bodyIndex) => {
+      const physicsBody = physicsBodies[bodyIndex];
+
+      return (
+        isRecord(entry) &&
+        isRecord(physicsBody) &&
+        hasExactOwnKeys(entry, ["bodyId", "color"]) &&
+        entry.bodyId === physicsBody.id &&
+        typeof entry.color === "string" &&
+        /^#[0-9A-Fa-f]{6}$/.test(entry.color)
+      );
+    })
+  );
+}
+
 export function isAppliedScenario(value: unknown): value is AppliedScenario {
   if (
     !isRecord(value) ||
     !hasExactOwnKeys(value, [
       "kind",
       "physics",
+      "presentation",
       "numericalPolicy",
       "initialValidity",
     ]) ||
@@ -700,6 +731,10 @@ export function isAppliedScenario(value: unknown): value is AppliedScenario {
     !Array.isArray(value.physics.bodies) ||
     value.physics.bodies.length < 1 ||
     !value.physics.bodies.every(hasBodyShape) ||
+    !hasPresentationShape(
+      value.presentation,
+      value.physics.bodies
+    ) ||
     !isRecord(value.numericalPolicy) ||
     !hasExactOwnKeys(value.numericalPolicy, [
       "precisionProfile",
@@ -832,7 +867,7 @@ export function appliedScenarioToDraft(
     bodies: scenario.physics.bodies.map((body, bodyIndex) => ({
       id: body.id,
       name: body.name,
-      color: defaultBodyDraftColor(bodyIndex),
+      color: scenario.presentation.bodies[bodyIndex].color,
       fixed: body.fixed,
       mass: createDraftNumberFromSi(
         body.massKg,

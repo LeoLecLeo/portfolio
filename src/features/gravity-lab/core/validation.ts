@@ -49,6 +49,7 @@ export type ValidationDiagnosticCode =
   | "body.id-required"
   | "body.id-duplicate"
   | "body.name-required"
+  | "body.color-format"
   | "body.mass-non-positive"
   | "body.mass-limit"
   | "body.radius-negative"

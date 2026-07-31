@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useReducer,
   useRef,
   useState,
@@ -28,6 +29,10 @@ import {
 } from "./gravityLabReducer";
 import { MAX_NEWTONIAN_BODIES } from "../core/types";
 import { BodyDraftEditor } from "./BodyDraftEditor";
+import {
+  applyGravityLabDraft,
+  validateGravityLabDraft,
+} from "./gravityLabApplication";
 
 const SECONDS_PER_DAY = 86_400;
 
@@ -149,9 +154,20 @@ export function GravityLabPrototype({
   );
   const [renderRevision, setRenderRevision] = useState(0);
   const [rendererReady, setRendererReady] = useState(false);
+  const [applicationFailure, setApplicationFailure] = useState<
+    string | null
+  >(null);
   const initialRendererStartHandled = useRef(false);
   const telemetry = labState.sessionTelemetry;
   const session = labState.activeSession;
+  const draftValidation = useMemo(
+    () =>
+      validateGravityLabDraft(
+        labState.draft,
+        labState.activeSession.schedulerConfig
+      ),
+    [labState.activeSession, labState.draft]
+  );
 
   useEffect(() => {
     if (
@@ -233,7 +249,24 @@ export function GravityLabPrototype({
 
   const cancelDraft = useCallback(() => {
     dispatch({ type: "cancel-draft" });
+    setApplicationFailure(null);
   }, []);
+
+  const applyDraft = useCallback(() => {
+    const result = applyGravityLabDraft(labState, host);
+
+    if (!result.ok) {
+      setApplicationFailure(
+        result.message ??
+          "Le brouillon contient des erreurs et n’a pas été appliqué."
+      );
+      return;
+    }
+
+    dispatch(result.action);
+    setApplicationFailure(null);
+    setRenderRevision((current) => current + 1);
+  }, [host, labState]);
 
   const notice =
     telemetry.collisionMessage ??
@@ -353,6 +386,48 @@ export function GravityLabPrototype({
               Annuler les modifications
             </button>
           </div>
+          <button
+            type="button"
+            onClick={applyDraft}
+            disabled={
+              !draftValidation.ok ||
+              telemetry.status === "running"
+            }
+            className="mt-2 w-full rounded-lg bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            Appliquer et réinitialiser
+          </button>
+          {draftValidation.report.errors.length > 0 ? (
+            <div
+              role="alert"
+              className="mt-3 rounded-lg border border-destructive/60 bg-destructive/10 p-3"
+            >
+              <p className="text-xs font-semibold text-destructive">
+                {draftValidation.report.errors.length} erreur
+                {draftValidation.report.errors.length > 1 ? "s" : ""}{" "}
+                empêche
+                {draftValidation.report.errors.length > 1
+                  ? "nt"
+                  : ""}{" "}
+                l’application.
+              </p>
+              <ul className="mt-2 space-y-1 text-xs text-destructive">
+                {draftValidation.report.errors.map((error, index) => (
+                  <li key={`${error.code}-${error.path}-${index}`}>
+                    {error.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {applicationFailure === null ? null : (
+            <p
+              role="alert"
+              className="mt-3 text-xs text-destructive"
+            >
+              {applicationFailure}
+            </p>
+          )}
           <p className="mt-2 text-xs text-muted-foreground">
             Sélection de session : {labState.selectedSessionBodyId}
           </p>
@@ -360,6 +435,7 @@ export function GravityLabPrototype({
 
         <BodyDraftEditor
           draft={labState.draft}
+          validationReport={draftValidation.report}
           selectedBodyId={labState.selectedDraftBodyId}
           dispatch={dispatch}
         />

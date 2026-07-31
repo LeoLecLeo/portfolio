@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, type Dispatch } from "react";
+import type { Dispatch } from "react";
 
 import {
   type DraftNumber,
   type ScenarioDraft,
+  type ScenarioValidationReport,
 } from "../core/scenario";
-import { compileScenarioDraft } from "../core/scenarioCompiler";
 import type {
   DistanceUnit,
   MassUnit,
@@ -99,19 +99,17 @@ function NumberEditor<Unit extends string>({
 
 export type BodyDraftEditorProps = Readonly<{
   draft: ScenarioDraft;
+  validationReport: ScenarioValidationReport;
   selectedBodyId: string;
   dispatch: Dispatch<GravityLabAction>;
 }>;
 
 export function BodyDraftEditor({
   draft,
+  validationReport,
   selectedBodyId,
   dispatch,
 }: BodyDraftEditorProps) {
-  const compilation = useMemo(
-    () => compileScenarioDraft(draft),
-    [draft]
-  );
   const bodyIndex = draft.bodies.findIndex(
     ({ id }) => id === selectedBodyId
   );
@@ -120,7 +118,7 @@ export function BodyDraftEditor({
     return null;
   }
 
-  const body = compilation.report.analyzedDraft.bodies[bodyIndex];
+  const body = validationReport.analyzedDraft.bodies[bodyIndex];
   const prefix = `draft-body-${bodyIndex}`;
   const nameError = bodyNameError(body.name);
   const colorError = bodyColorError(body.color);

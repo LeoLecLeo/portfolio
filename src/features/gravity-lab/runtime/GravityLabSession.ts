@@ -1,5 +1,4 @@
 import {
-  defaultBodyDraftColor,
   isAppliedScenario,
   type AppliedScenario,
 } from "../core/scenario";
@@ -97,6 +96,7 @@ export class GravityLabSession {
   readonly runtime: GravityPrototypeRuntime;
   readonly sceneTransform: SceneTransform;
   readonly bodies: readonly SessionBodyPresentation[];
+  readonly schedulerConfig: FixedStepSchedulerConfig;
 
   constructor(request: GravityLabSessionRequest) {
     if (!isAppliedScenario(request.appliedScenario)) {
@@ -106,9 +106,12 @@ export class GravityLabSession {
     }
 
     this.appliedScenario = request.appliedScenario;
+    this.schedulerConfig = Object.freeze({
+      ...request.schedulerConfig,
+    });
     this.runtime = new GravityPrototypeRuntime(
       request.appliedScenario,
-      request.schedulerConfig
+      this.schedulerConfig
     );
     this.sceneTransform = createSceneTransform(
       request.appliedScenario
@@ -118,7 +121,8 @@ export class GravityLabSession {
         Object.freeze({
           bodyId: body.id,
           name: body.name,
-          color: defaultBodyDraftColor(index),
+          color:
+            request.appliedScenario.presentation.bodies[index].color,
           graphicRadiusScene: 0.58,
         })
       )

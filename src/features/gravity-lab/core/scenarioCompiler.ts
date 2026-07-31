@@ -339,6 +339,18 @@ export function compileScenarioDraft(
     const sourceBody = draft.bodies[bodyIndex];
     const subject = bodySubject(sourceBody.id, bodyIndex);
     const bodyPath = `/bodies/${bodyIndex}`;
+
+    if (!/^#[0-9A-Fa-f]{6}$/.test(sourceBody.color)) {
+      diagnostics.push({
+        code: "body.color-format",
+        severity: "error",
+        category: "elementary",
+        path: `${bodyPath}/color`,
+        subject,
+        message: `Color of body "${sourceBody.id}" must use the #RRGGBB format.`,
+      });
+    }
+
     const mass = analyzeDraftField(
       sourceBody.mass,
       MASS_DRAFT_UNIT_CONVERTER,
@@ -702,6 +714,12 @@ export function compileScenarioDraft(
           body.initialVelocityMps.y,
           body.initialVelocityMps.z
         ),
+      })),
+    },
+    presentation: {
+      bodies: analyzedDraft.bodies.map((body) => ({
+        bodyId: body.id,
+        color: body.color,
       })),
     },
     numericalPolicy: {

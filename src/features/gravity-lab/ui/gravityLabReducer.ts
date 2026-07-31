@@ -54,6 +54,12 @@ export type GravityLabAction =
       snapshot: GravityLabHostSnapshot;
     }>
   | Readonly<{
+      type: "draft-applied";
+      snapshot: GravityLabHostSnapshot;
+      draft: ScenarioDraft;
+      selectedBodyId: string;
+    }>
+  | Readonly<{
       type: "select-draft-body";
       bodyId: string;
     }>
@@ -341,6 +347,33 @@ export function gravityLabReducer(
         sessionRevision: action.snapshot.revision,
         selectedDraftBodyId: firstBodyId,
         selectedSessionBodyId: firstBodyId,
+      };
+    }
+
+    case "draft-applied": {
+      if (
+        action.snapshot.appliedScenario !==
+        action.snapshot.session.appliedScenario
+      ) {
+        return state;
+      }
+
+      const selectedBodyId =
+        action.snapshot.appliedScenario.physics.bodies.some(
+          ({ id }) => id === action.selectedBodyId
+        )
+          ? action.selectedBodyId
+          : action.snapshot.appliedScenario.physics.bodies[0].id;
+
+      return {
+        ...state,
+        draft: action.draft,
+        appliedScenario: action.snapshot.appliedScenario,
+        activeSession: action.snapshot.session,
+        sessionTelemetry: action.snapshot.telemetry,
+        sessionRevision: action.snapshot.revision,
+        selectedDraftBodyId: selectedBodyId,
+        selectedSessionBodyId: selectedBodyId,
       };
     }
 
