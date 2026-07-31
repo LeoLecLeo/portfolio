@@ -64,6 +64,11 @@ export type GravityLabAction =
       bodyId: string;
     }>
   | Readonly<{
+      type: "select-session-body";
+      sourceSession: GravityLabSession;
+      bodyId: string;
+    }>
+  | Readonly<{
       type: "add-body";
     }>
   | Readonly<{
@@ -377,12 +382,48 @@ export function gravityLabReducer(
       };
     }
 
-    case "select-draft-body":
-      return state.draft.bodies.some(
+    case "select-draft-body": {
+      if (
+        !state.draft.bodies.some(({ id }) => id === action.bodyId)
+      ) {
+        return state;
+      }
+
+      const existsInSession = state.activeSession.bodies.some(
+        ({ bodyId }) => bodyId === action.bodyId
+      );
+
+      return {
+        ...state,
+        selectedDraftBodyId: action.bodyId,
+        selectedSessionBodyId: existsInSession
+          ? action.bodyId
+          : state.selectedSessionBodyId,
+      };
+    }
+
+    case "select-session-body": {
+      if (
+        action.sourceSession !== state.activeSession ||
+        !state.activeSession.bodies.some(
+          ({ bodyId }) => bodyId === action.bodyId
+        )
+      ) {
+        return state;
+      }
+
+      const existsInDraft = state.draft.bodies.some(
         ({ id }) => id === action.bodyId
-      )
-        ? { ...state, selectedDraftBodyId: action.bodyId }
-        : state;
+      );
+
+      return {
+        ...state,
+        selectedSessionBodyId: action.bodyId,
+        selectedDraftBodyId: existsInDraft
+          ? action.bodyId
+          : state.selectedDraftBodyId,
+      };
+    }
 
     case "add-body": {
       if (state.draft.bodies.length >= MAX_NEWTONIAN_BODIES) {
@@ -430,11 +471,19 @@ export function gravityLabReducer(
         state.selectedDraftBodyId === action.bodyId
           ? bodies[Math.min(removedIndex, bodies.length - 1)].id
           : state.selectedDraftBodyId;
+      const selectedSessionBodyId =
+        state.selectedDraftBodyId === action.bodyId &&
+        state.activeSession.bodies.some(
+          ({ bodyId }) => bodyId === selectedDraftBodyId
+        )
+          ? selectedDraftBodyId
+          : state.selectedSessionBodyId;
 
       return {
         ...state,
         draft: { ...state.draft, bodies },
         selectedDraftBodyId,
+        selectedSessionBodyId,
       };
     }
 

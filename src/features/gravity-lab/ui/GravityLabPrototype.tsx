@@ -252,6 +252,17 @@ export function GravityLabPrototype({
     setApplicationFailure(null);
   }, []);
 
+  const selectSessionBody = useCallback(
+    (sourceSession: GravityLabSession, bodyId: string) => {
+      dispatch({
+        type: "select-session-body",
+        sourceSession,
+        bodyId,
+      });
+    },
+    []
+  );
+
   const applyDraft = useCallback(() => {
     const result = applyGravityLabDraft(labState, host);
 
@@ -306,6 +317,8 @@ export function GravityLabPrototype({
 
         <GravityCanvas
           session={session}
+          selectedBodyId={labState.selectedSessionBodyId}
+          onSelectBody={selectSessionBody}
           onTelemetry={publishTelemetry}
           onReady={startWhenRendererIsReady}
           renderRevision={renderRevision}
@@ -428,8 +441,17 @@ export function GravityLabPrototype({
               {applicationFailure}
             </p>
           )}
-          <p className="mt-2 text-xs text-muted-foreground">
-            Sélection de session : {labState.selectedSessionBodyId}
+          <p
+            aria-live="polite"
+            className="mt-2 text-xs text-muted-foreground"
+          >
+            Corps affiché sélectionné :{" "}
+            <strong className="text-foreground">
+              {session.bodies.find(
+                ({ bodyId }) =>
+                  bodyId === labState.selectedSessionBodyId
+              )?.name ?? labState.selectedSessionBodyId}
+            </strong>
           </p>
         </div>
 

@@ -18,6 +18,11 @@ import type { GravityLabSession } from "../runtime/GravityLabSession";
 
 type GravityCanvasProps = Readonly<{
   session: GravityLabSession;
+  selectedBodyId: string;
+  onSelectBody: (
+    source: GravityLabSession,
+    bodyId: string
+  ) => void;
   onTelemetry: (
     source: GravityLabSession,
     telemetry: PrototypeTelemetry
@@ -41,6 +46,8 @@ function FixedCamera() {
 
 function GravityScene({
   session,
+  selectedBodyId,
+  onSelectBody,
   onTelemetry,
   renderRevision,
 }: GravitySceneProps) {
@@ -55,6 +62,10 @@ function GravityScene({
     telemetryElapsedSeconds.current = 0;
     invalidate();
   }, [bodies.length, invalidate, renderRevision, session]);
+
+  useEffect(() => {
+    invalidate();
+  }, [invalidate, selectedBodyId]);
 
   useFrame((state, deltaSeconds) => {
     const urgentTelemetry = runtime.advanceFrame(deltaSeconds);
@@ -110,19 +121,29 @@ function GravityScene({
       </mesh>
 
       {bodies.map((body, bodyIndex) => {
+        const selected = body.bodyId === selectedBodyId;
         const setMeshRef: RefCallback<Mesh> = (mesh) => {
           meshRefs.current[bodyIndex] = mesh;
         };
 
         return (
-          <mesh key={body.bodyId} ref={setMeshRef} name={body.name}>
+          <mesh
+            key={body.bodyId}
+            ref={setMeshRef}
+            name={body.name}
+            scale={selected ? 1.3 : 1}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelectBody(session, body.bodyId);
+            }}
+          >
             <sphereGeometry
               args={[body.graphicRadiusScene, 32, 32]}
             />
             <meshStandardMaterial
               color={body.color}
               emissive={body.color}
-              emissiveIntensity={0.5}
+              emissiveIntensity={selected ? 1.4 : 0.5}
               roughness={0.5}
             />
           </mesh>
@@ -134,6 +155,8 @@ function GravityScene({
 
 export const GravityCanvas = memo(function GravityCanvas({
   session,
+  selectedBodyId,
+  onSelectBody,
   onTelemetry,
   onReady,
   renderRevision,
@@ -161,6 +184,8 @@ export const GravityCanvas = memo(function GravityCanvas({
       >
         <GravityScene
           session={session}
+          selectedBodyId={selectedBodyId}
+          onSelectBody={onSelectBody}
           onTelemetry={onTelemetry}
           renderRevision={renderRevision}
         />

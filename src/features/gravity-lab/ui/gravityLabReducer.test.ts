@@ -112,6 +112,75 @@ describe("gravity-lab draft reducer", () => {
     );
   });
 
+  it("synchronizes a list selection with the active session", () => {
+    const initial = initialState();
+    const secondBodyId = initial.draft.bodies[1].id;
+    const selected = gravityLabReducer(initial, {
+      type: "select-draft-body",
+      bodyId: secondBodyId,
+    });
+
+    expect(selected.selectedDraftBodyId).toBe(secondBodyId);
+    expect(selected.selectedSessionBodyId).toBe(secondBodyId);
+  });
+
+  it("synchronizes a Canvas selection with the draft", () => {
+    const initial = initialState();
+    const secondBodyId = initial.activeSession.bodies[1].bodyId;
+    const selected = gravityLabReducer(initial, {
+      type: "select-session-body",
+      sourceSession: initial.activeSession,
+      bodyId: secondBodyId,
+    });
+
+    expect(selected.selectedSessionBodyId).toBe(secondBodyId);
+    expect(selected.selectedDraftBodyId).toBe(secondBodyId);
+  });
+
+  it("projects selections bidirectionally only for shared body IDs", () => {
+    const initial = initialState();
+    const withDraftOnlyBody = addBody(initial);
+    const draftOnlyBodyId = withDraftOnlyBody.selectedDraftBodyId;
+    const sessionBodyId =
+      withDraftOnlyBody.activeSession.bodies[1].bodyId;
+
+    expect(withDraftOnlyBody.selectedSessionBodyId).toBe(
+      initial.selectedSessionBodyId
+    );
+
+    const fromCanvas = gravityLabReducer(withDraftOnlyBody, {
+      type: "select-session-body",
+      sourceSession: withDraftOnlyBody.activeSession,
+      bodyId: sessionBodyId,
+    });
+    expect(fromCanvas.selectedDraftBodyId).toBe(sessionBodyId);
+    expect(fromCanvas.selectedSessionBodyId).toBe(sessionBodyId);
+
+    const fromList = gravityLabReducer(fromCanvas, {
+      type: "select-draft-body",
+      bodyId: draftOnlyBodyId,
+    });
+    expect(fromList.selectedDraftBodyId).toBe(draftOnlyBodyId);
+    expect(fromList.selectedSessionBodyId).toBe(sessionBodyId);
+  });
+
+  it("reconciles both selections after deleting a shared selected body", () => {
+    const initial = initialState();
+    const secondBodyId = initial.draft.bodies[1].id;
+    const selected = gravityLabReducer(initial, {
+      type: "select-draft-body",
+      bodyId: secondBodyId,
+    });
+    const removed = gravityLabReducer(selected, {
+      type: "remove-body",
+      bodyId: secondBodyId,
+    });
+    const remainingBodyId = removed.draft.bodies[0].id;
+
+    expect(removed.selectedDraftBodyId).toBe(remainingBodyId);
+    expect(removed.selectedSessionBodyId).toBe(remainingBodyId);
+  });
+
   it("selects the deterministic neighbour after deleting the selection", () => {
     let state = addBody(initialState());
     const selectedId = state.selectedDraftBodyId;
