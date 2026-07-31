@@ -25,6 +25,7 @@ import {
 } from "../core/units";
 import { vector3, type Vector3 } from "../core/vector3";
 import type { FixedStepSchedulerConfig } from "../runtime/FixedStepScheduler";
+import { defineGravityPreset } from "./gravityPreset";
 
 export const INCLINED_BINARY_STEPS_PER_PERIOD = 2_048;
 export const INCLINED_BINARY_SEPARATION_M = 0.2 * ASTRONOMICAL_UNIT_M;
@@ -228,3 +229,20 @@ export function createInclinedBinaryAppliedScenario(
 
   return result.scenario;
 }
+
+export const INCLINED_BINARY_PRESET_ID = "inclined-binary";
+
+export const INCLINED_BINARY_PRESET = defineGravityPreset({
+  id: INCLINED_BINARY_PRESET_ID,
+  name: "Système binaire incliné",
+  shortDescription:
+    "Deux étoiles de masse solaire égale sur une orbite circulaire inclinée.",
+  category: "binary-system",
+  educationalLevel: "intermediate",
+  bodyCount: 2,
+  expectedPhysicalDomain: "newtonian-n-body",
+  createScenario: () =>
+    createInclinedBinaryAppliedScenario(
+      INCLINED_BINARY_SCHEDULER_CONFIG
+    ),
+});
