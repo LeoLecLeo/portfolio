@@ -79,6 +79,10 @@ export type GravityLabAction =
       type: "cancel-draft";
     }>
   | Readonly<{
+      type: "preset-draft-loaded";
+      scenario: AppliedScenario;
+    }>
+  | Readonly<{
       type: "edit-body-name";
       bodyId: string;
       name: string;
@@ -644,6 +648,21 @@ export function gravityLabReducer(
             )
           ? state.selectedSessionBodyId
           : draft.bodies[0].id;
+
+      return {
+        ...state,
+        draft,
+        selectedDraftBodyId,
+      };
+    }
+
+    case "preset-draft-loaded": {
+      const draft = draftFromApplied(action.scenario);
+      const selectedDraftBodyId = draft.bodies.some(
+        ({ id }) => id === state.selectedDraftBodyId
+      )
+        ? state.selectedDraftBodyId
+        : draft.bodies[0].id;
 
       return {
         ...state,

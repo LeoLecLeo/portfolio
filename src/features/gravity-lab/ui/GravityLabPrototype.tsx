@@ -23,6 +23,8 @@ import {
   createInclinedBinaryAppliedScenario,
   INCLINED_BINARY_SCHEDULER_CONFIG,
 } from "../presets/inclinedBinary";
+import { GRAVITY_PRESETS } from "../presets/catalog";
+import type { GravityPreset } from "../presets/gravityPreset";
 import {
   createGravityLabState,
   gravityLabReducer,
@@ -39,6 +41,8 @@ import {
   bodyListLabel,
   diagnosticMessageFr,
 } from "./gravityLabPresentation";
+import { GravityPresetCatalog } from "./GravityPresetCatalog";
+import { preparePresetDraftLoad } from "./presetDraftLoading";
 
 const SECONDS_PER_DAY = 86_400;
 
@@ -165,6 +169,9 @@ export function GravityLabPrototype({
   >(null);
   const [applicationConfirmation, setApplicationConfirmation] =
     useState<string | null>(null);
+  const [presetLoadFailure, setPresetLoadFailure] = useState<
+    string | null
+  >(null);
   const initialRendererStartHandled = useRef(false);
   const telemetry = labState.sessionTelemetry;
   const session = labState.activeSession;
@@ -200,6 +207,7 @@ export function GravityLabPrototype({
     });
     setApplicationFailure(null);
     setApplicationConfirmation(null);
+    setPresetLoadFailure(null);
     setRenderRevision((current) => current + 1);
   }, [host, sessionRequest]);
 
@@ -264,6 +272,7 @@ export function GravityLabPrototype({
   const updateDraft = useCallback((action: GravityLabAction) => {
     setApplicationFailure(null);
     setApplicationConfirmation(null);
+    setPresetLoadFailure(null);
     dispatch(action);
   }, []);
 
@@ -275,7 +284,33 @@ export function GravityLabPrototype({
     dispatch({ type: "cancel-draft" });
     setApplicationFailure(null);
     setApplicationConfirmation(null);
+    setPresetLoadFailure(null);
   }, []);
+
+  const loadPresetIntoDraft = useCallback(
+    (preset: GravityPreset) => {
+      const result = preparePresetDraftLoad(
+        preset,
+        hasUnappliedChanges,
+        () =>
+          window.confirm(
+            "Le brouillon contient des modifications non appliquées. Les remplacer par ce preset ?"
+          )
+      );
+
+      if (result.kind === "cancelled") {
+        return;
+      }
+
+      if (result.kind === "failed") {
+        setPresetLoadFailure(result.message);
+        return;
+      }
+
+      updateDraft(result.action);
+    },
+    [hasUnappliedChanges, updateDraft]
+  );
 
   const selectSessionBody = useCallback(
     (sourceSession: GravityLabSession, bodyId: string) => {
@@ -301,6 +336,7 @@ export function GravityLabPrototype({
 
     dispatch(result.action);
     setApplicationFailure(null);
+    setPresetLoadFailure(null);
     setApplicationConfirmation(
       "Scénario appliqué : une nouvelle session a été créée à t = 0 et mise en pause."
     );
@@ -329,7 +365,7 @@ export function GravityLabPrototype({
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              Laboratoire newtonien · phase 2B
+              Laboratoire newtonien · phase 2C
             </p>
             <h2
               id="gravity-prototype-title"
@@ -354,6 +390,18 @@ export function GravityLabPrototype({
       </div>
 
       <aside className="flex flex-col gap-4 rounded-xl border border-border/80 bg-card/70 p-5 shadow-xl shadow-black/10">
+        <GravityPresetCatalog
+          presets={GRAVITY_PRESETS}
+          onLoad={loadPresetIntoDraft}
+        />
+        {presetLoadFailure === null ? null : (
+          <p
+            role="alert"
+            className="rounded-lg border border-destructive/60 bg-destructive/10 p-3 text-xs text-destructive"
+          >
+            {presetLoadFailure}
+          </p>
+        )}
         <div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">

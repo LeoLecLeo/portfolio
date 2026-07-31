@@ -6,6 +6,7 @@ import {
   createInclinedBinaryAppliedScenario,
   INCLINED_BINARY_SCHEDULER_CONFIG,
 } from "../presets/inclinedBinary";
+import { STAR_PLANET_PRESET } from "../presets/starPlanet";
 import { GravityLabSessionHost } from "../runtime/GravityLabSession";
 import {
   EDITOR_DRAFT_UNIT_POLICY,
@@ -320,6 +321,65 @@ describe("gravity-lab draft reducer", () => {
         ({ id }) => id === cancelled.selectedDraftBodyId
       )
     ).toBe(true);
+  });
+
+  it("loads a preset only into the draft and reconciles its selection", () => {
+    const initial = initialState();
+    const activeSession = initial.activeSession;
+    const appliedScenario = initial.appliedScenario;
+    const selectedSessionBodyId = initial.selectedSessionBodyId;
+    const telemetry = initial.sessionTelemetry;
+    const presetScenario = STAR_PLANET_PRESET.createScenario();
+    const loaded = gravityLabReducer(initial, {
+      type: "preset-draft-loaded",
+      scenario: presetScenario,
+    });
+    const expectedDraft = appliedScenarioToDraft(
+      presetScenario,
+      EDITOR_DRAFT_UNIT_POLICY
+    );
+
+    expect(loaded.draft).toEqual(expectedDraft);
+    expect(loaded.draft).not.toBe(initial.draft);
+    expect(
+      loaded.draft.bodies.some(
+        ({ id }) => id === loaded.selectedDraftBodyId
+      )
+    ).toBe(true);
+    expect(loaded.selectedDraftBodyId).toBe(
+      presetScenario.physics.bodies[0].id
+    );
+    expect(loaded.appliedScenario).toBe(appliedScenario);
+    expect(loaded.activeSession).toBe(activeSession);
+    expect(loaded.sessionTelemetry).toBe(telemetry);
+    expect(loaded.selectedSessionBodyId).toBe(selectedSessionBodyId);
+    expect(
+      hasUnappliedScenarioChanges(
+        loaded.draft,
+        loaded.appliedScenario
+      )
+    ).toBe(true);
+  });
+
+  it("cancels a loaded preset by restoring the applied scenario", () => {
+    const initial = initialState();
+    const loaded = gravityLabReducer(initial, {
+      type: "preset-draft-loaded",
+      scenario: STAR_PLANET_PRESET.createScenario(),
+    });
+    const cancelled = gravityLabReducer(loaded, {
+      type: "cancel-draft",
+    });
+
+    expect(cancelled.draft).toEqual(initial.draft);
+    expect(cancelled.appliedScenario).toBe(initial.appliedScenario);
+    expect(cancelled.activeSession).toBe(initial.activeSession);
+    expect(
+      hasUnappliedScenarioChanges(
+        cancelled.draft,
+        cancelled.appliedScenario
+      )
+    ).toBe(false);
   });
 
   it("edits every selected-body field only in the draft", () => {
