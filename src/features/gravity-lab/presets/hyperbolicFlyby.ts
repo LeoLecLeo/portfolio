@@ -7,6 +7,7 @@ import {
 } from "../core/units";
 import { vector3 } from "../core/vector3";
 import { defineGravityPreset } from "./gravityPreset";
+import type { FixedStepSchedulerConfig } from "../runtime/FixedStepScheduler";
 import {
   compilePresetScenario,
   createBarycentricTwoBodyDefinitions,
@@ -47,6 +48,12 @@ export const HYPERBOLIC_FLYBY_PERIAPSIS_M =
   (HYPERBOLIC_FLYBY_GRAVITATIONAL_PARAMETER *
     (1 + HYPERBOLIC_FLYBY_ECCENTRICITY));
 export const HYPERBOLIC_FLYBY_TIME_STEP_SECONDS = 240;
+export const HYPERBOLIC_FLYBY_SCHEDULER_CONFIG: FixedStepSchedulerConfig =
+  Object.freeze({
+    simulatedSecondsPerRealSecond: 7_200,
+    maxSubStepsPerTick: 32,
+    maxFrameDeltaSeconds: 0.25,
+  });
 
 const HYPERBOLIC_FLYBY_DEFINITIONS =
   createBarycentricTwoBodyDefinitions(
@@ -89,5 +96,6 @@ export const HYPERBOLIC_FLYBY_PRESET = defineGravityPreset({
   educationalLevel: "intermediate",
   bodyCount: 2,
   expectedPhysicalDomain: "newtonian-n-body",
+  schedulerConfig: HYPERBOLIC_FLYBY_SCHEDULER_CONFIG,
   createScenario: createHyperbolicFlybyAppliedScenario,
 });

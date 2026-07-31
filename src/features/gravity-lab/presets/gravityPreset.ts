@@ -3,6 +3,7 @@ import {
   type AppliedScenario,
 } from "../core/scenario";
 import { MAX_NEWTONIAN_BODIES } from "../core/types";
+import type { FixedStepSchedulerConfig } from "../runtime/FixedStepScheduler";
 
 export type GravityPresetCategory =
   | "binary-system"
@@ -25,6 +26,7 @@ export type GravityPreset = Readonly<{
   educationalLevel: GravityPresetEducationalLevel;
   bodyCount: number;
   expectedPhysicalDomain: GravityPresetPhysicalDomain;
+  schedulerConfig?: FixedStepSchedulerConfig;
   createScenario: () => AppliedScenario;
 }>;
 
@@ -61,6 +63,28 @@ export function defineGravityPreset(
 
   const presetId = definition.id;
   const bodyCount = definition.bodyCount;
+  const schedulerConfig =
+    definition.schedulerConfig === undefined
+      ? undefined
+      : Object.freeze({ ...definition.schedulerConfig });
+
+  if (schedulerConfig !== undefined) {
+    if (
+      !Number.isFinite(
+        schedulerConfig.simulatedSecondsPerRealSecond
+      ) ||
+      schedulerConfig.simulatedSecondsPerRealSecond <= 0 ||
+      !Number.isInteger(schedulerConfig.maxSubStepsPerTick) ||
+      schedulerConfig.maxSubStepsPerTick <= 0 ||
+      !Number.isFinite(schedulerConfig.maxFrameDeltaSeconds) ||
+      schedulerConfig.maxFrameDeltaSeconds <= 0
+    ) {
+      throw new RangeError(
+        `Preset "${presetId}" has an invalid scheduler configuration.`
+      );
+    }
+  }
+
   const scenarioFactory = definition.createScenario;
   const createScenario = (): AppliedScenario => {
     const scenario = scenarioFactory();
@@ -90,6 +114,7 @@ export function defineGravityPreset(
     educationalLevel: definition.educationalLevel,
     bodyCount,
     expectedPhysicalDomain: definition.expectedPhysicalDomain,
+    ...(schedulerConfig === undefined ? {} : { schedulerConfig }),
     createScenario,
   });
 }

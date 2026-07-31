@@ -179,9 +179,9 @@ export function GravityLabPrototype({
     () =>
       validateGravityLabDraft(
         labState.draft,
-        labState.activeSession.schedulerConfig
+        labState.draftSchedulerConfig
       ),
-    [labState.activeSession, labState.draft]
+    [labState.draft, labState.draftSchedulerConfig]
   );
   const hasUnappliedChanges = useMemo(
     () =>

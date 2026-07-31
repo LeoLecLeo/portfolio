@@ -66,7 +66,7 @@ export function applyGravityLabDraft(
 
   const compilation = validateGravityLabDraft(
     state.draft,
-    state.activeSession.schedulerConfig
+    state.draftSchedulerConfig
   );
 
   if (!compilation.ok) {
@@ -80,7 +80,7 @@ export function applyGravityLabDraft(
   try {
     const snapshot = host.replace({
       appliedScenario: compilation.scenario,
-      schedulerConfig: state.activeSession.schedulerConfig,
+      schedulerConfig: state.draftSchedulerConfig,
     });
 
     return {

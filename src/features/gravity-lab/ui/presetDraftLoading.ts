@@ -27,6 +27,7 @@ export function preparePresetDraftLoad(
       action: {
         type: "preset-draft-loaded",
         scenario: preset.createScenario(),
+        schedulerConfig: preset.schedulerConfig ?? null,
       },
     };
   } catch {

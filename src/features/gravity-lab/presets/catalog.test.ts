@@ -12,6 +12,8 @@ import {
   INCLINED_BINARY_SCHEDULER_CONFIG,
   createInclinedBinaryAppliedScenario,
 } from "./inclinedBinary";
+import { CIRCULAR_TWO_BODY_PRESET } from "./circularTwoBody";
+import { STAR_PLANET_PRESET } from "./starPlanet";
 
 describe("gravity preset catalog", () => {
   it("is immutable and contains no duplicate identifier", () => {
@@ -78,5 +80,11 @@ describe("gravity preset catalog", () => {
 
       expect(preset.bodyCount).toBe(scenario.physics.bodies.length);
     }
+  });
+
+  it("keeps the scheduler policy of the other three presets unchanged", () => {
+    expect(INCLINED_BINARY_PRESET.schedulerConfig).toBeUndefined();
+    expect(CIRCULAR_TWO_BODY_PRESET.schedulerConfig).toBeUndefined();
+    expect(STAR_PLANET_PRESET.schedulerConfig).toBeUndefined();
   });
 });

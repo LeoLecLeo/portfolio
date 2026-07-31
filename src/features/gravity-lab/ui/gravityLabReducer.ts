@@ -23,6 +23,7 @@ import type {
   GravityLabHostSnapshot,
   GravityLabSession,
 } from "../runtime/GravityLabSession";
+import type { FixedStepSchedulerConfig } from "../runtime/FixedStepScheduler";
 
 export const EDITOR_DRAFT_UNIT_POLICY: ScenarioDraftUnitPolicy =
   Object.freeze({
@@ -39,6 +40,7 @@ export type GravityLabState = Readonly<{
   activeSession: GravityLabSession;
   sessionTelemetry: PrototypeTelemetry;
   sessionRevision: number;
+  draftSchedulerConfig: FixedStepSchedulerConfig;
   selectedDraftBodyId: string;
   selectedSessionBodyId: string;
   nextBodyOrdinal: number;
@@ -81,6 +83,7 @@ export type GravityLabAction =
   | Readonly<{
       type: "preset-draft-loaded";
       scenario: AppliedScenario;
+      schedulerConfig: FixedStepSchedulerConfig | null;
     }>
   | Readonly<{
       type: "edit-body-name";
@@ -386,6 +389,7 @@ export function createGravityLabState(
     activeSession: snapshot.session,
     sessionTelemetry: snapshot.telemetry,
     sessionRevision: snapshot.revision,
+    draftSchedulerConfig: snapshot.session.schedulerConfig,
     selectedDraftBodyId: firstBodyId,
     selectedSessionBodyId: firstBodyId,
     nextBodyOrdinal: 1,
@@ -422,6 +426,7 @@ export function gravityLabReducer(
         activeSession: action.snapshot.session,
         sessionTelemetry: action.snapshot.telemetry,
         sessionRevision: action.snapshot.revision,
+        draftSchedulerConfig: action.snapshot.session.schedulerConfig,
         selectedDraftBodyId: firstBodyId,
         selectedSessionBodyId: firstBodyId,
       };
@@ -449,6 +454,7 @@ export function gravityLabReducer(
         activeSession: action.snapshot.session,
         sessionTelemetry: action.snapshot.telemetry,
         sessionRevision: action.snapshot.revision,
+        draftSchedulerConfig: action.snapshot.session.schedulerConfig,
         selectedDraftBodyId: selectedBodyId,
         selectedSessionBodyId: selectedBodyId,
       };
@@ -652,6 +658,7 @@ export function gravityLabReducer(
       return {
         ...state,
         draft,
+        draftSchedulerConfig: state.activeSession.schedulerConfig,
         selectedDraftBodyId,
       };
     }
@@ -667,6 +674,8 @@ export function gravityLabReducer(
       return {
         ...state,
         draft,
+        draftSchedulerConfig:
+          action.schedulerConfig ?? state.activeSession.schedulerConfig,
         selectedDraftBodyId,
       };
     }
