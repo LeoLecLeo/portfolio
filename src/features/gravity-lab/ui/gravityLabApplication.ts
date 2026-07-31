@@ -22,7 +22,7 @@ export type GravityLabApplicationResult =
     }>
   | Readonly<{
       ok: false;
-      report: ScenarioValidationReport;
+      report: ScenarioValidationReport | null;
       message: string | null;
     }>;
 
@@ -41,6 +41,29 @@ export function applyGravityLabDraft(
   state: GravityLabState,
   host: GravityLabSessionHost
 ): GravityLabApplicationResult {
+  const authoritativeSnapshot = host.snapshot;
+
+  if (
+    authoritativeSnapshot.session !== state.activeSession ||
+    authoritativeSnapshot.appliedScenario !== state.appliedScenario
+  ) {
+    return {
+      ok: false,
+      report: null,
+      message:
+        "La session active a changé avant l’application ; aucune modification n’a été effectuée.",
+    };
+  }
+
+  if (authoritativeSnapshot.session.runtime.isRunning) {
+    return {
+      ok: false,
+      report: null,
+      message:
+        "Mettez la simulation en pause avant d’appliquer le brouillon.",
+    };
+  }
+
   const compilation = validateGravityLabDraft(
     state.draft,
     state.activeSession.schedulerConfig
@@ -51,21 +74,6 @@ export function applyGravityLabDraft(
       ok: false,
       report: compilation.report,
       message: null,
-    };
-  }
-
-  if (
-    state.sessionTelemetry.status === "running" ||
-    host.snapshot.session !== state.activeSession ||
-    host.snapshot.appliedScenario !== state.appliedScenario
-  ) {
-    return {
-      ok: false,
-      report: compilation.report,
-      message:
-        state.sessionTelemetry.status === "running"
-          ? "Mettez la simulation en pause avant d’appliquer le brouillon."
-          : "La session active a changé avant l’application ; aucune modification n’a été effectuée.",
     };
   }
 

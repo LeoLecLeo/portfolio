@@ -20,6 +20,7 @@ import {
   type DraftSpeedField,
   type GravityLabAction,
 } from "./gravityLabReducer";
+import { diagnosticMessageFr } from "./gravityLabPresentation";
 
 const MASS_UNITS: readonly MassUnit[] = [
   "kg",
@@ -89,7 +90,9 @@ function NumberEditor<Unit extends string>({
       {hasErrors ? (
         <ul id={errorId} className="space-y-0.5 text-xs text-destructive">
           {field.errors.map((error, index) => (
-            <li key={`${error.code}-${index}`}>{error.message}</li>
+            <li key={`${error.code}-${index}`}>
+              {diagnosticMessageFr(error)}
+            </li>
           ))}
         </ul>
       ) : null}

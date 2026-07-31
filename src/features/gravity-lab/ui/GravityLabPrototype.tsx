@@ -35,6 +35,10 @@ import {
   applyGravityLabDraft,
   validateGravityLabDraft,
 } from "./gravityLabApplication";
+import {
+  bodyListLabel,
+  diagnosticMessageFr,
+} from "./gravityLabPresentation";
 
 const SECONDS_PER_DAY = 86_400;
 
@@ -386,6 +390,7 @@ export function GravityLabPrototype({
             {labState.draft.bodies.map((body) => {
               const selected =
                 body.id === labState.selectedDraftBodyId;
+              const label = bodyListLabel(body);
 
               return (
                 <li
@@ -407,11 +412,11 @@ export function GravityLabPrototype({
                         : "truncate rounded-lg border border-border bg-secondary/50 px-3 py-2 text-left text-sm hover:bg-secondary"
                     }
                   >
-                    {body.name}
+                    {label}
                   </button>
                   <button
                     type="button"
-                    aria-label={`Supprimer ${body.name}`}
+                    aria-label={`Supprimer ${label}`}
                     disabled={labState.draft.bodies.length === 1}
                     onClick={() =>
                       updateDraft({
@@ -485,7 +490,7 @@ export function GravityLabPrototype({
               <ul className="mt-2 space-y-1 text-xs text-destructive">
                 {draftValidation.report.errors.map((error, index) => (
                   <li key={`${error.code}-${error.path}-${index}`}>
-                    {error.message}
+                    {diagnosticMessageFr(error)}
                   </li>
                 ))}
               </ul>

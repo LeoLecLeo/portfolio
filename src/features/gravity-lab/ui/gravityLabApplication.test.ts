@@ -55,7 +55,7 @@ describe("gravity-lab draft application", () => {
     const result = applyGravityLabDraft(invalid, host);
 
     expect(result.ok).toBe(false);
-    expect(result.report.errors).toEqual(
+    expect(result.report?.errors).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           code: "parse.invalid-syntax",
@@ -66,6 +66,35 @@ describe("gravity-lab draft application", () => {
     expect(invalid.appliedScenario).toBe(initial.appliedScenario);
     expect(invalid.activeSession).toBe(initial.activeSession);
     expect(initial.activeSession.runtime.isDisposed).toBe(false);
+  });
+
+  it("refuses application when the host is running but React state is still paused", () => {
+    const { host, state: pausedReactState } = setup();
+    const edited = editName(pausedReactState);
+    const session = pausedReactState.activeSession;
+    const appliedScenario = pausedReactState.appliedScenario;
+
+    expect(pausedReactState.sessionTelemetry.status).toBe("paused");
+    expect(host.resume().telemetry.status).toBe("running");
+    expect(session.runtime.isRunning).toBe(true);
+
+    const replace = vi.spyOn(host, "replace");
+    const authoritativeSnapshot = host.snapshot;
+    const result = applyGravityLabDraft(edited, host);
+
+    expect(result).toEqual({
+      ok: false,
+      report: null,
+      message:
+        "Mettez la simulation en pause avant d’appliquer le brouillon.",
+    });
+    expect(replace).not.toHaveBeenCalled();
+    expect(host.snapshot).toBe(authoritativeSnapshot);
+    expect(host.snapshot.session).toBe(session);
+    expect(host.snapshot.appliedScenario).toBe(appliedScenario);
+    expect(session.runtime.isRunning).toBe(true);
+    expect(edited.activeSession).toBe(session);
+    expect(edited.appliedScenario).toBe(appliedScenario);
   });
 
   it("creates an immutable applied scenario and a new active session", () => {
