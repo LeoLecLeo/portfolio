@@ -9,7 +9,7 @@ import {
   useState,
   type RefCallback,
 } from "react";
-import type { Mesh } from "three";
+import { PerspectiveCamera, type Mesh } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import {
@@ -22,6 +22,7 @@ import {
   DEFAULT_GRAVITY_CAMERA_TARGET,
   isBodySelectionClick,
 } from "./cameraPolicy";
+import { calculateCameraFraming } from "./cameraFraming";
 
 type GravityCanvasProps = Readonly<{
   session: GravityLabSession;
@@ -39,16 +40,27 @@ type GravityCanvasProps = Readonly<{
 }>;
 
 type GravitySceneProps = Omit<GravityCanvasProps, "onReady"> &
-  Readonly<{ cameraResetRevision: number }>;
+  Readonly<{
+    cameraResetRevision: number;
+    cameraFramingRevision: number;
+  }>;
 
 function OrbitCameraControls({
+  session,
   resetRevision,
-}: Readonly<{ resetRevision: number }>) {
+  framingRevision,
+}: Readonly<{
+  session: GravityLabSession;
+  resetRevision: number;
+  framingRevision: number;
+}>) {
   const camera = useThree((state) => state.camera);
   const domElement = useThree((state) => state.gl.domElement);
   const invalidate = useThree((state) => state.invalidate);
   const controlsRef = useRef<OrbitControls | null>(null);
   const handledResetRevision = useRef(resetRevision);
+  const handledFramingRevision = useRef(framingRevision);
+  const framedSession = useRef<GravityLabSession | null>(null);
 
   useEffect(() => {
     const controls = new OrbitControls(camera, domElement);
@@ -85,12 +97,86 @@ function OrbitCameraControls({
       return;
     }
 
-    camera.position.set(...DEFAULT_GRAVITY_CAMERA_POSITION);
-    camera.up.set(0, 1, 0);
+    const controlledCamera = controls.object;
+
+    controlledCamera.position.set(...DEFAULT_GRAVITY_CAMERA_POSITION);
+    controlledCamera.up.set(0, 1, 0);
+
+    if (controlledCamera instanceof PerspectiveCamera) {
+      // Three.js cameras are intentionally mutated at this imperative boundary.
+      controlledCamera.near = 0.1;
+      controlledCamera.far = 100;
+      controlledCamera.updateProjectionMatrix();
+    }
+
     controls.target.set(...DEFAULT_GRAVITY_CAMERA_TARGET);
     controls.update();
     invalidate();
   }, [camera, invalidate, resetRevision]);
+
+  useEffect(() => {
+    const sessionChanged = framedSession.current !== session;
+    const explicitFramingRequested =
+      handledFramingRevision.current !== framingRevision;
+
+    if (!sessionChanged && !explicitFramingRequested) {
+      return;
+    }
+
+    framedSession.current = session;
+    handledFramingRevision.current = framingRevision;
+    const controls = controlsRef.current;
+
+    const controlledCamera = controls?.object;
+
+    if (
+      controls === null ||
+      !(controlledCamera instanceof PerspectiveCamera)
+    ) {
+      return;
+    }
+
+    const positions = session.bodies.map(({ bodyId }) => {
+      const position = { x: 0, y: 0, z: 0 };
+      session.writeScenePosition(bodyId, position);
+      return position;
+    });
+    const framing = calculateCameraFraming({
+      positions,
+      verticalFieldOfViewRadians:
+        (controlledCamera.fov * Math.PI) / 180,
+      aspectRatio: controlledCamera.aspect,
+      viewDirection: {
+        x: controlledCamera.position.x - controls.target.x,
+        y: controlledCamera.position.y - controls.target.y,
+        z: controlledCamera.position.z - controls.target.z,
+      },
+    });
+
+    controlledCamera.position.set(
+      framing.cameraPosition.x,
+      framing.cameraPosition.y,
+      framing.cameraPosition.z
+    );
+    // Keep compact and extended rendered systems inside the clipping planes.
+    // eslint-disable-next-line react-hooks/immutability
+    controlledCamera.near = Math.max(
+      0.01,
+      framing.cameraDistance - framing.framedRadius * 1.5
+    );
+    controlledCamera.far = Math.max(
+      100,
+      framing.cameraDistance + framing.framedRadius * 2
+    );
+    controlledCamera.updateProjectionMatrix();
+    controls.target.set(
+      framing.target.x,
+      framing.target.y,
+      framing.target.z
+    );
+    controls.update();
+    invalidate();
+  }, [camera, framingRevision, invalidate, session]);
 
   return null;
 }
@@ -102,6 +188,7 @@ function GravityScene({
   onTelemetry,
   renderRevision,
   cameraResetRevision,
+  cameraFramingRevision,
 }: GravitySceneProps) {
   const runtime = session.runtime;
   const invalidate = useThree((state) => state.invalidate);
@@ -155,7 +242,11 @@ function GravityScene({
 
   return (
     <>
-      <OrbitCameraControls resetRevision={cameraResetRevision} />
+      <OrbitCameraControls
+        session={session}
+        resetRevision={cameraResetRevision}
+        framingRevision={cameraFramingRevision}
+      />
       <color attach="background" args={["#060912"]} />
       <ambientLight intensity={0.35} />
       <directionalLight position={[5, 8, 6]} intensity={1.8} />
@@ -219,6 +310,7 @@ export const GravityCanvas = memo(function GravityCanvas({
   renderRevision,
 }: GravityCanvasProps) {
   const [cameraResetRevision, setCameraResetRevision] = useState(0);
+  const [cameraFramingRevision, setCameraFramingRevision] = useState(0);
 
   return (
     <div
@@ -256,18 +348,30 @@ export const GravityCanvas = memo(function GravityCanvas({
             onTelemetry={onTelemetry}
             renderRevision={renderRevision}
             cameraResetRevision={cameraResetRevision}
+            cameraFramingRevision={cameraFramingRevision}
           />
         </Canvas>
       </div>
-      <button
-        type="button"
-        onClick={() =>
-          setCameraResetRevision((revision) => revision + 1)
-        }
-        className="absolute right-3 top-3 rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-      >
-        Réinitialiser la caméra
-      </button>
+      <div className="absolute right-3 top-3 flex flex-col gap-2 sm:flex-row">
+        <button
+          type="button"
+          onClick={() =>
+            setCameraFramingRevision((revision) => revision + 1)
+          }
+          className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        >
+          Cadrer le système
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            setCameraResetRevision((revision) => revision + 1)
+          }
+          className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        >
+          Réinitialiser la caméra
+        </button>
+      </div>
     </div>
   );
 });
