@@ -23,6 +23,11 @@ import {
   isBodySelectionClick,
 } from "./cameraPolicy";
 import { calculateCameraFraming } from "./cameraFraming";
+import {
+  centerCameraOnRenderedPoint,
+  followRenderedPoint,
+  reconcileTrackedBodyId,
+} from "./cameraTracking";
 
 type GravityCanvasProps = Readonly<{
   session: GravityLabSession;
@@ -43,16 +48,28 @@ type GravitySceneProps = Omit<GravityCanvasProps, "onReady"> &
   Readonly<{
     cameraResetRevision: number;
     cameraFramingRevision: number;
+    cameraFocusRequest: Readonly<{
+      revision: number;
+      bodyId: string;
+    }>;
+    trackedBodyId: string | null;
   }>;
 
 function OrbitCameraControls({
   session,
   resetRevision,
   framingRevision,
+  focusRequest,
+  trackedBodyId,
 }: Readonly<{
   session: GravityLabSession;
   resetRevision: number;
   framingRevision: number;
+  focusRequest: Readonly<{
+    revision: number;
+    bodyId: string;
+  }>;
+  trackedBodyId: string | null;
 }>) {
   const camera = useThree((state) => state.camera);
   const domElement = useThree((state) => state.gl.domElement);
@@ -60,7 +77,11 @@ function OrbitCameraControls({
   const controlsRef = useRef<OrbitControls | null>(null);
   const handledResetRevision = useRef(resetRevision);
   const handledFramingRevision = useRef(framingRevision);
+  const handledFocusRevision = useRef(focusRequest.revision);
   const framedSession = useRef<GravityLabSession | null>(null);
+  const trackedPosition = useRef<{ x: number; y: number; z: number } | null>(
+    null
+  );
 
   useEffect(() => {
     const controls = new OrbitControls(camera, domElement);
@@ -178,6 +199,123 @@ function OrbitCameraControls({
     invalidate();
   }, [camera, framingRevision, invalidate, session]);
 
+  useEffect(() => {
+    if (handledFocusRevision.current === focusRequest.revision) {
+      return;
+    }
+
+    handledFocusRevision.current = focusRequest.revision;
+    const controls = controlsRef.current;
+
+    if (
+      controls === null ||
+      !session.bodies.some(({ bodyId }) => bodyId === focusRequest.bodyId)
+    ) {
+      return;
+    }
+
+    const renderedPosition = { x: 0, y: 0, z: 0 };
+    session.writeScenePosition(focusRequest.bodyId, renderedPosition);
+    const centred = centerCameraOnRenderedPoint(
+      controls.object.position,
+      controls.target,
+      renderedPosition
+    );
+
+    controls.object.position.set(
+      centred.cameraPosition.x,
+      centred.cameraPosition.y,
+      centred.cameraPosition.z
+    );
+    controls.target.set(
+      centred.target.x,
+      centred.target.y,
+      centred.target.z
+    );
+    controls.update();
+    invalidate();
+  }, [focusRequest, invalidate, session]);
+
+  useEffect(() => {
+    const controls = controlsRef.current;
+
+    if (
+      controls === null ||
+      trackedBodyId === null ||
+      !session.bodies.some(({ bodyId }) => bodyId === trackedBodyId)
+    ) {
+      trackedPosition.current = null;
+      return;
+    }
+
+    const renderedPosition = { x: 0, y: 0, z: 0 };
+    session.writeScenePosition(trackedBodyId, renderedPosition);
+    const centred = centerCameraOnRenderedPoint(
+      controls.object.position,
+      controls.target,
+      renderedPosition
+    );
+
+    controls.object.position.set(
+      centred.cameraPosition.x,
+      centred.cameraPosition.y,
+      centred.cameraPosition.z
+    );
+    controls.target.set(
+      centred.target.x,
+      centred.target.y,
+      centred.target.z
+    );
+    trackedPosition.current = renderedPosition;
+    controls.update();
+    invalidate();
+  }, [invalidate, session, trackedBodyId]);
+
+  useFrame(() => {
+    const controls = controlsRef.current;
+    const previousPosition = trackedPosition.current;
+
+    if (
+      controls === null ||
+      trackedBodyId === null ||
+      previousPosition === null ||
+      !session.bodies.some(({ bodyId }) => bodyId === trackedBodyId)
+    ) {
+      return;
+    }
+
+    const nextPosition = { x: 0, y: 0, z: 0 };
+    session.writeScenePosition(trackedBodyId, nextPosition);
+
+    if (
+      nextPosition.x === previousPosition.x &&
+      nextPosition.y === previousPosition.y &&
+      nextPosition.z === previousPosition.z
+    ) {
+      return;
+    }
+
+    const followed = followRenderedPoint(
+      controls.object.position,
+      controls.target,
+      previousPosition,
+      nextPosition
+    );
+
+    controls.object.position.set(
+      followed.cameraPosition.x,
+      followed.cameraPosition.y,
+      followed.cameraPosition.z
+    );
+    controls.target.set(
+      followed.target.x,
+      followed.target.y,
+      followed.target.z
+    );
+    trackedPosition.current = nextPosition;
+    controls.update();
+  });
+
   return null;
 }
 
@@ -189,6 +327,8 @@ function GravityScene({
   renderRevision,
   cameraResetRevision,
   cameraFramingRevision,
+  cameraFocusRequest,
+  trackedBodyId,
 }: GravitySceneProps) {
   const runtime = session.runtime;
   const invalidate = useThree((state) => state.invalidate);
@@ -246,6 +386,8 @@ function GravityScene({
         session={session}
         resetRevision={cameraResetRevision}
         framingRevision={cameraFramingRevision}
+        focusRequest={cameraFocusRequest}
+        trackedBodyId={trackedBodyId}
       />
       <color attach="background" args={["#060912"]} />
       <ambientLight intensity={0.35} />
@@ -311,6 +453,35 @@ export const GravityCanvas = memo(function GravityCanvas({
 }: GravityCanvasProps) {
   const [cameraResetRevision, setCameraResetRevision] = useState(0);
   const [cameraFramingRevision, setCameraFramingRevision] = useState(0);
+  const [cameraFocusRequest, setCameraFocusRequest] = useState(() => ({
+    revision: 0,
+    bodyId: selectedBodyId,
+  }));
+  const [trackedBodyId, setTrackedBodyId] = useState<string | null>(null);
+  const previousSession = useRef(session);
+  const selectedBodyExists = session.bodies.some(
+    ({ bodyId }) => bodyId === selectedBodyId
+  );
+  const effectiveTrackedBodyId =
+    trackedBodyId !== null &&
+    session.bodies.some(({ bodyId }) => bodyId === trackedBodyId)
+      ? trackedBodyId
+      : null;
+
+  useEffect(() => {
+    const sessionChanged = previousSession.current !== session;
+    previousSession.current = session;
+    const availableBodyIds = session.bodies.map(({ bodyId }) => bodyId);
+
+    setTrackedBodyId((current) =>
+      reconcileTrackedBodyId({
+        trackedBodyId: current,
+        selectedBodyId,
+        availableBodyIds,
+        sessionChanged,
+      })
+    );
+  }, [selectedBodyId, session]);
 
   return (
     <div
@@ -349,10 +520,38 @@ export const GravityCanvas = memo(function GravityCanvas({
             renderRevision={renderRevision}
             cameraResetRevision={cameraResetRevision}
             cameraFramingRevision={cameraFramingRevision}
+            cameraFocusRequest={cameraFocusRequest}
+            trackedBodyId={effectiveTrackedBodyId}
           />
         </Canvas>
       </div>
-      <div className="absolute right-3 top-3 flex flex-col gap-2 sm:flex-row">
+      <div className="absolute right-3 top-3 grid max-w-[calc(100%-1.5rem)] grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+        <button
+          type="button"
+          disabled={!selectedBodyExists}
+          onClick={() =>
+            setCameraFocusRequest((request) => ({
+              revision: request.revision + 1,
+              bodyId: selectedBodyId,
+            }))
+          }
+          className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          Centrer sur le corps
+        </button>
+        <button
+          type="button"
+          aria-pressed={effectiveTrackedBodyId !== null}
+          disabled={!selectedBodyExists}
+          onClick={() =>
+            setTrackedBodyId((current) =>
+              current === null ? selectedBodyId : null
+            )
+          }
+          className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-45 aria-pressed:border-primary aria-pressed:bg-primary/80"
+        >
+          Suivre le corps
+        </button>
         <button
           type="button"
           onClick={() =>
