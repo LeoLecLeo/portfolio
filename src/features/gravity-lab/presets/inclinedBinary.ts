@@ -26,6 +26,8 @@ import {
 import { vector3, type Vector3 } from "../core/vector3";
 import type { FixedStepSchedulerConfig } from "../runtime/FixedStepScheduler";
 import { defineGravityPreset } from "./gravityPreset";
+import { STANDARD_ORBITAL_PRESET_PREFERRED_CADENCE } from "./presetSchedulerPolicies";
+import { createGravityLabSchedulerConfig } from "../runtime/schedulerPolicy";
 
 export const INCLINED_BINARY_STEPS_PER_PERIOD = 2_048;
 export const INCLINED_BINARY_SEPARATION_M = 0.2 * ASTRONOMICAL_UNIT_M;
@@ -42,12 +44,10 @@ export const INCLINED_BINARY_TIME_STEP_SECONDS =
   INCLINED_BINARY_PERIOD_SECONDS / INCLINED_BINARY_STEPS_PER_PERIOD;
 export const INCLINED_BINARY_PRECISION_PROFILE = "balanced" as const;
 export const INCLINED_BINARY_SCHEDULER_CONFIG: FixedStepSchedulerConfig =
-  Object.freeze({
-    simulatedSecondsPerRealSecond:
-      INCLINED_BINARY_PERIOD_SECONDS / 24,
-    maxSubStepsPerTick: 32,
-    maxFrameDeltaSeconds: 0.25,
-  });
+  createGravityLabSchedulerConfig(
+    INCLINED_BINARY_TIME_STEP_SECONDS,
+    STANDARD_ORBITAL_PRESET_PREFERRED_CADENCE
+  );
 
 const ORBITAL_PHASE_RADIANS = (35 * Math.PI) / 180;
 const INCLINATION_RADIANS = (30 * Math.PI) / 180;
@@ -241,6 +241,27 @@ export const INCLINED_BINARY_PRESET = defineGravityPreset({
   educationalLevel: "intermediate",
   bodyCount: 2,
   expectedPhysicalDomain: "newtonian-n-body",
+  pedagogy: {
+    learningObjective:
+      "Relier mouvement barycentrique et orbite tridimensionnelle.",
+    observedPhenomenon:
+      "Deux étoiles identiques tournent autour de leur barycentre dans un plan incliné.",
+    keyParameters: [
+      "Masses : 1 masse solaire chacune",
+      "Séparation : 0,2 au",
+      "Inclinaison : 30°",
+    ],
+    interestingParametersToModify: [
+      "Comparer les composantes z des positions",
+      "Modifier symétriquement les vitesses initiales",
+    ],
+    expectedResult:
+      "Une orbite circulaire stable, vue en perspective, centrée sur le barycentre.",
+    limitationOrWarning:
+      "Système isolé idéalisé ; les rayons affichés ne sont pas à l’échelle physique.",
+  },
+  preferredSimulatedSecondsPerRealSecond:
+    STANDARD_ORBITAL_PRESET_PREFERRED_CADENCE,
   createScenario: () =>
     createInclinedBinaryAppliedScenario(
       INCLINED_BINARY_SCHEDULER_CONFIG

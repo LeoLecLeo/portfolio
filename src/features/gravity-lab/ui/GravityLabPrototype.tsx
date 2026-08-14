@@ -179,9 +179,12 @@ export function GravityLabPrototype({
     () =>
       validateGravityLabDraft(
         labState.draft,
-        labState.draftSchedulerConfig
+        labState.draftPreferredSimulatedSecondsPerRealSecond
       ),
-    [labState.draft, labState.draftSchedulerConfig]
+    [
+      labState.draft,
+      labState.draftPreferredSimulatedSecondsPerRealSecond,
+    ]
   );
   const hasUnappliedChanges = useMemo(
     () =>

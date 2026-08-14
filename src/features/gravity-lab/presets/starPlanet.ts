@@ -8,6 +8,7 @@ import {
 } from "../core/units";
 import { vector3 } from "../core/vector3";
 import { defineGravityPreset } from "./gravityPreset";
+import { STANDARD_ORBITAL_PRESET_PREFERRED_CADENCE } from "./presetSchedulerPolicies";
 import {
   compilePresetScenario,
   createBarycentricTwoBodyDefinitions,
@@ -73,5 +74,26 @@ export const STAR_PLANET_PRESET = defineGravityPreset({
   educationalLevel: "introductory",
   bodyCount: 2,
   expectedPhysicalDomain: "newtonian-n-body",
+  pedagogy: {
+    learningObjective:
+      "Observer une orbite planétaire légèrement excentrique dans le référentiel barycentrique.",
+    observedPhenomenon:
+      "La planète accélère près du périastre tandis que l’étoile effectue un faible mouvement réflexe.",
+    keyParameters: [
+      "Masses : 1 masse solaire et 1 masse terrestre",
+      "Demi-grand axe : 1 au",
+      "Excentricité : 0,0167",
+    ],
+    interestingParametersToModify: [
+      "Modifier la vitesse tangentielle de la planète",
+      "Comparer différentes distances initiales",
+    ],
+    expectedResult:
+      "Une orbite quasi circulaire et un barycentre très proche du centre de l’étoile.",
+    limitationOrWarning:
+      "Les autres planètes, les marées et les corrections relativistes sont volontairement absentes.",
+  },
+  preferredSimulatedSecondsPerRealSecond:
+    STANDARD_ORBITAL_PRESET_PREFERRED_CADENCE,
   createScenario: createStarPlanetAppliedScenario,
 });

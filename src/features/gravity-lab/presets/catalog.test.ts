@@ -9,10 +9,17 @@ import {
 import {
   INCLINED_BINARY_PRESET,
   INCLINED_BINARY_PRESET_ID,
+  INCLINED_BINARY_PERIOD_SECONDS,
   INCLINED_BINARY_SCHEDULER_CONFIG,
   createInclinedBinaryAppliedScenario,
 } from "./inclinedBinary";
 import { CIRCULAR_TWO_BODY_PRESET } from "./circularTwoBody";
+import { HYPERBOLIC_FLYBY_PRESET } from "./hyperbolicFlyby";
+import type { GravityPreset } from "./gravityPreset";
+import {
+  HYPERBOLIC_FLYBY_PREFERRED_CADENCE,
+  STANDARD_ORBITAL_PRESET_PREFERRED_CADENCE,
+} from "./presetSchedulerPolicies";
 import { STAR_PLANET_PRESET } from "./starPlanet";
 
 describe("gravity preset catalog", () => {
@@ -82,9 +89,62 @@ describe("gravity preset catalog", () => {
     }
   });
 
-  it("keeps the scheduler policy of the other three presets unchanged", () => {
-    expect(INCLINED_BINARY_PRESET.schedulerConfig).toBeUndefined();
-    expect(CIRCULAR_TWO_BODY_PRESET.schedulerConfig).toBeUndefined();
-    expect(STAR_PLANET_PRESET.schedulerConfig).toBeUndefined();
+  it("provides complete immutable pedagogical metadata for every preset", () => {
+    for (const preset of GRAVITY_PRESETS) {
+      const pedagogy = preset.pedagogy;
+
+      expect(pedagogy.learningObjective.trim()).not.toBe("");
+      expect(pedagogy.observedPhenomenon.trim()).not.toBe("");
+      expect(pedagogy.keyParameters.length).toBeGreaterThan(0);
+      expect(
+        pedagogy.interestingParametersToModify.length
+      ).toBeGreaterThan(0);
+      expect(pedagogy.expectedResult.trim()).not.toBe("");
+      expect(pedagogy.limitationOrWarning.trim()).not.toBe("");
+      expect(
+        pedagogy.keyParameters.every(
+          (parameter) => parameter.trim().length > 0
+        )
+      ).toBe(true);
+      expect(
+        pedagogy.interestingParametersToModify.every(
+          (parameter) => parameter.trim().length > 0
+        )
+      ).toBe(true);
+      expect(Object.isFrozen(pedagogy)).toBe(true);
+      expect(Object.isFrozen(pedagogy.keyParameters)).toBe(true);
+      expect(
+        Object.isFrozen(pedagogy.interestingParametersToModify)
+      ).toBe(true);
+    }
+  });
+
+  it("assigns an explicit cadence preference to every preset", () => {
+    expect(STANDARD_ORBITAL_PRESET_PREFERRED_CADENCE).toBe(
+      INCLINED_BINARY_PERIOD_SECONDS / 24
+    );
+    expect(
+      INCLINED_BINARY_PRESET.preferredSimulatedSecondsPerRealSecond
+    ).toBe(STANDARD_ORBITAL_PRESET_PREFERRED_CADENCE);
+    expect(
+      CIRCULAR_TWO_BODY_PRESET.preferredSimulatedSecondsPerRealSecond
+    ).toBe(STANDARD_ORBITAL_PRESET_PREFERRED_CADENCE);
+    expect(
+      STAR_PLANET_PRESET.preferredSimulatedSecondsPerRealSecond
+    ).toBe(STANDARD_ORBITAL_PRESET_PREFERRED_CADENCE);
+    expect(
+      HYPERBOLIC_FLYBY_PRESET.preferredSimulatedSecondsPerRealSecond
+    ).toBe(HYPERBOLIC_FLYBY_PREFERRED_CADENCE);
+  });
+
+  it("rejects a forged catalogue preset without a valid cadence preference", () => {
+    const forged = {
+      ...INCLINED_BINARY_PRESET,
+      preferredSimulatedSecondsPerRealSecond: undefined,
+    } as unknown as GravityPreset;
+
+    expect(() => createGravityPresetCatalog([forged])).toThrow(
+      /invalid cadence preference/
+    );
   });
 });

@@ -1,14 +1,15 @@
 import {
   compileScenarioDraft,
-  type ScenarioCompilationOptions,
 } from "../core/scenarioCompiler";
 import type {
+  AppliedScenario,
   ScenarioDraft,
   ScenarioCompilationResult,
   ScenarioValidationReport,
 } from "../core/scenario";
 import type { FixedStepSchedulerConfig } from "../runtime/FixedStepScheduler";
 import type { GravityLabSessionHost } from "../runtime/GravityLabSession";
+import { createGravityLabSchedulerConfig } from "../runtime/schedulerPolicy";
 import type {
   GravityLabAction,
   GravityLabState,
@@ -28,13 +29,30 @@ export type GravityLabApplicationResult =
 
 export function validateGravityLabDraft(
   draft: ScenarioDraft,
-  schedulerConfig: FixedStepSchedulerConfig
+  preferredSimulatedSecondsPerRealSecond: number | null
 ): ScenarioCompilationResult {
-  const options: ScenarioCompilationOptions = {
-    budget: schedulerConfig,
-  };
+  const preliminary = compileScenarioDraft(draft);
 
-  return compileScenarioDraft(draft, options);
+  if (!preliminary.ok) {
+    return preliminary;
+  }
+
+  const schedulerConfig = schedulerConfigForAppliedScenario(
+    preliminary.scenario,
+    preferredSimulatedSecondsPerRealSecond
+  );
+
+  return compileScenarioDraft(draft, { budget: schedulerConfig });
+}
+
+export function schedulerConfigForAppliedScenario(
+  scenario: AppliedScenario,
+  preferredSimulatedSecondsPerRealSecond: number | null
+): FixedStepSchedulerConfig {
+  return createGravityLabSchedulerConfig(
+    scenario.numericalPolicy.timeStepSeconds,
+    preferredSimulatedSecondsPerRealSecond
+  );
 }
 
 export function applyGravityLabDraft(
@@ -66,7 +84,7 @@ export function applyGravityLabDraft(
 
   const compilation = validateGravityLabDraft(
     state.draft,
-    state.draftSchedulerConfig
+    state.draftPreferredSimulatedSecondsPerRealSecond
   );
 
   if (!compilation.ok) {
@@ -78,9 +96,13 @@ export function applyGravityLabDraft(
   }
 
   try {
+    const schedulerConfig = schedulerConfigForAppliedScenario(
+      compilation.scenario,
+      state.draftPreferredSimulatedSecondsPerRealSecond
+    );
     const snapshot = host.replace({
       appliedScenario: compilation.scenario,
-      schedulerConfig: state.draftSchedulerConfig,
+      schedulerConfig,
     });
 
     return {
@@ -91,6 +113,8 @@ export function applyGravityLabDraft(
         snapshot,
         draft: compilation.report.analyzedDraft,
         selectedBodyId: state.selectedDraftBodyId,
+        preferredSimulatedSecondsPerRealSecond:
+          state.draftPreferredSimulatedSecondsPerRealSecond,
       },
     };
   } catch (error) {

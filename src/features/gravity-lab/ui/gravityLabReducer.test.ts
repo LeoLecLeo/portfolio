@@ -333,7 +333,8 @@ describe("gravity-lab draft reducer", () => {
     const loaded = gravityLabReducer(initial, {
       type: "preset-draft-loaded",
       scenario: presetScenario,
-      schedulerConfig: null,
+      preferredSimulatedSecondsPerRealSecond:
+        STAR_PLANET_PRESET.preferredSimulatedSecondsPerRealSecond,
     });
     const expectedDraft = appliedScenarioToDraft(
       presetScenario,
@@ -367,7 +368,8 @@ describe("gravity-lab draft reducer", () => {
     const loaded = gravityLabReducer(initial, {
       type: "preset-draft-loaded",
       scenario: STAR_PLANET_PRESET.createScenario(),
-      schedulerConfig: null,
+      preferredSimulatedSecondsPerRealSecond:
+        STAR_PLANET_PRESET.preferredSimulatedSecondsPerRealSecond,
     });
     const cancelled = gravityLabReducer(loaded, {
       type: "cancel-draft",

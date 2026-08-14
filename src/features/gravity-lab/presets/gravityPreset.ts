@@ -3,7 +3,6 @@ import {
   type AppliedScenario,
 } from "../core/scenario";
 import { MAX_NEWTONIAN_BODIES } from "../core/types";
-import type { FixedStepSchedulerConfig } from "../runtime/FixedStepScheduler";
 
 export type GravityPresetCategory =
   | "binary-system"
@@ -18,6 +17,15 @@ export type GravityPresetEducationalLevel =
 
 export type GravityPresetPhysicalDomain = "newtonian-n-body";
 
+export type GravityPresetPedagogy = Readonly<{
+  learningObjective: string;
+  observedPhenomenon: string;
+  keyParameters: readonly string[];
+  interestingParametersToModify: readonly string[];
+  expectedResult: string;
+  limitationOrWarning: string;
+}>;
+
 export type GravityPreset = Readonly<{
   id: string;
   name: string;
@@ -26,7 +34,8 @@ export type GravityPreset = Readonly<{
   educationalLevel: GravityPresetEducationalLevel;
   bodyCount: number;
   expectedPhysicalDomain: GravityPresetPhysicalDomain;
-  schedulerConfig?: FixedStepSchedulerConfig;
+  pedagogy: GravityPresetPedagogy;
+  preferredSimulatedSecondsPerRealSecond: number | null;
   createScenario: () => AppliedScenario;
 }>;
 
@@ -36,6 +45,27 @@ function assertNonEmpty(value: string, label: string): void {
   if (value.trim().length === 0) {
     throw new TypeError(`${label} must not be empty.`);
   }
+}
+
+function freezeNonEmptyList(
+  values: readonly string[],
+  label: string
+): readonly string[] {
+  if (values.length === 0) {
+    throw new TypeError(`${label} must not be empty.`);
+  }
+
+  for (const value of values) {
+    assertNonEmpty(value, label);
+  }
+
+  return Object.freeze([...values]);
+}
+
+export function isValidPresetCadencePreference(
+  value: unknown
+): value is number | null {
+  return value === null || (Number.isFinite(value) && Number(value) > 0);
 }
 
 export function defineGravityPreset(
@@ -63,26 +93,42 @@ export function defineGravityPreset(
 
   const presetId = definition.id;
   const bodyCount = definition.bodyCount;
-  const schedulerConfig =
-    definition.schedulerConfig === undefined
-      ? undefined
-      : Object.freeze({ ...definition.schedulerConfig });
+  const pedagogy = Object.freeze({
+    learningObjective: definition.pedagogy.learningObjective,
+    observedPhenomenon: definition.pedagogy.observedPhenomenon,
+    keyParameters: freezeNonEmptyList(
+      definition.pedagogy.keyParameters,
+      "Preset key parameters"
+    ),
+    interestingParametersToModify: freezeNonEmptyList(
+      definition.pedagogy.interestingParametersToModify,
+      "Preset interesting parameters"
+    ),
+    expectedResult: definition.pedagogy.expectedResult,
+    limitationOrWarning: definition.pedagogy.limitationOrWarning,
+  });
 
-  if (schedulerConfig !== undefined) {
-    if (
-      !Number.isFinite(
-        schedulerConfig.simulatedSecondsPerRealSecond
-      ) ||
-      schedulerConfig.simulatedSecondsPerRealSecond <= 0 ||
-      !Number.isInteger(schedulerConfig.maxSubStepsPerTick) ||
-      schedulerConfig.maxSubStepsPerTick <= 0 ||
-      !Number.isFinite(schedulerConfig.maxFrameDeltaSeconds) ||
-      schedulerConfig.maxFrameDeltaSeconds <= 0
-    ) {
-      throw new RangeError(
-        `Preset "${presetId}" has an invalid scheduler configuration.`
-      );
-    }
+  assertNonEmpty(
+    pedagogy.learningObjective,
+    "Preset learning objective"
+  );
+  assertNonEmpty(
+    pedagogy.observedPhenomenon,
+    "Preset observed phenomenon"
+  );
+  assertNonEmpty(pedagogy.expectedResult, "Preset expected result");
+  assertNonEmpty(
+    pedagogy.limitationOrWarning,
+    "Preset limitation or warning"
+  );
+  if (
+    !isValidPresetCadencePreference(
+      definition.preferredSimulatedSecondsPerRealSecond
+    )
+  ) {
+    throw new RangeError(
+      `Preset "${presetId}" has an invalid cadence preference.`
+    );
   }
 
   const scenarioFactory = definition.createScenario;
@@ -114,7 +160,9 @@ export function defineGravityPreset(
     educationalLevel: definition.educationalLevel,
     bodyCount,
     expectedPhysicalDomain: definition.expectedPhysicalDomain,
-    ...(schedulerConfig === undefined ? {} : { schedulerConfig }),
+    pedagogy,
+    preferredSimulatedSecondsPerRealSecond:
+      definition.preferredSimulatedSecondsPerRealSecond,
     createScenario,
   });
 }

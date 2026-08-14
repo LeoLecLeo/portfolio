@@ -1,7 +1,10 @@
 import { CIRCULAR_TWO_BODY_PRESET } from "./circularTwoBody";
 import { HYPERBOLIC_FLYBY_PRESET } from "./hyperbolicFlyby";
 import { INCLINED_BINARY_PRESET } from "./inclinedBinary";
-import type { GravityPreset } from "./gravityPreset";
+import {
+  isValidPresetCadencePreference,
+  type GravityPreset,
+} from "./gravityPreset";
 import { STAR_PLANET_PRESET } from "./starPlanet";
 
 export function createGravityPresetCatalog(
@@ -10,6 +13,16 @@ export function createGravityPresetCatalog(
   const ids = new Set<string>();
 
   for (const preset of presets) {
+    if (
+      !isValidPresetCadencePreference(
+        preset.preferredSimulatedSecondsPerRealSecond
+      )
+    ) {
+      throw new RangeError(
+        `Gravity preset "${preset.id}" has an invalid cadence preference.`
+      );
+    }
+
     if (ids.has(preset.id)) {
       throw new RangeError(
         `Gravity preset identifier "${preset.id}" is duplicated.`

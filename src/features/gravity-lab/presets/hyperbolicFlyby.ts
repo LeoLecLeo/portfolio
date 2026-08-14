@@ -8,6 +8,8 @@ import {
 import { vector3 } from "../core/vector3";
 import { defineGravityPreset } from "./gravityPreset";
 import type { FixedStepSchedulerConfig } from "../runtime/FixedStepScheduler";
+import { createGravityLabSchedulerConfig } from "../runtime/schedulerPolicy";
+import { HYPERBOLIC_FLYBY_PREFERRED_CADENCE } from "./presetSchedulerPolicies";
 import {
   compilePresetScenario,
   createBarycentricTwoBodyDefinitions,
@@ -49,11 +51,10 @@ export const HYPERBOLIC_FLYBY_PERIAPSIS_M =
     (1 + HYPERBOLIC_FLYBY_ECCENTRICITY));
 export const HYPERBOLIC_FLYBY_TIME_STEP_SECONDS = 240;
 export const HYPERBOLIC_FLYBY_SCHEDULER_CONFIG: FixedStepSchedulerConfig =
-  Object.freeze({
-    simulatedSecondsPerRealSecond: 7_200,
-    maxSubStepsPerTick: 32,
-    maxFrameDeltaSeconds: 0.25,
-  });
+  createGravityLabSchedulerConfig(
+    HYPERBOLIC_FLYBY_TIME_STEP_SECONDS,
+    HYPERBOLIC_FLYBY_PREFERRED_CADENCE
+  );
 
 const HYPERBOLIC_FLYBY_DEFINITIONS =
   createBarycentricTwoBodyDefinitions(
@@ -96,6 +97,26 @@ export const HYPERBOLIC_FLYBY_PRESET = defineGravityPreset({
   educationalLevel: "intermediate",
   bodyCount: 2,
   expectedPhysicalDomain: "newtonian-n-body",
-  schedulerConfig: HYPERBOLIC_FLYBY_SCHEDULER_CONFIG,
+  pedagogy: {
+    learningObjective:
+      "Distinguer une trajectoire non liée d’une orbite fermée.",
+    observedPhenomenon:
+      "Le visiteur accélère, dévie au périastre puis s’éloigne avec une énergie orbitale positive.",
+    keyParameters: [
+      "Masses : 1 masse jovienne et 1 masse terrestre",
+      "Vitesse à l’infini : 15 km/s",
+      "Décalage initial : 1,0 × 10⁹ m",
+    ],
+    interestingParametersToModify: [
+      "Modifier la vitesse d’excès hyperbolique",
+      "Modifier le décalage transversal initial",
+    ],
+    expectedResult:
+      "Une branche entrante et une branche sortante distinctes, sans capture gravitationnelle.",
+    limitationOrWarning:
+      "Une approche plus serrée peut déclencher la garde de rencontre ; le pas de 240 s doit rester explicite.",
+  },
+  preferredSimulatedSecondsPerRealSecond:
+    HYPERBOLIC_FLYBY_PREFERRED_CADENCE,
   createScenario: createHyperbolicFlybyAppliedScenario,
 });

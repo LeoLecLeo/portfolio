@@ -43,17 +43,17 @@ function loadAndApplyHyperbolicPreset() {
   const previousSession = initial.activeSession;
 
   expect(loaded.activeSession).toBe(previousSession);
-  expect(loaded.draftSchedulerConfig).toEqual(
-    HYPERBOLIC_FLYBY_SCHEDULER_CONFIG
-  );
+  expect(
+    loaded.draftPreferredSimulatedSecondsPerRealSecond
+  ).toBe(7_200);
   const afterActiveSessionTelemetry = gravityLabReducer(loaded, {
     type: "session-updated",
     snapshot: host.pause(),
   });
 
-  expect(afterActiveSessionTelemetry.draftSchedulerConfig).toEqual(
-    HYPERBOLIC_FLYBY_SCHEDULER_CONFIG
-  );
+  expect(
+    afterActiveSessionTelemetry.draftPreferredSimulatedSecondsPerRealSecond
+  ).toBe(7_200);
 
   const result = applyGravityLabDraft(afterActiveSessionTelemetry, host);
 

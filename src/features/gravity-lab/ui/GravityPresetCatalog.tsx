@@ -88,6 +88,10 @@ export function GravityPresetCatalog({
                 <p className="mt-1 break-words text-xs leading-relaxed text-muted-foreground">
                   {preset.shortDescription}
                 </p>
+                <p className="mt-2 break-words rounded-md bg-background/55 px-2 py-1.5 text-xs leading-relaxed">
+                  <span className="font-semibold">Objectif : </span>
+                  {preset.pedagogy.learningObjective}
+                </p>
                 <dl className="mt-2 grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
                   <div className="min-w-0">
                     <dt className="text-muted-foreground">Catégorie</dt>
@@ -116,6 +120,53 @@ export function GravityPresetCatalog({
                     </dd>
                   </div>
                 </dl>
+                <details className="mt-3 rounded-md border border-border/70 bg-background/35 text-xs">
+                  <summary className="cursor-pointer rounded-md px-2 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Repères pédagogiques
+                  </summary>
+                  <div className="space-y-3 border-t border-border/70 px-2 py-3">
+                    <div>
+                      <h5 className="font-semibold">Phénomène observé</h5>
+                      <p className="mt-0.5 break-words leading-relaxed text-muted-foreground">
+                        {preset.pedagogy.observedPhenomenon}
+                      </p>
+                    </div>
+                    <div>
+                      <h5 className="font-semibold">Paramètres principaux</h5>
+                      <ul className="mt-1 list-disc space-y-0.5 pl-4 text-muted-foreground">
+                        {preset.pedagogy.keyParameters.map((parameter) => (
+                          <li key={parameter} className="break-words">
+                            {parameter}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <h5 className="font-semibold">À modifier</h5>
+                      <ul className="mt-1 list-disc space-y-0.5 pl-4 text-muted-foreground">
+                        {preset.pedagogy.interestingParametersToModify.map(
+                          (parameter) => (
+                            <li key={parameter} className="break-words">
+                              {parameter}
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                    <div>
+                      <h5 className="font-semibold">Résultat attendu</h5>
+                      <p className="mt-0.5 break-words leading-relaxed text-muted-foreground">
+                        {preset.pedagogy.expectedResult}
+                      </p>
+                    </div>
+                    <div>
+                      <h5 className="font-semibold">Limite ou avertissement</h5>
+                      <p className="mt-0.5 break-words leading-relaxed text-muted-foreground">
+                        {preset.pedagogy.limitationOrWarning}
+                      </p>
+                    </div>
+                  </div>
+                </details>
                 <button
                   type="button"
                   onClick={() => onLoad(preset)}
