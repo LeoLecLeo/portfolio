@@ -6,15 +6,22 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
   type RefCallback,
 } from "react";
 import type { Mesh } from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import {
   TELEMETRY_INTERVAL_SECONDS,
   type PrototypeTelemetry,
 } from "../runtime/GravityPrototypeRuntime";
 import type { GravityLabSession } from "../runtime/GravityLabSession";
+import {
+  DEFAULT_GRAVITY_CAMERA_POSITION,
+  DEFAULT_GRAVITY_CAMERA_TARGET,
+  isBodySelectionClick,
+} from "./cameraPolicy";
 
 type GravityCanvasProps = Readonly<{
   session: GravityLabSession;
@@ -31,15 +38,59 @@ type GravityCanvasProps = Readonly<{
   renderRevision: number;
 }>;
 
-type GravitySceneProps = Omit<GravityCanvasProps, "onReady">;
+type GravitySceneProps = Omit<GravityCanvasProps, "onReady"> &
+  Readonly<{ cameraResetRevision: number }>;
 
-function FixedCamera() {
+function OrbitCameraControls({
+  resetRevision,
+}: Readonly<{ resetRevision: number }>) {
   const camera = useThree((state) => state.camera);
+  const domElement = useThree((state) => state.gl.domElement);
+  const invalidate = useThree((state) => state.invalidate);
+  const controlsRef = useRef<OrbitControls | null>(null);
+  const handledResetRevision = useRef(resetRevision);
 
   useEffect(() => {
-    camera.position.set(11, 8, 14);
-    camera.lookAt(0, 0, 0);
-  }, [camera]);
+    const controls = new OrbitControls(camera, domElement);
+    const invalidateOnChange = () => invalidate();
+
+    controls.enableDamping = false;
+    controls.enablePan = true;
+    controls.enableRotate = true;
+    controls.enableZoom = true;
+    controls.screenSpacePanning = true;
+    controls.minDistance = 2;
+    controls.maxDistance = 80;
+    controls.target.set(...DEFAULT_GRAVITY_CAMERA_TARGET);
+    controls.addEventListener("change", invalidateOnChange);
+    controls.update();
+    controlsRef.current = controls;
+
+    return () => {
+      controls.removeEventListener("change", invalidateOnChange);
+      controls.dispose();
+      controlsRef.current = null;
+    };
+  }, [camera, domElement, invalidate]);
+
+  useEffect(() => {
+    if (handledResetRevision.current === resetRevision) {
+      return;
+    }
+
+    handledResetRevision.current = resetRevision;
+    const controls = controlsRef.current;
+
+    if (controls === null) {
+      return;
+    }
+
+    camera.position.set(...DEFAULT_GRAVITY_CAMERA_POSITION);
+    camera.up.set(0, 1, 0);
+    controls.target.set(...DEFAULT_GRAVITY_CAMERA_TARGET);
+    controls.update();
+    invalidate();
+  }, [camera, invalidate, resetRevision]);
 
   return null;
 }
@@ -50,6 +101,7 @@ function GravityScene({
   onSelectBody,
   onTelemetry,
   renderRevision,
+  cameraResetRevision,
 }: GravitySceneProps) {
   const runtime = session.runtime;
   const invalidate = useThree((state) => state.invalidate);
@@ -103,7 +155,7 @@ function GravityScene({
 
   return (
     <>
-      <FixedCamera />
+      <OrbitCameraControls resetRevision={cameraResetRevision} />
       <color attach="background" args={["#060912"]} />
       <ambientLight intensity={0.35} />
       <directionalLight position={[5, 8, 6]} intensity={1.8} />
@@ -134,6 +186,11 @@ function GravityScene({
             scale={selected ? 1.3 : 1}
             onClick={(event) => {
               event.stopPropagation();
+
+              if (!isBodySelectionClick(event.delta)) {
+                return;
+              }
+
               onSelectBody(session, body.bodyId);
             }}
           >
@@ -161,35 +218,56 @@ export const GravityCanvas = memo(function GravityCanvas({
   onReady,
   renderRevision,
 }: GravityCanvasProps) {
+  const [cameraResetRevision, setCameraResetRevision] = useState(0);
+
   return (
     <div
-      role="img"
-      aria-label={`Simulation gravitationnelle tridimensionnelle de ${session.bodies.length} corps célestes.`}
-      className="h-[65svh] min-h-72 max-h-[28rem] w-full overflow-hidden rounded-xl border border-border/80 bg-black/30 md:h-[70svh] md:max-h-[36rem]"
+      className="relative h-[65svh] min-h-72 max-h-[28rem] w-full overflow-hidden rounded-xl border border-border/80 bg-black/30 md:h-[70svh] md:max-h-[36rem]"
     >
-      <Canvas
-        camera={{ fov: 46, near: 0.1, far: 100, position: [11, 8, 14] }}
-        dpr={[1, 1.5]}
-        fallback={
-          <div className="grid h-full place-items-center p-8 text-center text-sm text-muted-foreground">
-            Visualisation tridimensionnelle du scénario gravitationnel.
-          </div>
-        }
-        frameloop="demand"
-        gl={{ antialias: true, powerPreference: "high-performance" }}
-        onCreated={(state) => {
-          onReady();
-          state.invalidate();
-        }}
+      <div
+        role="img"
+        aria-label={`Simulation gravitationnelle tridimensionnelle de ${session.bodies.length} corps célestes.`}
+        className="h-full w-full"
       >
-        <GravityScene
-          session={session}
-          selectedBodyId={selectedBodyId}
-          onSelectBody={onSelectBody}
-          onTelemetry={onTelemetry}
-          renderRevision={renderRevision}
-        />
-      </Canvas>
+        <Canvas
+          camera={{
+            fov: 46,
+            near: 0.1,
+            far: 100,
+            position: [...DEFAULT_GRAVITY_CAMERA_POSITION],
+          }}
+          dpr={[1, 1.5]}
+          fallback={
+            <div className="grid h-full place-items-center p-8 text-center text-sm text-muted-foreground">
+              Visualisation tridimensionnelle du scénario gravitationnel.
+            </div>
+          }
+          frameloop="demand"
+          gl={{ antialias: true, powerPreference: "high-performance" }}
+          onCreated={(state) => {
+            onReady();
+            state.invalidate();
+          }}
+        >
+          <GravityScene
+            session={session}
+            selectedBodyId={selectedBodyId}
+            onSelectBody={onSelectBody}
+            onTelemetry={onTelemetry}
+            renderRevision={renderRevision}
+            cameraResetRevision={cameraResetRevision}
+          />
+        </Canvas>
+      </div>
+      <button
+        type="button"
+        onClick={() =>
+          setCameraResetRevision((revision) => revision + 1)
+        }
+        className="absolute right-3 top-3 rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+      >
+        Réinitialiser la caméra
+      </button>
     </div>
   );
 });

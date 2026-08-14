@@ -378,7 +378,7 @@ export function GravityLabPrototype({
             </h2>
           </div>
           <p className="text-sm text-muted-foreground">
-            Caméra fixe · anneau = barycentre
+            Caméra orbitale · anneau = barycentre
           </p>
         </div>
 
