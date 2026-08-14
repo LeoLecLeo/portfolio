@@ -43,6 +43,10 @@ import {
 } from "./gravityLabPresentation";
 import { GravityPresetCatalog } from "./GravityPresetCatalog";
 import { preparePresetDraftLoad } from "./presetDraftLoading";
+import {
+  getGravityLabMainControlState,
+  invokeGravityLabMainControl,
+} from "./gravityLabMainControls";
 
 const SECONDS_PER_DAY = 86_400;
 
@@ -194,6 +198,12 @@ export function GravityLabPrototype({
       ),
     [labState.appliedScenario, labState.draft]
   );
+  const mainControlState = getGravityLabMainControlState({
+    status: telemetry.status,
+    rendererReady,
+    hasUnappliedChanges,
+    draftIsValid: draftValidation.ok,
+  });
 
   useEffect(() => {
     if (
@@ -345,6 +355,11 @@ export function GravityLabPrototype({
     );
     setRenderRevision((current) => current + 1);
   }, [host, labState]);
+  const mainControlHandlers = {
+    resume,
+    pause,
+    apply: applyDraft,
+  };
 
   const notice =
     telemetry.collisionMessage ??
@@ -380,6 +395,60 @@ export function GravityLabPrototype({
           <p className="text-sm text-muted-foreground">
             Caméra orbitale · anneau = barycentre
           </p>
+        </div>
+
+        <div
+          role="group"
+          aria-label="Contrôles principaux de la simulation"
+          className="mb-4 flex flex-col gap-3 rounded-xl border border-border/80 bg-card/70 p-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p
+            role="status"
+            aria-live="polite"
+            className="text-sm text-muted-foreground"
+          >
+            État courant :{" "}
+            <strong className="text-foreground">
+              {mainControlState.mode}
+            </strong>
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+            <button
+              type="button"
+              aria-label="Démarrer ou reprendre la simulation"
+              onClick={() =>
+                invokeGravityLabMainControl("resume", mainControlHandlers)
+              }
+              disabled={mainControlState.resumeDisabled}
+              className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              <span aria-hidden="true">▶ </span>
+              Lecture
+            </button>
+            <button
+              type="button"
+              aria-label="Mettre la simulation en pause"
+              onClick={() =>
+                invokeGravityLabMainControl("pause", mainControlHandlers)
+              }
+              disabled={mainControlState.pauseDisabled}
+              className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              <span aria-hidden="true">■ </span>
+              Stop
+            </button>
+            <button
+              type="button"
+              aria-describedby="draft-state-message"
+              onClick={() =>
+                invokeGravityLabMainControl("apply", mainControlHandlers)
+              }
+              disabled={mainControlState.applyDisabled}
+              className="col-span-2 whitespace-nowrap rounded-lg border border-primary bg-background px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              Appliquer et réinitialiser
+            </button>
+          </div>
         </div>
 
         <GravityCanvas
@@ -503,19 +572,6 @@ export function GravityLabPrototype({
               Annuler les modifications
             </button>
           </div>
-          <button
-            type="button"
-            onClick={applyDraft}
-            aria-describedby="draft-state-message"
-            disabled={
-              !hasUnappliedChanges ||
-              !draftValidation.ok ||
-              telemetry.status === "running"
-            }
-            className="mt-2 w-full rounded-lg bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
-          >
-            Appliquer et réinitialiser
-          </button>
           {hasUnappliedChanges &&
           draftValidation.ok &&
           telemetry.status === "running" ? (
@@ -587,29 +643,13 @@ export function GravityLabPrototype({
 
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Commandes
+            Réinitialisation
           </p>
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={pause}
-              disabled={telemetry.status !== "running"}
-              className="rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm font-medium transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              Pause
-            </button>
-            <button
-              type="button"
-              onClick={resume}
-              disabled={!rendererReady || telemetry.status !== "paused"}
-              className="rounded-lg bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              Reprendre
-            </button>
+          <div className="mt-3">
             <button
               type="button"
               onClick={reset}
-              className="rounded-lg border border-border bg-transparent px-3 py-2.5 text-sm font-medium transition-colors hover:bg-secondary sm:col-span-2"
+              className="w-full rounded-lg border border-border bg-transparent px-3 py-2.5 text-sm font-medium transition-colors hover:bg-secondary"
             >
               Réinitialiser en pause
             </button>
