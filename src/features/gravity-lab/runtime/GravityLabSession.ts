@@ -21,7 +21,7 @@ export type SessionBodyPresentation = Readonly<{
   bodyId: string;
   name: string;
   color: string;
-  graphicRadiusScene: number;
+  physicalRadiusM: number;
 }>;
 
 export type GravityLabSessionRequest = Readonly<{
@@ -123,7 +123,7 @@ export class GravityLabSession {
           name: body.name,
           color:
             request.appliedScenario.presentation.bodies[index].color,
-          graphicRadiusScene: 0.58,
+          physicalRadiusM: body.physicalRadiusM,
         })
       )
     );

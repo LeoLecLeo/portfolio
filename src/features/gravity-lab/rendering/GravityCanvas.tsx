@@ -39,6 +39,10 @@ import {
   TRAJECTORY_MAX_POINTS_PER_BODY,
   TrajectoryCollector,
 } from "./trajectoryCollector";
+import {
+  calculateVisualRadiusScene,
+  type VisualRadiusMode,
+} from "./visualRadiusPolicy";
 
 type GravityCanvasProps = Readonly<{
   session: GravityLabSession;
@@ -67,6 +71,7 @@ type GravitySceneProps = Omit<GravityCanvasProps, "onReady"> &
     trackedBodyId: string | null;
     trajectoriesVisible: boolean;
     trajectoryClearRevision: number;
+    visualRadiusMode: VisualRadiusMode;
   }>;
 
 function updateTrajectoryGeometry(
@@ -365,6 +370,7 @@ function GravityScene({
   trajectoriesVisible,
   trajectoryClearRevision,
   trajectoryResetRevision,
+  visualRadiusMode,
 }: GravitySceneProps) {
   const runtime = session.runtime;
   const invalidate = useThree((state) => state.invalidate);
@@ -460,7 +466,7 @@ function GravityScene({
 
   useEffect(() => {
     invalidate();
-  }, [invalidate, selectedBodyId]);
+  }, [invalidate, selectedBodyId, visualRadiusMode]);
 
   useFrame((state, deltaSeconds) => {
     const urgentTelemetry = runtime.advanceFrame(deltaSeconds);
@@ -561,7 +567,6 @@ function GravityScene({
             key={body.bodyId}
             ref={setMeshRef}
             name={body.name}
-            scale={selected ? 1.3 : 1}
             onClick={(event) => {
               event.stopPropagation();
 
@@ -573,7 +578,15 @@ function GravityScene({
             }}
           >
             <sphereGeometry
-              args={[body.graphicRadiusScene, 32, 32]}
+              args={[
+                calculateVisualRadiusScene(
+                  body.physicalRadiusM,
+                  session.sceneTransform.sceneUnitsPerMeter,
+                  visualRadiusMode
+                ),
+                32,
+                32,
+              ]}
             />
             <meshStandardMaterial
               color={body.color}
@@ -606,6 +619,8 @@ export const GravityCanvas = memo(function GravityCanvas({
   const [trackedBodyId, setTrackedBodyId] = useState<string | null>(null);
   const [trajectoriesVisible, setTrajectoriesVisible] = useState(true);
   const [trajectoryClearRevision, setTrajectoryClearRevision] = useState(0);
+  const [visualRadiusMode, setVisualRadiusMode] =
+    useState<VisualRadiusMode>("amplified");
   const previousSession = useRef(session);
   const selectedBodyExists = session.bodies.some(
     ({ bodyId }) => bodyId === selectedBodyId
@@ -673,29 +688,62 @@ export const GravityCanvas = memo(function GravityCanvas({
             trajectoriesVisible={trajectoriesVisible}
             trajectoryClearRevision={trajectoryClearRevision}
             trajectoryResetRevision={trajectoryResetRevision}
+            visualRadiusMode={visualRadiusMode}
           />
         </Canvas>
       </div>
-      <div className="absolute bottom-3 left-3 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-2">
-        <button
-          type="button"
-          aria-pressed={trajectoriesVisible}
-          onClick={() => setTrajectoriesVisible((visible) => !visible)}
-          className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white aria-pressed:border-primary aria-pressed:bg-primary/80"
-        >
-          {trajectoriesVisible
-            ? "Masquer les trajectoires"
-            : "Afficher les trajectoires"}
-        </button>
-        <button
-          type="button"
-          onClick={() =>
-            setTrajectoryClearRevision((revision) => revision + 1)
-          }
-          className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-        >
-          Effacer les trajectoires
-        </button>
+      <div className="pointer-events-none absolute inset-x-3 bottom-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="pointer-events-auto flex flex-wrap gap-2">
+          <button
+            type="button"
+            aria-pressed={trajectoriesVisible}
+            onClick={() => setTrajectoriesVisible((visible) => !visible)}
+            className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white aria-pressed:border-primary aria-pressed:bg-primary/80"
+          >
+            {trajectoriesVisible
+              ? "Masquer les trajectoires"
+              : "Afficher les trajectoires"}
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              setTrajectoryClearRevision((revision) => revision + 1)
+            }
+            className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            Effacer les trajectoires
+          </button>
+        </div>
+        <fieldset className="pointer-events-auto rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs text-white shadow-lg backdrop-blur-sm">
+          <legend className="px-1 font-semibold">Taille des astres</legend>
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            <label className="flex cursor-pointer items-center gap-1.5">
+              <input
+                type="radio"
+                name="gravity-visual-radius-mode"
+                value="amplified"
+                checked={visualRadiusMode === "amplified"}
+                onChange={() => setVisualRadiusMode("amplified")}
+              />
+              Rayons amplifiés
+            </label>
+            <label className="flex cursor-pointer items-center gap-1.5">
+              <input
+                type="radio"
+                name="gravity-visual-radius-mode"
+                value="physical-scale"
+                checked={visualRadiusMode === "physical-scale"}
+                onChange={() => setVisualRadiusMode("physical-scale")}
+              />
+              Rayons à l’échelle
+            </label>
+          </div>
+          {visualRadiusMode === "amplified" ? (
+            <p role="status" className="mt-1 text-[0.68rem] text-white/75">
+              Les tailles des astres sont amplifiées pour la lisibilité.
+            </p>
+          ) : null}
+        </fieldset>
       </div>
       <div className="absolute right-3 top-3 grid max-w-[calc(100%-1.5rem)] grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
         <button

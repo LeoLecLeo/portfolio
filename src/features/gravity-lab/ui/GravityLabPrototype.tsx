@@ -838,9 +838,8 @@ export function GravityLabPrototype({
         </div>
 
         <p className="mt-auto text-xs leading-relaxed text-muted-foreground">
-          Calculs internes en unités SI. Les sphères sont volontairement
-          agrandies pour rester visibles&nbsp;: leurs rayons graphiques ne
-          servent jamais à la détection physique. La télémétrie est
+          Calculs internes en unités SI. Le mode de taille visuelle des astres
+          ne sert jamais à la détection physique. La télémétrie est
           échantillonnée dans la boucle avec une publication périodique à{" "}
           {(1 / TELEMETRY_INTERVAL_SECONDS).toFixed(0)} Hz, complétée par les
           actions et arrêts urgents.

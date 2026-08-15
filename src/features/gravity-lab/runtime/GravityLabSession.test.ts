@@ -148,6 +148,12 @@ describe("generic gravity-lab session host", () => {
       "binary-a",
       "binary-b",
     ]);
+    expect(session.bodies.map(({ physicalRadiusM }) => physicalRadiusM))
+      .toEqual(
+        session.appliedScenario.physics.bodies.map(
+          ({ physicalRadiusM }) => physicalRadiusM
+        )
+      );
     session.writeScenePosition("binary-a", first);
     session.writeScenePosition("binary-b", second);
     expect(Math.hypot(first.x, first.y, first.z)).toBeCloseTo(4, 14);
