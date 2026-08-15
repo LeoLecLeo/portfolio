@@ -488,7 +488,10 @@ function GravityScene({
       }
     }
 
-    if (trajectoryCollector.shouldSample(deltaSeconds, runtime.isRunning)) {
+    if (
+      trajectoriesVisible &&
+      trajectoryCollector.shouldSample(deltaSeconds, runtime.isRunning)
+    ) {
       for (let bodyIndex = 0; bodyIndex < bodies.length; bodyIndex += 1) {
         const mesh = meshRefs.current[bodyIndex];
 
@@ -499,13 +502,11 @@ function GravityScene({
         const bodyId = bodies[bodyIndex].bodyId;
         trajectoryCollector.append(bodyId, mesh.position);
 
-        if (trajectoriesVisible) {
-          updateTrajectoryGeometry(
-            trajectoryCollector,
-            bodyId,
-            trajectoryRenderObjects[bodyIndex].geometry
-          );
-        }
+        updateTrajectoryGeometry(
+          trajectoryCollector,
+          bodyId,
+          trajectoryRenderObjects[bodyIndex].geometry
+        );
       }
     }
 
@@ -543,14 +544,12 @@ function GravityScene({
       <directionalLight position={[5, 8, 6]} intensity={1.8} />
       <pointLight position={[0, 0, 0]} intensity={18} distance={28} />
 
-      <GravityPotentialGrid
-        session={session}
-        visible={potentialGridVisible}
-      />
-      <GravityFieldVectors
-        session={session}
-        visible={gravityFieldVisible}
-      />
+      {potentialGridVisible ? (
+        <GravityPotentialGrid session={session} visible />
+      ) : null}
+      {gravityFieldVisible ? (
+        <GravityFieldVectors session={session} visible />
+      ) : null}
       <axesHelper args={[2.2]} />
 
       {bodies.map((body, bodyIndex) => (
@@ -659,120 +658,116 @@ export const GravityCanvas = memo(function GravityCanvas({
   }, [selectedBodyId, session]);
 
   return (
-    <div
-      className="relative h-[65svh] min-h-72 max-h-[28rem] w-full overflow-hidden rounded-xl border border-border/80 bg-black/30 md:h-[70svh] md:max-h-[36rem]"
-    >
-      <div
-        role="img"
-        aria-label={`Simulation gravitationnelle tridimensionnelle de ${session.bodies.length} corps célestes.`}
-        className="h-full w-full"
-      >
-        <Canvas
-          camera={{
-            fov: 46,
-            near: 0.1,
-            far: 100,
-            position: [...DEFAULT_GRAVITY_CAMERA_POSITION],
-          }}
-          dpr={[1, 1.5]}
-          fallback={
-            <div className="grid h-full place-items-center p-8 text-center text-sm text-muted-foreground">
-              Visualisation tridimensionnelle du scénario gravitationnel.
-            </div>
-          }
-          frameloop="demand"
-          gl={{ antialias: true, powerPreference: "high-performance" }}
-          onCreated={(state) => {
-            onReady();
-            state.invalidate();
-          }}
+    <div className="space-y-3">
+      <div className="relative h-[65svh] min-h-72 max-h-[28rem] w-full overflow-hidden rounded-xl border border-border/80 bg-black/30 md:h-[70svh] md:max-h-[36rem]">
+        <div
+          role="img"
+          aria-label={`Simulation gravitationnelle tridimensionnelle de ${session.bodies.length} corps célestes.`}
+          className="h-full w-full"
         >
-          <GravityScene
-            session={session}
-            selectedBodyId={selectedBodyId}
-            onSelectBody={onSelectBody}
-            onTelemetry={onTelemetry}
-            renderRevision={renderRevision}
-            cameraResetRevision={cameraResetRevision}
-            cameraFramingRevision={cameraFramingRevision}
-            cameraFocusRequest={cameraFocusRequest}
-            trackedBodyId={effectiveTrackedBodyId}
-            trajectoriesVisible={trajectoriesVisible}
-            trajectoryClearRevision={trajectoryClearRevision}
-            trajectoryResetRevision={trajectoryResetRevision}
-            visualRadiusMode={visualRadiusMode}
-            potentialGridVisible={potentialGridVisible}
-            gravityFieldVisible={gravityFieldVisible}
-          />
-        </Canvas>
-      </div>
-      <div className="pointer-events-none absolute inset-x-3 bottom-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div className="pointer-events-auto flex flex-wrap gap-2">
-          <div className="flex flex-col gap-1">
-            <button
-              type="button"
-              aria-pressed={potentialGridVisible}
-              onClick={() =>
-                setPotentialGridVisible((visible) => !visible)
-              }
-              className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white aria-pressed:border-primary aria-pressed:bg-primary/80"
-            >
-              {potentialGridVisible
-                ? "Grille gravitationnelle : Masquer"
-                : "Grille gravitationnelle : Afficher"}
-            </button>
-            {potentialGridVisible ? (
-              <p className="max-w-xs rounded bg-black/55 px-2 py-1 text-[0.68rem] leading-tight text-white/75">
-                Visualisation du potentiel gravitationnel newtonien —
-                déformation amplifiée pour la lisibilité. Ce réseau ne
-                représente pas une courbure relativiste de l’espace-temps.
-              </p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-1">
-            <button
-              type="button"
-              aria-pressed={gravityFieldVisible}
-              onClick={() =>
-                setGravityFieldVisible((visible) => !visible)
-              }
-              className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white aria-pressed:border-primary aria-pressed:bg-primary/80"
-            >
-              {gravityFieldVisible
-                ? "Champ gravitationnel : Masquer"
-                : "Champ gravitationnel : Afficher"}
-            </button>
-            {gravityFieldVisible ? (
-              <p className="max-w-xs rounded bg-black/55 px-2 py-1 text-[0.68rem] leading-tight text-white/75">
-                Les flèches indiquent la direction et l’intensité relative de
-                l’accélération gravitationnelle.
-              </p>
-            ) : null}
-          </div>
+          <Canvas
+            camera={{
+              fov: 46,
+              near: 0.1,
+              far: 100,
+              position: [...DEFAULT_GRAVITY_CAMERA_POSITION],
+            }}
+            dpr={[1, 1.5]}
+            fallback={
+              <div className="grid h-full place-items-center p-8 text-center text-sm text-muted-foreground">
+                Visualisation tridimensionnelle du scénario gravitationnel.
+              </div>
+            }
+            frameloop="demand"
+            gl={{ antialias: true, powerPreference: "high-performance" }}
+            onCreated={(state) => {
+              onReady();
+              state.invalidate();
+            }}
+          >
+            <GravityScene
+              session={session}
+              selectedBodyId={selectedBodyId}
+              onSelectBody={onSelectBody}
+              onTelemetry={onTelemetry}
+              renderRevision={renderRevision}
+              cameraResetRevision={cameraResetRevision}
+              cameraFramingRevision={cameraFramingRevision}
+              cameraFocusRequest={cameraFocusRequest}
+              trackedBodyId={effectiveTrackedBodyId}
+              trajectoriesVisible={trajectoriesVisible}
+              trajectoryClearRevision={trajectoryClearRevision}
+              trajectoryResetRevision={trajectoryResetRevision}
+              visualRadiusMode={visualRadiusMode}
+              potentialGridVisible={potentialGridVisible}
+              gravityFieldVisible={gravityFieldVisible}
+            />
+          </Canvas>
+        </div>
+        <div
+          role="group"
+          aria-label="Caméra"
+          className="absolute right-3 top-3 grid max-w-[calc(100%-1.5rem)] grid-cols-2 gap-2 rounded-lg border border-white/15 bg-black/45 p-2 shadow-lg backdrop-blur-sm"
+        >
+          <p className="col-span-2 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white/70">
+            Caméra
+          </p>
           <button
             type="button"
-            aria-pressed={trajectoriesVisible}
-            onClick={() => setTrajectoriesVisible((visible) => !visible)}
-            className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white aria-pressed:border-primary aria-pressed:bg-primary/80"
+            disabled={!selectedBodyExists}
+            onClick={() =>
+              setCameraFocusRequest((request) => ({
+                revision: request.revision + 1,
+                bodyId: selectedBodyId,
+              }))
+            }
+            className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-45"
           >
-            {trajectoriesVisible
-              ? "Masquer les trajectoires"
-              : "Afficher les trajectoires"}
+            Centrer sur le corps
+          </button>
+          <button
+            type="button"
+            aria-pressed={effectiveTrackedBodyId !== null}
+            disabled={!selectedBodyExists}
+            onClick={() =>
+              setTrackedBodyId((current) =>
+                current === null ? selectedBodyId : null
+              )
+            }
+            className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-45 aria-pressed:border-primary aria-pressed:bg-primary/80"
+          >
+            Suivre le corps
           </button>
           <button
             type="button"
             onClick={() =>
-              setTrajectoryClearRevision((revision) => revision + 1)
+              setCameraFramingRevision((revision) => revision + 1)
             }
             className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
-            Effacer les trajectoires
+            Cadrer le système
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              setCameraResetRevision((revision) => revision + 1)
+            }
+            className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            Réinitialiser la caméra
           </button>
         </div>
-        <fieldset className="pointer-events-auto rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs text-white shadow-lg backdrop-blur-sm">
-          <legend className="px-1 font-semibold">Taille des astres</legend>
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
-            <label className="flex cursor-pointer items-center gap-1.5">
+      </div>
+      <div
+        aria-label="Contrôles d’affichage"
+        className="grid gap-3 rounded-xl border border-border/80 bg-card/40 p-3 sm:grid-cols-2 xl:grid-cols-4"
+      >
+        <fieldset className="rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
+          <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Affichage des astres
+          </legend>
+          <div className="space-y-2">
+            <label className="flex cursor-pointer items-center gap-2">
               <input
                 type="radio"
                 name="gravity-visual-radius-mode"
@@ -782,7 +777,7 @@ export const GravityCanvas = memo(function GravityCanvas({
               />
               Rayons amplifiés
             </label>
-            <label className="flex cursor-pointer items-center gap-1.5">
+            <label className="flex cursor-pointer items-center gap-2">
               <input
                 type="radio"
                 name="gravity-visual-radius-mode"
@@ -794,57 +789,77 @@ export const GravityCanvas = memo(function GravityCanvas({
             </label>
           </div>
           {visualRadiusMode === "amplified" ? (
-            <p role="status" className="mt-1 text-[0.68rem] text-white/75">
+            <p role="status" className="mt-2 text-xs text-muted-foreground">
               Les tailles des astres sont amplifiées pour la lisibilité.
             </p>
           ) : null}
         </fieldset>
-      </div>
-      <div className="absolute right-3 top-3 grid max-w-[calc(100%-1.5rem)] grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
-        <button
-          type="button"
-          disabled={!selectedBodyExists}
-          onClick={() =>
-            setCameraFocusRequest((request) => ({
-              revision: request.revision + 1,
-              bodyId: selectedBodyId,
-            }))
-          }
-          className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-45"
-        >
-          Centrer sur le corps
-        </button>
-        <button
-          type="button"
-          aria-pressed={effectiveTrackedBodyId !== null}
-          disabled={!selectedBodyExists}
-          onClick={() =>
-            setTrackedBodyId((current) =>
-              current === null ? selectedBodyId : null
-            )
-          }
-          className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-45 aria-pressed:border-primary aria-pressed:bg-primary/80"
-        >
-          Suivre le corps
-        </button>
-        <button
-          type="button"
-          onClick={() =>
-            setCameraFramingRevision((revision) => revision + 1)
-          }
-          className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-        >
-          Cadrer le système
-        </button>
-        <button
-          type="button"
-          onClick={() =>
-            setCameraResetRevision((revision) => revision + 1)
-          }
-          className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-        >
-          Réinitialiser la caméra
-        </button>
+
+        <fieldset className="rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
+          <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Trajectoires
+          </legend>
+          <div className="grid gap-2">
+            <button
+              type="button"
+              aria-pressed={trajectoriesVisible}
+              onClick={() => setTrajectoriesVisible((visible) => !visible)}
+              className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary aria-pressed:bg-primary/10"
+            >
+              {trajectoriesVisible ? "Masquer" : "Afficher"}
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setTrajectoryClearRevision((revision) => revision + 1)
+              }
+              className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              Effacer les trajectoires
+            </button>
+          </div>
+        </fieldset>
+
+        <fieldset className="rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
+          <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Grille gravitationnelle
+          </legend>
+          <button
+            type="button"
+            aria-pressed={potentialGridVisible}
+            onClick={() => setPotentialGridVisible((visible) => !visible)}
+            className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary aria-pressed:bg-primary/10"
+          >
+            {potentialGridVisible ? "Masquer" : "Afficher"}
+          </button>
+          {potentialGridVisible ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Visualisation du potentiel gravitationnel newtonien — déformation
+              amplifiée pour la lisibilité. Ce réseau ne représente pas une
+              courbure relativiste de l’espace-temps.
+            </p>
+          ) : null}
+        </fieldset>
+
+        <fieldset className="rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
+          <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Champ gravitationnel
+          </legend>
+          <button
+            type="button"
+            aria-pressed={gravityFieldVisible}
+            onClick={() => setGravityFieldVisible((visible) => !visible)}
+            className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary aria-pressed:bg-primary/10"
+          >
+            {gravityFieldVisible ? "Masquer" : "Afficher"}
+          </button>
+          {gravityFieldVisible ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Les flèches indiquent la direction et l’intensité relative de
+              l’accélération gravitationnelle.
+            </p>
+          ) : null}
+        </fieldset>
       </div>
     </div>
   );

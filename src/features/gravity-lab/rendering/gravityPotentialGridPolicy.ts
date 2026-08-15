@@ -4,9 +4,9 @@ import type { RenderedCameraPoint } from "./cameraFraming";
 
 export const GRAVITY_GRID_LINES_PER_AXIS = 9;
 export const GRAVITY_GRID_POINTS_PER_LINE = 33;
-export const GRAVITY_GRID_BOUNDS_MARGIN = 1.4;
-export const GRAVITY_GRID_MIN_HALF_EXTENT_SCENE = 2.5;
-export const GRAVITY_GRID_MIN_AXIS_FRACTION = 0.45;
+export const GRAVITY_GRID_BOUNDS_MARGIN = 1.65;
+export const GRAVITY_GRID_MIN_HALF_EXTENT_SCENE = 3.25;
+export const GRAVITY_GRID_MIN_AXIS_FRACTION = 0.55;
 export const GRAVITY_GRID_VISUAL_SOFTENING_SCENE = 0.4;
 export const GRAVITY_GRID_FIELD_COMPRESSION = 0.35;
 export const GRAVITY_GRID_MAX_DISPLACEMENT_SCENE = 0.7;

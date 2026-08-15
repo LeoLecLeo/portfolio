@@ -54,6 +54,19 @@ describe("volumetric Newtonian potential grid policy", () => {
     expect(calculatePotentialGridBounds(extendedInput)).toEqual(extended);
   });
 
+  it("adds generous volume around a normalized orbital system without changing density", () => {
+    const bounds = calculatePotentialGridBounds([
+      { x: -4, y: 0, z: 0 },
+      { x: 4, y: 0, z: 0 },
+    ]);
+
+    expect(bounds.halfExtents.x).toBeCloseTo(6.6, 14);
+    expect(bounds.halfExtents.y).toBeCloseTo(3.25, 14);
+    expect(bounds.halfExtents.z).toBeCloseTo(3.25, 14);
+    expect(GRAVITY_GRID_LINES_PER_AXIS).toBe(9);
+    expect(GRAVITY_GRID_POINTS_PER_LINE).toBe(33);
+  });
+
   it("creates lines along X, Y, and Z with the expected bounded size", () => {
     const bounds = calculatePotentialGridBounds([origin]);
     const positions = createPotentialGridLinePositions(bounds);
