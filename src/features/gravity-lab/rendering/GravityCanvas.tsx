@@ -47,6 +47,8 @@ import {
 import { GravityPotentialGrid } from "./GravityPotentialGrid";
 import { GravityFieldVectors } from "./GravityFieldVectors";
 import { createSessionVisualizationLayout } from "./sessionVisualizationLayout";
+import { ContextualHelp } from "../ui/ContextualHelp";
+import { VISUALIZATION_HELP } from "../ui/gravityLabHelp";
 
 type GravityCanvasProps = Readonly<{
   session: GravityLabSession;
@@ -852,9 +854,13 @@ export const GravityCanvas = memo(function GravityCanvas({
           </div>
           {visualRadiusMode === "amplified" ? (
             <p role="status" className="mt-2 text-xs text-muted-foreground">
-              Les tailles des astres sont amplifiées pour la lisibilité.
+              Tailles visuelles amplifiées · physique inchangée.
             </p>
           ) : null}
+          <ContextualHelp
+            summary="Comprendre les tailles"
+            description={VISUALIZATION_HELP.radii}
+          />
         </fieldset>
 
         <fieldset className="rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
@@ -880,6 +886,10 @@ export const GravityCanvas = memo(function GravityCanvas({
               Effacer les trajectoires
             </button>
           </div>
+          <ContextualHelp
+            summary="Comprendre les trajectoires"
+            description={VISUALIZATION_HELP.trajectories}
+          />
         </fieldset>
 
         <fieldset className="rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
@@ -894,13 +904,10 @@ export const GravityCanvas = memo(function GravityCanvas({
           >
             {potentialGridVisible ? "Masquer" : "Afficher"}
           </button>
-          {potentialGridVisible ? (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Visualisation du potentiel gravitationnel newtonien — déformation
-              amplifiée pour la lisibilité. Ce réseau ne représente pas une
-              courbure relativiste de l’espace-temps.
-            </p>
-          ) : null}
+          <ContextualHelp
+            summary="Comprendre la grille"
+            description={VISUALIZATION_HELP.potentialGrid}
+          />
         </fieldset>
 
         <fieldset className="rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
@@ -915,12 +922,10 @@ export const GravityCanvas = memo(function GravityCanvas({
           >
             {gravityFieldVisible ? "Masquer" : "Afficher"}
           </button>
-          {gravityFieldVisible ? (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Les flèches indiquent la direction et l’intensité relative de
-              l’accélération gravitationnelle.
-            </p>
-          ) : null}
+          <ContextualHelp
+            summary="Comprendre les vecteurs"
+            description={VISUALIZATION_HELP.gravityField}
+          />
         </fieldset>
       </div>
       </section>

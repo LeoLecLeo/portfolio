@@ -3,8 +3,13 @@ import { GRAVITATIONAL_CONSTANT_M3_KG_S2 } from "../core/units";
 import type { RenderedCameraPoint } from "./cameraFraming";
 import type { PotentialGridBounds } from "./gravityPotentialGridPolicy";
 
-export const GRAVITY_FIELD_SAMPLES_PER_AXIS = 5;
-export const GRAVITY_FIELD_VECTOR_COUNT = GRAVITY_FIELD_SAMPLES_PER_AXIS ** 3;
+export const GRAVITY_FIELD_TARGET_SPACING_SCENE = 1;
+export const GRAVITY_FIELD_MIN_SAMPLES_PER_AXIS = 7;
+export const GRAVITY_FIELD_MAX_SAMPLES_PER_AXIS = 15;
+export const GRAVITY_FIELD_MAX_VECTOR_COUNT = 3_375;
+export const GRAVITY_FIELD_VERTICES_PER_VECTOR = 10;
+export const GRAVITY_FIELD_MAX_VERTEX_COUNT =
+  GRAVITY_FIELD_MAX_VECTOR_COUNT * GRAVITY_FIELD_VERTICES_PER_VECTOR;
 export const GRAVITY_FIELD_VISUAL_SOFTENING_SCENE = 0.4;
 export const GRAVITY_FIELD_INTENSITY_COMPRESSION = 0.4;
 export const GRAVITY_FIELD_MIN_LENGTH_SCENE = 0.14;
@@ -21,6 +26,18 @@ export type VisualGravityVector = Readonly<{
   regularizedMagnitude: number;
   relativeIntensity: number;
   lengthScene: number;
+}>;
+
+export type GravityFieldSampleCounts = Readonly<{
+  x: number;
+  y: number;
+  z: number;
+}>;
+
+export type GravityFieldSampling = Readonly<{
+  counts: GravityFieldSampleCounts;
+  spacing: Readonly<{ x: number; y: number; z: number }>;
+  vectorCount: number;
 }>;
 
 function assertFinitePoint(point: RenderedCameraPoint, label: string): void {
@@ -184,37 +201,130 @@ export function calculateVisualGravityVector(
   });
 }
 
-export function createGravityFieldSamplePositions(
-  bounds: PotentialGridBounds,
-  samplesPerAxis = GRAVITY_FIELD_SAMPLES_PER_AXIS
-): Float32Array {
+function gravityFieldExtents(bounds: PotentialGridBounds) {
   assertFinitePoint(bounds.minimum, "Field sample minimum");
   assertFinitePoint(bounds.maximum, "Field sample maximum");
+  const extents = {
+    x: bounds.maximum.x - bounds.minimum.x,
+    y: bounds.maximum.y - bounds.minimum.y,
+    z: bounds.maximum.z - bounds.minimum.z,
+  };
 
-  if (!Number.isSafeInteger(samplesPerAxis) || samplesPerAxis < 2) {
+  if (Object.values(extents).some((extent) => !Number.isFinite(extent) || extent <= 0)) {
     throw new RangeError(
-      "Gravity field samples per axis must be a safe integer of at least two."
+      "Gravity field extents must be finite and strictly positive."
     );
   }
 
-  const positions = new Float32Array(samplesPerAxis ** 3 * 3);
+  return extents;
+}
+
+function sampleCountForExtent(extent: number): number {
+  return Math.min(
+    GRAVITY_FIELD_MAX_SAMPLES_PER_AXIS,
+    Math.max(
+      GRAVITY_FIELD_MIN_SAMPLES_PER_AXIS,
+      Math.ceil(extent / GRAVITY_FIELD_TARGET_SPACING_SCENE) + 1
+    )
+  );
+}
+
+function vectorCount(counts: GravityFieldSampleCounts): number {
+  return counts.x * counts.y * counts.z;
+}
+
+function assertSampleCounts(counts: GravityFieldSampleCounts): void {
+  for (const count of Object.values(counts)) {
+    if (
+      !Number.isSafeInteger(count) ||
+      count < GRAVITY_FIELD_MIN_SAMPLES_PER_AXIS ||
+      count > GRAVITY_FIELD_MAX_SAMPLES_PER_AXIS
+    ) {
+      throw new RangeError(
+        `Gravity field sample counts must be safe integers between ${GRAVITY_FIELD_MIN_SAMPLES_PER_AXIS} and ${GRAVITY_FIELD_MAX_SAMPLES_PER_AXIS}.`
+      );
+    }
+  }
+
+  if (vectorCount(counts) > GRAVITY_FIELD_MAX_VECTOR_COUNT) {
+    throw new RangeError(
+      `Gravity field samples must not exceed ${GRAVITY_FIELD_MAX_VECTOR_COUNT} vectors.`
+    );
+  }
+}
+
+export function calculateGravityFieldSampling(
+  bounds: PotentialGridBounds
+): GravityFieldSampling {
+  const extents = gravityFieldExtents(bounds);
+  const counts = {
+    x: sampleCountForExtent(extents.x),
+    y: sampleCountForExtent(extents.y),
+    z: sampleCountForExtent(extents.z),
+  };
+  const axes = ["x", "y", "z"] as const;
+
+  while (vectorCount(counts) > GRAVITY_FIELD_MAX_VECTOR_COUNT) {
+    let selectedAxis: (typeof axes)[number] | null = null;
+    let greatestSampleDensity = Number.NEGATIVE_INFINITY;
+
+    for (const axis of axes) {
+      if (counts[axis] <= GRAVITY_FIELD_MIN_SAMPLES_PER_AXIS) {
+        continue;
+      }
+
+      const sampleDensity = (counts[axis] - 1) / extents[axis];
+
+      if (sampleDensity > greatestSampleDensity) {
+        selectedAxis = axis;
+        greatestSampleDensity = sampleDensity;
+      }
+    }
+
+    if (selectedAxis === null) {
+      throw new RangeError(
+        "Gravity field sampling cannot satisfy its global vector budget."
+      );
+    }
+
+    counts[selectedAxis] -= 1;
+  }
+
+  assertSampleCounts(counts);
+  const frozenCounts = Object.freeze({ ...counts });
+
+  return Object.freeze({
+    counts: frozenCounts,
+    spacing: Object.freeze({
+      x: extents.x / (counts.x - 1),
+      y: extents.y / (counts.y - 1),
+      z: extents.z / (counts.z - 1),
+    }),
+    vectorCount: vectorCount(counts),
+  });
+}
+
+export function createGravityFieldSamplePositions(
+  bounds: PotentialGridBounds,
+  counts = calculateGravityFieldSampling(bounds).counts
+): Float32Array {
+  const extents = gravityFieldExtents(bounds);
+  assertSampleCounts(counts);
+  const positions = new Float32Array(vectorCount(counts) * 3);
   let offset = 0;
 
-  for (let xIndex = 0; xIndex < samplesPerAxis; xIndex += 1) {
-    for (let yIndex = 0; yIndex < samplesPerAxis; yIndex += 1) {
-      for (let zIndex = 0; zIndex < samplesPerAxis; zIndex += 1) {
+  for (let xIndex = 0; xIndex < counts.x; xIndex += 1) {
+    for (let yIndex = 0; yIndex < counts.y; yIndex += 1) {
+      for (let zIndex = 0; zIndex < counts.z; zIndex += 1) {
         positions[offset] =
           bounds.minimum.x +
-          ((bounds.maximum.x - bounds.minimum.x) * xIndex) /
-            (samplesPerAxis - 1);
+          (extents.x * xIndex) / (counts.x - 1);
         positions[offset + 1] =
           bounds.minimum.y +
-          ((bounds.maximum.y - bounds.minimum.y) * yIndex) /
-            (samplesPerAxis - 1);
+          (extents.y * yIndex) / (counts.y - 1);
         positions[offset + 2] =
           bounds.minimum.z +
-          ((bounds.maximum.z - bounds.minimum.z) * zIndex) /
-            (samplesPerAxis - 1);
+          (extents.z * zIndex) / (counts.z - 1);
         offset += 3;
       }
     }

@@ -12,6 +12,7 @@ import {
   GRAVITY_FIELD_INTENSITY_COMPRESSION,
   GRAVITY_FIELD_MAX_LENGTH_SCENE,
   GRAVITY_FIELD_MIN_LENGTH_SCENE,
+  GRAVITY_FIELD_VERTICES_PER_VECTOR,
   GRAVITY_FIELD_VISUAL_SOFTENING_SCENE,
   createGravityFieldSamplePositions,
   prepareGravityFieldMassWeights,
@@ -122,6 +123,13 @@ function writeBodyPositionUniforms(
 function createArrowGeometry(samplePositions: Float32Array): BufferGeometry {
   const sampleCount = samplePositions.length / 3;
   const pointsPerGlyph = GLYPH_POINTS.length / 3;
+
+  if (pointsPerGlyph !== GRAVITY_FIELD_VERTICES_PER_VECTOR) {
+    throw new RangeError(
+      "The gravity field glyph does not match its explicit vertex budget."
+    );
+  }
+
   const glyphPositions = new Float32Array(sampleCount * GLYPH_POINTS.length);
   const repeatedSamples = new Float32Array(sampleCount * GLYPH_POINTS.length);
 

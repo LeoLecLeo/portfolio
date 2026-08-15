@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   GRAVITY_FIELD_MAX_LENGTH_SCENE,
+  GRAVITY_FIELD_MAX_SAMPLES_PER_AXIS,
+  GRAVITY_FIELD_MAX_VECTOR_COUNT,
   GRAVITY_FIELD_MIN_LENGTH_SCENE,
-  GRAVITY_FIELD_VECTOR_COUNT,
+  GRAVITY_FIELD_MIN_SAMPLES_PER_AXIS,
+  GRAVITY_FIELD_TARGET_SPACING_SCENE,
+  calculateGravityFieldSampling,
   calculateRegularizedGravityField,
   calculateVisualGravityVector,
   createGravityFieldSamplePositions,
@@ -11,6 +15,7 @@ import {
   type GravityFieldBody,
 } from "./gravityFieldVectorPolicy";
 import { calculatePotentialGridBounds } from "./gravityPotentialGridPolicy";
+import type { PotentialGridBounds } from "./gravityPotentialGridPolicy";
 
 const origin = { x: 0, y: 0, z: 0 };
 
@@ -23,6 +28,18 @@ function body(
 
 function magnitude(point: Readonly<{ x: number; y: number; z: number }>) {
   return Math.hypot(point.x, point.y, point.z);
+}
+
+function fieldBounds(x: number, y: number, z: number): PotentialGridBounds {
+  const minimum = { x: 0, y: 0, z: 0 };
+  const maximum = { x, y, z };
+
+  return {
+    minimum,
+    maximum,
+    center: { x: x / 2, y: y / 2, z: z / 2 },
+    halfExtents: { x: x / 2, y: y / 2, z: z / 2 },
+  };
 }
 
 describe("Newtonian gravity field vector policy", () => {
@@ -115,11 +132,12 @@ describe("Newtonian gravity field vector policy", () => {
     expect(vector.relativeIntensity).toBeLessThanOrEqual(1);
   });
 
-  it("prepares exactly 125 sample points and supports one or sixteen bodies", () => {
+  it("prepares the adaptive sample count and supports one or sixteen bodies", () => {
     const bounds = calculatePotentialGridBounds([origin]);
+    const sampling = calculateGravityFieldSampling(bounds);
     const samples = createGravityFieldSamplePositions(bounds);
 
-    expect(samples).toHaveLength(GRAVITY_FIELD_VECTOR_COUNT * 3);
+    expect(samples).toHaveLength(sampling.vectorCount * 3);
     expect([...samples].every(Number.isFinite)).toBe(true);
     expect(prepareGravityFieldMassWeights([1]).bodyCount).toBe(1);
     expect(
@@ -127,6 +145,70 @@ describe("Newtonian gravity field vector policy", () => {
         Array.from({ length: 16 }, (_, index) => index + 1)
       ).bodyCount
     ).toBe(16);
+  });
+
+  it("increases vector density with a larger volume", () => {
+    const compact = calculateGravityFieldSampling(fieldBounds(1, 1, 1));
+    const extended = calculateGravityFieldSampling(
+      fieldBounds(10, 10, 10)
+    );
+
+    expect(compact.counts).toEqual({ x: 7, y: 7, z: 7 });
+    expect(extended.counts).toEqual({ x: 11, y: 11, z: 11 });
+    expect(extended.vectorCount).toBeGreaterThan(compact.vectorCount);
+  });
+
+  it("keeps independent axis spacing close to the target", () => {
+    const sampling = calculateGravityFieldSampling(
+      fieldBounds(6, 8, 10)
+    );
+
+    expect(sampling.spacing).toEqual({
+      x: GRAVITY_FIELD_TARGET_SPACING_SCENE,
+      y: GRAVITY_FIELD_TARGET_SPACING_SCENE,
+      z: GRAVITY_FIELD_TARGET_SPACING_SCENE,
+    });
+    expect(sampling.counts.x).toBeLessThan(sampling.counts.y);
+    expect(sampling.counts.y).toBeLessThan(sampling.counts.z);
+  });
+
+  it("respects per-axis and global sampling bounds", () => {
+    const elongated = calculateGravityFieldSampling(
+      fieldBounds(10_000, 1, 1)
+    );
+    const extreme = calculateGravityFieldSampling(
+      fieldBounds(10_000, 10_000, 10_000)
+    );
+
+    expect(elongated.counts).toEqual({
+      x: GRAVITY_FIELD_MAX_SAMPLES_PER_AXIS,
+      y: GRAVITY_FIELD_MIN_SAMPLES_PER_AXIS,
+      z: GRAVITY_FIELD_MIN_SAMPLES_PER_AXIS,
+    });
+    expect(extreme.vectorCount).toBeLessThanOrEqual(
+      GRAVITY_FIELD_MAX_VECTOR_COUNT
+    );
+    expect(extreme.vectorCount).toBe(GRAVITY_FIELD_MAX_VECTOR_COUNT);
+    for (const count of Object.values(extreme.counts)) {
+      expect(count).toBeGreaterThanOrEqual(
+        GRAVITY_FIELD_MIN_SAMPLES_PER_AXIS
+      );
+      expect(count).toBeLessThanOrEqual(
+        GRAVITY_FIELD_MAX_SAMPLES_PER_AXIS
+      );
+    }
+  });
+
+  it("is deterministic for compact, anisotropic, and extreme bounds", () => {
+    for (const bounds of [
+      fieldBounds(0.25, 0.5, 0.75),
+      fieldBounds(80, 16, 32),
+      fieldBounds(1e9, 1e9, 1e9),
+    ]) {
+      expect(calculateGravityFieldSampling(bounds)).toEqual(
+        calculateGravityFieldSampling(bounds)
+      );
+    }
   });
 
   it("combines sixteen bodies into one finite bounded visual vector", () => {
@@ -166,6 +248,7 @@ describe("Newtonian gravity field vector policy", () => {
 
     calculateRegularizedGravityField(bodies, origin);
     calculateVisualGravityVector(bodies, origin);
+    calculateGravityFieldSampling(bounds);
     createGravityFieldSamplePositions(bounds);
     prepareGravityFieldMassWeights(masses);
 

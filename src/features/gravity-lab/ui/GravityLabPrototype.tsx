@@ -33,6 +33,7 @@ import {
 } from "./gravityLabReducer";
 import { MAX_NEWTONIAN_BODIES } from "../core/types";
 import { BodyDraftEditor } from "./BodyDraftEditor";
+import { ContextualHelp } from "./ContextualHelp";
 import {
   applyGravityLabDraft,
   validateGravityLabDraft,
@@ -41,6 +42,11 @@ import {
   bodyListLabel,
   diagnosticMessageFr,
 } from "./gravityLabPresentation";
+import {
+  SCENARIO_STATE_HELP,
+  SCIENTIFIC_DIAGNOSTIC_HELP,
+  SIMULATION_CONTROL_HELP,
+} from "./gravityLabHelp";
 import { GravityPresetCatalog } from "./GravityPresetCatalog";
 import { preparePresetDraftLoad } from "./presetDraftLoading";
 import {
@@ -402,6 +408,10 @@ export function GravityLabPrototype({
             La scène montre le scénario appliqué ; les paramètres se
             préparent séparément dans le brouillon.
           </p>
+          <ContextualHelp
+            summary="Comprendre les trois états"
+            items={SCENARIO_STATE_HELP}
+          />
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
           <span className="rounded-full border border-border bg-card px-3 py-1.5 font-medium">
@@ -526,6 +536,10 @@ export function GravityLabPrototype({
             {applicationConfirmation}
           </p>
         )}
+        <ContextualHelp
+          summary="Comprendre les commandes"
+          items={SIMULATION_CONTROL_HELP}
+        />
       </section>
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -767,6 +781,10 @@ export function GravityLabPrototype({
               </span>
             </summary>
             <div className="space-y-4 border-t border-border/80 p-4">
+        <ContextualHelp
+          summary="Comprendre les diagnostics"
+          items={SCIENTIFIC_DIAGNOSTIC_HELP}
+        />
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             Diagnostics newtoniens
