@@ -45,6 +45,7 @@ import {
 } from "./visualRadiusPolicy";
 import { GravityPotentialGrid } from "./GravityPotentialGrid";
 import { GravityFieldVectors } from "./GravityFieldVectors";
+import { createSessionVisualizationLayout } from "./sessionVisualizationLayout";
 
 type GravityCanvasProps = Readonly<{
   session: GravityLabSession;
@@ -381,6 +382,10 @@ function GravityScene({
   const runtime = session.runtime;
   const invalidate = useThree((state) => state.invalidate);
   const bodies = useMemo(() => session.bodies, [session]);
+  const visualizationLayout = useMemo(
+    () => createSessionVisualizationLayout(session),
+    [session]
+  );
   const meshRefs = useRef<Array<Mesh | null>>([]);
   const telemetryElapsedSeconds = useRef(0);
   const trajectoryCollector = useMemo(
@@ -554,10 +559,18 @@ function GravityScene({
       <pointLight position={[0, 0, 0]} intensity={18} distance={28} />
 
       {potentialGridVisible ? (
-        <GravityPotentialGrid session={session} visible />
+        <GravityPotentialGrid
+          session={session}
+          bounds={visualizationLayout.bounds}
+          visible
+        />
       ) : null}
       {gravityFieldVisible ? (
-        <GravityFieldVectors session={session} visible />
+        <GravityFieldVectors
+          session={session}
+          bounds={visualizationLayout.bounds}
+          visible
+        />
       ) : null}
       <axesHelper args={[2.2]} />
 

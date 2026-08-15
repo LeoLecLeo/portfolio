@@ -2,11 +2,13 @@ import { MAX_NEWTONIAN_BODIES } from "../core/types";
 import { GRAVITATIONAL_CONSTANT_M3_KG_S2 } from "../core/units";
 import type { RenderedCameraPoint } from "./cameraFraming";
 
-export const GRAVITY_GRID_LINES_PER_AXIS = 9;
+export const GRAVITY_GRID_TARGET_LINE_SPACING_SCENE = 1.75;
+export const GRAVITY_GRID_MIN_LINES_PER_AXIS = 9;
+export const GRAVITY_GRID_MAX_LINES_PER_AXIS = 25;
 export const GRAVITY_GRID_POINTS_PER_LINE = 33;
-export const GRAVITY_GRID_BOUNDS_MARGIN = 1.65;
-export const GRAVITY_GRID_MIN_HALF_EXTENT_SCENE = 3.25;
-export const GRAVITY_GRID_MIN_AXIS_FRACTION = 0.55;
+export const GRAVITY_GRID_BOUNDS_MARGIN = 5;
+export const GRAVITY_GRID_MIN_HALF_EXTENT_SCENE = 10;
+export const GRAVITY_GRID_MIN_AXIS_FRACTION = 0.6;
 export const GRAVITY_GRID_VISUAL_SOFTENING_SCENE = 0.4;
 export const GRAVITY_GRID_FIELD_COMPRESSION = 0.35;
 export const GRAVITY_GRID_MAX_DISPLACEMENT_SCENE = 0.7;
@@ -23,6 +25,18 @@ export type PotentialGridBounds = Readonly<{
   maximum: RenderedCameraPoint;
   center: RenderedCameraPoint;
   halfExtents: RenderedCameraPoint;
+}>;
+
+export type PotentialGridLineCounts = Readonly<{
+  x: number;
+  y: number;
+  z: number;
+}>;
+
+export type PotentialGridGeometrySize = Readonly<{
+  lineCount: number;
+  segmentCount: number;
+  vertexCount: number;
 }>;
 
 export type PotentialGridActivity = Readonly<{
@@ -126,7 +140,9 @@ export function calculatePotentialGridBounds(
   );
   const minimumAxisHalfExtent = Math.max(
     GRAVITY_GRID_MIN_HALF_EXTENT_SCENE,
-    largestRawHalfExtent * GRAVITY_GRID_MIN_AXIS_FRACTION
+    largestRawHalfExtent *
+      GRAVITY_GRID_BOUNDS_MARGIN *
+      GRAVITY_GRID_MIN_AXIS_FRACTION
   );
   const halfExtents = {
     x: Math.max(
@@ -175,18 +191,60 @@ function axisCoordinate(
   return minimum + ((maximum - minimum) * index) / (count - 1);
 }
 
-export function createPotentialGridLinePositions(
-  bounds: PotentialGridBounds,
-  linesPerAxis = GRAVITY_GRID_LINES_PER_AXIS,
-  pointsPerLine = GRAVITY_GRID_POINTS_PER_LINE
-): Float32Array {
+function lineCountForExtent(extent: number): number {
+  const targetCount =
+    Math.ceil(extent / GRAVITY_GRID_TARGET_LINE_SPACING_SCENE) + 1;
+  return Math.min(
+    GRAVITY_GRID_MAX_LINES_PER_AXIS,
+    Math.max(GRAVITY_GRID_MIN_LINES_PER_AXIS, targetCount)
+  );
+}
+
+export function calculatePotentialGridLineCounts(
+  bounds: PotentialGridBounds
+): PotentialGridLineCounts {
   assertFinitePoint(bounds.minimum, "Grid minimum");
   assertFinitePoint(bounds.maximum, "Grid maximum");
+  const extents = {
+    x: bounds.maximum.x - bounds.minimum.x,
+    y: bounds.maximum.y - bounds.minimum.y,
+    z: bounds.maximum.z - bounds.minimum.z,
+  };
 
-  if (!Number.isSafeInteger(linesPerAxis) || linesPerAxis < 2) {
+  if (
+    !Number.isFinite(extents.x) ||
+    !Number.isFinite(extents.y) ||
+    !Number.isFinite(extents.z) ||
+    extents.x <= 0 ||
+    extents.y <= 0 ||
+    extents.z <= 0
+  ) {
     throw new RangeError(
-      "Grid lines per axis must be a safe integer of at least two."
+      "Grid extents must be finite and strictly positive."
     );
+  }
+
+  return Object.freeze({
+    x: lineCountForExtent(extents.x),
+    y: lineCountForExtent(extents.y),
+    z: lineCountForExtent(extents.z),
+  });
+}
+
+export function calculatePotentialGridGeometrySize(
+  lineCounts: PotentialGridLineCounts,
+  pointsPerLine = GRAVITY_GRID_POINTS_PER_LINE
+): PotentialGridGeometrySize {
+  for (const count of Object.values(lineCounts)) {
+    if (
+      !Number.isSafeInteger(count) ||
+      count < GRAVITY_GRID_MIN_LINES_PER_AXIS ||
+      count > GRAVITY_GRID_MAX_LINES_PER_AXIS
+    ) {
+      throw new RangeError(
+        `Grid line counts must be safe integers between ${GRAVITY_GRID_MIN_LINES_PER_AXIS} and ${GRAVITY_GRID_MAX_LINES_PER_AXIS}.`
+      );
+    }
   }
 
   if (!Number.isSafeInteger(pointsPerLine) || pointsPerLine < 2) {
@@ -195,8 +253,31 @@ export function createPotentialGridLinePositions(
     );
   }
 
-  const segmentCount = 3 * linesPerAxis ** 2 * (pointsPerLine - 1);
-  const positions = new Float32Array(segmentCount * 2 * 3);
+  const lineCount =
+    lineCounts.y * lineCounts.z +
+    lineCounts.x * lineCounts.z +
+    lineCounts.x * lineCounts.y;
+  const segmentCount = lineCount * (pointsPerLine - 1);
+
+  return Object.freeze({
+    lineCount,
+    segmentCount,
+    vertexCount: segmentCount * 2,
+  });
+}
+
+export function createPotentialGridLinePositions(
+  bounds: PotentialGridBounds,
+  lineCounts = calculatePotentialGridLineCounts(bounds),
+  pointsPerLine = GRAVITY_GRID_POINTS_PER_LINE
+): Float32Array {
+  assertFinitePoint(bounds.minimum, "Grid minimum");
+  assertFinitePoint(bounds.maximum, "Grid maximum");
+  const geometrySize = calculatePotentialGridGeometrySize(
+    lineCounts,
+    pointsPerLine
+  );
+  const positions = new Float32Array(geometrySize.vertexCount * 3);
   let offset = 0;
   const writePoint = (x: number, y: number, z: number) => {
     positions[offset] = x;
@@ -205,43 +286,19 @@ export function createPotentialGridLinePositions(
     offset += 3;
   };
 
-  for (let first = 0; first < linesPerAxis; first += 1) {
-    for (let second = 0; second < linesPerAxis; second += 1) {
+  for (let yIndex = 0; yIndex < lineCounts.y; yIndex += 1) {
+    for (let zIndex = 0; zIndex < lineCounts.z; zIndex += 1) {
       const yForX = axisCoordinate(
         bounds.minimum.y,
         bounds.maximum.y,
-        first,
-        linesPerAxis
+        yIndex,
+        lineCounts.y
       );
       const zForX = axisCoordinate(
         bounds.minimum.z,
         bounds.maximum.z,
-        second,
-        linesPerAxis
-      );
-      const xForY = axisCoordinate(
-        bounds.minimum.x,
-        bounds.maximum.x,
-        first,
-        linesPerAxis
-      );
-      const zForY = axisCoordinate(
-        bounds.minimum.z,
-        bounds.maximum.z,
-        second,
-        linesPerAxis
-      );
-      const xForZ = axisCoordinate(
-        bounds.minimum.x,
-        bounds.maximum.x,
-        first,
-        linesPerAxis
-      );
-      const yForZ = axisCoordinate(
-        bounds.minimum.y,
-        bounds.maximum.y,
-        second,
-        linesPerAxis
+        zIndex,
+        lineCounts.z
       );
 
       for (let point = 0; point < pointsPerLine - 1; point += 1) {
@@ -257,6 +314,28 @@ export function createPotentialGridLinePositions(
           point + 1,
           pointsPerLine
         );
+        writePoint(x0, yForX, zForX);
+        writePoint(x1, yForX, zForX);
+      }
+    }
+  }
+
+  for (let xIndex = 0; xIndex < lineCounts.x; xIndex += 1) {
+    for (let zIndex = 0; zIndex < lineCounts.z; zIndex += 1) {
+      const xForY = axisCoordinate(
+        bounds.minimum.x,
+        bounds.maximum.x,
+        xIndex,
+        lineCounts.x
+      );
+      const zForY = axisCoordinate(
+        bounds.minimum.z,
+        bounds.maximum.z,
+        zIndex,
+        lineCounts.z
+      );
+
+      for (let point = 0; point < pointsPerLine - 1; point += 1) {
         const y0 = axisCoordinate(
           bounds.minimum.y,
           bounds.maximum.y,
@@ -269,6 +348,28 @@ export function createPotentialGridLinePositions(
           point + 1,
           pointsPerLine
         );
+        writePoint(xForY, y0, zForY);
+        writePoint(xForY, y1, zForY);
+      }
+    }
+  }
+
+  for (let xIndex = 0; xIndex < lineCounts.x; xIndex += 1) {
+    for (let yIndex = 0; yIndex < lineCounts.y; yIndex += 1) {
+      const xForZ = axisCoordinate(
+        bounds.minimum.x,
+        bounds.maximum.x,
+        xIndex,
+        lineCounts.x
+      );
+      const yForZ = axisCoordinate(
+        bounds.minimum.y,
+        bounds.maximum.y,
+        yIndex,
+        lineCounts.y
+      );
+
+      for (let point = 0; point < pointsPerLine - 1; point += 1) {
         const z0 = axisCoordinate(
           bounds.minimum.z,
           bounds.maximum.z,
@@ -282,10 +383,6 @@ export function createPotentialGridLinePositions(
           pointsPerLine
         );
 
-        writePoint(x0, yForX, zForX);
-        writePoint(x1, yForX, zForX);
-        writePoint(xForY, y0, zForY);
-        writePoint(xForY, y1, zForY);
         writePoint(xForZ, yForZ, z0);
         writePoint(xForZ, yForZ, z1);
       }

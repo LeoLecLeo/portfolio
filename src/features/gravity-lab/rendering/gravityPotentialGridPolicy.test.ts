@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  GRAVITY_GRID_LINES_PER_AXIS,
+  GRAVITY_GRID_MAX_LINES_PER_AXIS,
   GRAVITY_GRID_MAX_DISPLACEMENT_SCENE,
+  GRAVITY_GRID_MIN_LINES_PER_AXIS,
   GRAVITY_GRID_MIN_MASS_WEIGHT,
   GRAVITY_GRID_POINTS_PER_LINE,
+  GRAVITY_GRID_TARGET_LINE_SPACING_SCENE,
   calculatePotentialGridBounds,
+  calculatePotentialGridGeometrySize,
+  calculatePotentialGridLineCounts,
   calculateRegularizedNewtonianPotential,
   calculateVisualFieldDisplacement,
   createPotentialGridLinePositions,
@@ -60,22 +64,57 @@ describe("volumetric Newtonian potential grid policy", () => {
       { x: 4, y: 0, z: 0 },
     ]);
 
-    expect(bounds.halfExtents.x).toBeCloseTo(6.6, 14);
-    expect(bounds.halfExtents.y).toBeCloseTo(3.25, 14);
-    expect(bounds.halfExtents.z).toBeCloseTo(3.25, 14);
-    expect(GRAVITY_GRID_LINES_PER_AXIS).toBe(9);
+    expect(bounds.halfExtents.x).toBeCloseTo(20, 14);
+    expect(bounds.halfExtents.y).toBeCloseTo(12, 14);
+    expect(bounds.halfExtents.z).toBeCloseTo(12, 14);
+    expect(calculatePotentialGridLineCounts(bounds)).toEqual({
+      x: 24,
+      y: 15,
+      z: 15,
+    });
     expect(GRAVITY_GRID_POINTS_PER_LINE).toBe(33);
+  });
+
+  it("keeps compact, extended, and off-center systems finite and enclosed", () => {
+    const systems = [
+      [{ x: 0, y: 0, z: 0 }],
+      [
+        { x: -1e100, y: -2e99, z: 3e99 },
+        { x: 1e100, y: 2e99, z: -3e99 },
+      ],
+      [
+        { x: 120, y: -45, z: 300 },
+        { x: 126, y: -41, z: 304 },
+      ],
+    ];
+
+    for (const positions of systems) {
+      const bounds = calculatePotentialGridBounds(positions);
+
+      expect(Object.values(bounds.minimum).every(Number.isFinite)).toBe(true);
+      expect(Object.values(bounds.maximum).every(Number.isFinite)).toBe(true);
+      expect(Object.values(bounds.halfExtents).every(Number.isFinite)).toBe(
+        true
+      );
+
+      for (const position of positions) {
+        expect(position.x).toBeGreaterThanOrEqual(bounds.minimum.x);
+        expect(position.x).toBeLessThanOrEqual(bounds.maximum.x);
+        expect(position.y).toBeGreaterThanOrEqual(bounds.minimum.y);
+        expect(position.y).toBeLessThanOrEqual(bounds.maximum.y);
+        expect(position.z).toBeGreaterThanOrEqual(bounds.minimum.z);
+        expect(position.z).toBeLessThanOrEqual(bounds.maximum.z);
+      }
+    }
   });
 
   it("creates lines along X, Y, and Z with the expected bounded size", () => {
     const bounds = calculatePotentialGridBounds([origin]);
+    const lineCounts = calculatePotentialGridLineCounts(bounds);
     const positions = createPotentialGridLinePositions(bounds);
-    const expectedSegments =
-      3 *
-      GRAVITY_GRID_LINES_PER_AXIS ** 2 *
-      (GRAVITY_GRID_POINTS_PER_LINE - 1);
+    const geometrySize = calculatePotentialGridGeometrySize(lineCounts);
 
-    expect(positions).toHaveLength(expectedSegments * 2 * 3);
+    expect(positions).toHaveLength(geometrySize.vertexCount * 3);
     expect([...positions].every(Number.isFinite)).toBe(true);
     const xValues = new Set<number>();
     const yValues = new Set<number>();
@@ -90,6 +129,92 @@ describe("volumetric Newtonian potential grid policy", () => {
     expect(xValues.size).toBeGreaterThanOrEqual(GRAVITY_GRID_POINTS_PER_LINE);
     expect(yValues.size).toBeGreaterThanOrEqual(GRAVITY_GRID_POINTS_PER_LINE);
     expect(zValues.size).toBeGreaterThanOrEqual(GRAVITY_GRID_POINTS_PER_LINE);
+  });
+
+  it("increases line counts when the same volume is enlarged", () => {
+    const compactBounds = calculatePotentialGridBounds([origin]);
+    const enlargedBounds = {
+      minimum: { x: -20, y: -20, z: -20 },
+      maximum: { x: 20, y: 20, z: 20 },
+      center: origin,
+      halfExtents: { x: 20, y: 20, z: 20 },
+    };
+
+    const compact = calculatePotentialGridLineCounts(compactBounds);
+    const enlarged = calculatePotentialGridLineCounts(enlargedBounds);
+
+    expect(enlarged.x).toBeGreaterThan(compact.x);
+    expect(enlarged.y).toBeGreaterThan(compact.y);
+    expect(enlarged.z).toBeGreaterThan(compact.z);
+  });
+
+  it("keeps unclamped spacing at or just below its target", () => {
+    const bounds = {
+      minimum: { x: -10, y: -7, z: -5 },
+      maximum: { x: 10, y: 7, z: 5 },
+      center: origin,
+      halfExtents: { x: 10, y: 7, z: 5 },
+    };
+    const counts = calculatePotentialGridLineCounts(bounds);
+    const spacings = {
+      x: 20 / (counts.x - 1),
+      y: 14 / (counts.y - 1),
+      z: 10 / (counts.z - 1),
+    };
+
+    expect(spacings.x).toBeLessThanOrEqual(
+      GRAVITY_GRID_TARGET_LINE_SPACING_SCENE
+    );
+    expect(spacings.x).toBeGreaterThan(1.5);
+    expect(spacings.y).toBeLessThanOrEqual(
+      GRAVITY_GRID_TARGET_LINE_SPACING_SCENE
+    );
+    expect(spacings.z).toBeLessThanOrEqual(
+      GRAVITY_GRID_TARGET_LINE_SPACING_SCENE
+    );
+  });
+
+  it("respects explicit density limits for compact and extended volumes", () => {
+    const compact = calculatePotentialGridLineCounts({
+      minimum: { x: -0.1, y: -0.1, z: -0.1 },
+      maximum: { x: 0.1, y: 0.1, z: 0.1 },
+      center: origin,
+      halfExtents: { x: 0.1, y: 0.1, z: 0.1 },
+    });
+    const extended = calculatePotentialGridLineCounts({
+      minimum: { x: -1e100, y: -1e50, z: -1e25 },
+      maximum: { x: 1e100, y: 1e50, z: 1e25 },
+      center: origin,
+      halfExtents: { x: 1e100, y: 1e50, z: 1e25 },
+    });
+
+    expect(compact).toEqual({
+      x: GRAVITY_GRID_MIN_LINES_PER_AXIS,
+      y: GRAVITY_GRID_MIN_LINES_PER_AXIS,
+      z: GRAVITY_GRID_MIN_LINES_PER_AXIS,
+    });
+    expect(extended).toEqual({
+      x: GRAVITY_GRID_MAX_LINES_PER_AXIS,
+      y: GRAVITY_GRID_MAX_LINES_PER_AXIS,
+      z: GRAVITY_GRID_MAX_LINES_PER_AXIS,
+    });
+  });
+
+  it("is deterministic and strictly bounds the maximum GPU geometry", () => {
+    const maximumCounts = {
+      x: GRAVITY_GRID_MAX_LINES_PER_AXIS,
+      y: GRAVITY_GRID_MAX_LINES_PER_AXIS,
+      z: GRAVITY_GRID_MAX_LINES_PER_AXIS,
+    };
+    const first = calculatePotentialGridGeometrySize(maximumCounts);
+    const second = calculatePotentialGridGeometrySize(maximumCounts);
+
+    expect(first).toEqual(second);
+    expect(first).toEqual({
+      lineCount: 1_875,
+      segmentCount: 60_000,
+      vertexCount: 120_000,
+    });
   });
 
   it("produces a genuinely three-dimensional displacement", () => {

@@ -16,7 +16,7 @@ import {
   createGravityFieldSamplePositions,
   prepareGravityFieldMassWeights,
 } from "./gravityFieldVectorPolicy";
-import { calculatePotentialGridBounds } from "./gravityPotentialGridPolicy";
+import type { PotentialGridBounds } from "./gravityPotentialGridPolicy";
 
 const MAX_SHADER_BODIES = 16;
 const GLYPH_POINTS = new Float32Array([
@@ -95,16 +95,6 @@ const FIELD_VECTOR_FRAGMENT_SHADER = /* glsl */ `
   }
 `;
 
-function readSessionScenePositions(
-  session: GravityLabSession
-): readonly Readonly<{ x: number; y: number; z: number }>[] {
-  return session.bodies.map(({ bodyId }) => {
-    const position = { x: 0, y: 0, z: 0 };
-    session.writeScenePosition(bodyId, position);
-    return Object.freeze(position);
-  });
-}
-
 function writeBodyPositionUniforms(
   session: GravityLabSession,
   positions: readonly Vector3[],
@@ -159,17 +149,16 @@ function createArrowGeometry(samplePositions: Float32Array): BufferGeometry {
 
 export function GravityFieldVectors({
   session,
+  bounds,
   visible,
 }: Readonly<{
   session: GravityLabSession;
+  bounds: PotentialGridBounds;
   visible: boolean;
 }>) {
   const invalidate = useThree((state) => state.invalidate);
   const scratchPosition = useRef({ x: 0, y: 0, z: 0 });
   const resources = useMemo(() => {
-    const bounds = calculatePotentialGridBounds(
-      readSessionScenePositions(session)
-    );
     const samples = createGravityFieldSamplePositions(bounds);
     const geometry = createArrowGeometry(samples);
     const preparedMasses = prepareGravityFieldMassWeights(
@@ -203,7 +192,7 @@ export function GravityFieldVectors({
     });
 
     return { bodyPositions, geometry, material };
-  }, [session]);
+  }, [bounds, session]);
   const resourcesRef = useRef(resources);
 
   useEffect(() => {

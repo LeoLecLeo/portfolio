@@ -12,10 +12,10 @@ import {
   GRAVITY_GRID_FIELD_COMPRESSION,
   GRAVITY_GRID_MAX_DISPLACEMENT_SCENE,
   GRAVITY_GRID_VISUAL_SOFTENING_SCENE,
-  calculatePotentialGridBounds,
   createPotentialGridLinePositions,
   preparePotentialMasses,
   resolvePotentialGridActivity,
+  type PotentialGridBounds,
 } from "./gravityPotentialGridPolicy";
 
 const MAX_SHADER_BODIES = 16;
@@ -97,30 +97,19 @@ function writeBodyPositionUniforms(
   return changed;
 }
 
-function readSessionScenePositions(
-  session: GravityLabSession
-): readonly Readonly<{ x: number; y: number; z: number }>[] {
-  return session.bodies.map(({ bodyId }) => {
-    const position = { x: 0, y: 0, z: 0 };
-    session.writeScenePosition(bodyId, position);
-    return Object.freeze(position);
-  });
-}
-
 export function GravityPotentialGrid({
   session,
+  bounds,
   visible,
 }: Readonly<{
   session: GravityLabSession;
+  bounds: PotentialGridBounds;
   visible: boolean;
 }>) {
   const invalidate = useThree((state) => state.invalidate);
   const activity = resolvePotentialGridActivity(visible);
   const scratchPosition = useRef({ x: 0, y: 0, z: 0 });
   const resources = useMemo(() => {
-    const bounds = calculatePotentialGridBounds(
-      readSessionScenePositions(session)
-    );
     const linePositions = createPotentialGridLinePositions(bounds);
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(linePositions, 3));
@@ -152,7 +141,7 @@ export function GravityPotentialGrid({
     });
 
     return { bodyPositions, geometry, material };
-  }, [session]);
+  }, [bounds, session]);
   const resourcesRef = useRef(resources);
 
   useEffect(() => {
