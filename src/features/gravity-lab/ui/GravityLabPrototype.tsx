@@ -167,6 +167,7 @@ export function GravityLabPrototype({
     createGravityLabState
   );
   const [renderRevision, setRenderRevision] = useState(0);
+  const [trajectoryResetRevision, setTrajectoryResetRevision] = useState(0);
   const [rendererReady, setRendererReady] = useState(false);
   const [applicationFailure, setApplicationFailure] = useState<
     string | null
@@ -280,6 +281,7 @@ export function GravityLabPrototype({
       snapshot: host.reset(),
     });
     setRenderRevision((current) => current + 1);
+    setTrajectoryResetRevision((current) => current + 1);
   }, [host]);
 
   const updateDraft = useCallback((action: GravityLabAction) => {
@@ -458,6 +460,7 @@ export function GravityLabPrototype({
           onTelemetry={publishTelemetry}
           onReady={startWhenRendererIsReady}
           renderRevision={renderRevision}
+          trajectoryResetRevision={trajectoryResetRevision}
         />
       </div>
 

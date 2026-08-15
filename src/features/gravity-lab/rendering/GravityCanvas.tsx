@@ -9,7 +9,14 @@ import {
   useState,
   type RefCallback,
 } from "react";
-import { PerspectiveCamera, type Mesh } from "three";
+import {
+  BufferAttribute,
+  BufferGeometry,
+  Line,
+  LineBasicMaterial,
+  PerspectiveCamera,
+  type Mesh,
+} from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import {
@@ -28,6 +35,10 @@ import {
   followRenderedPoint,
   reconcileTrackedBodyId,
 } from "./cameraTracking";
+import {
+  TRAJECTORY_MAX_POINTS_PER_BODY,
+  TrajectoryCollector,
+} from "./trajectoryCollector";
 
 type GravityCanvasProps = Readonly<{
   session: GravityLabSession;
@@ -42,6 +53,7 @@ type GravityCanvasProps = Readonly<{
   ) => void;
   onReady: () => void;
   renderRevision: number;
+  trajectoryResetRevision: number;
 }>;
 
 type GravitySceneProps = Omit<GravityCanvasProps, "onReady"> &
@@ -53,7 +65,28 @@ type GravitySceneProps = Omit<GravityCanvasProps, "onReady"> &
       bodyId: string;
     }>;
     trackedBodyId: string | null;
+    trajectoriesVisible: boolean;
+    trajectoryClearRevision: number;
   }>;
+
+function updateTrajectoryGeometry(
+  collector: TrajectoryCollector,
+  bodyId: string,
+  geometry: BufferGeometry
+): void {
+  const positionAttribute = geometry.getAttribute("position");
+
+  if (!(positionAttribute instanceof BufferAttribute)) {
+    return;
+  }
+
+  const pointCount = collector.copyPositionsTo(
+    bodyId,
+    positionAttribute.array as Float32Array
+  );
+  geometry.setDrawRange(0, pointCount);
+  positionAttribute.needsUpdate = true;
+}
 
 function OrbitCameraControls({
   session,
@@ -329,18 +362,101 @@ function GravityScene({
   cameraFramingRevision,
   cameraFocusRequest,
   trackedBodyId,
+  trajectoriesVisible,
+  trajectoryClearRevision,
+  trajectoryResetRevision,
 }: GravitySceneProps) {
   const runtime = session.runtime;
   const invalidate = useThree((state) => state.invalidate);
   const bodies = useMemo(() => session.bodies, [session]);
   const meshRefs = useRef<Array<Mesh | null>>([]);
   const telemetryElapsedSeconds = useRef(0);
+  const trajectoryCollector = useMemo(
+    () =>
+      new TrajectoryCollector(bodies.map(({ bodyId }) => bodyId)),
+    [bodies]
+  );
+  const trajectoryRenderObjects = useMemo(
+    () =>
+      bodies.map((body) => {
+        const geometry = new BufferGeometry();
+        geometry.setAttribute(
+          "position",
+          new BufferAttribute(
+            new Float32Array(TRAJECTORY_MAX_POINTS_PER_BODY * 3),
+            3
+          )
+        );
+        geometry.setDrawRange(0, 0);
+        const material = new LineBasicMaterial({
+          color: body.color,
+          transparent: true,
+          opacity: 0.7,
+          depthWrite: false,
+        });
+        const line = new Line(geometry, material);
+        line.frustumCulled = false;
+
+        return { geometry, line, material };
+      }),
+    [bodies]
+  );
+
+  useEffect(
+    () => () => {
+      for (const { geometry, material } of trajectoryRenderObjects) {
+        geometry.dispose();
+        material.dispose();
+      }
+    },
+    [trajectoryRenderObjects]
+  );
 
   useEffect(() => {
     meshRefs.current.length = bodies.length;
     telemetryElapsedSeconds.current = 0;
     invalidate();
   }, [bodies.length, invalidate, renderRevision, session]);
+
+  useEffect(() => {
+    trajectoryCollector.rebaseSamplingClock();
+  }, [renderRevision, trajectoryCollector]);
+
+  useEffect(() => {
+    trajectoryCollector.clear();
+
+    for (const { geometry } of trajectoryRenderObjects) {
+      geometry.setDrawRange(0, 0);
+    }
+
+    invalidate();
+  }, [
+    invalidate,
+    trajectoryClearRevision,
+    trajectoryCollector,
+    trajectoryResetRevision,
+    trajectoryRenderObjects,
+  ]);
+
+  useEffect(() => {
+    if (trajectoriesVisible) {
+      for (const [bodyIndex, body] of bodies.entries()) {
+        updateTrajectoryGeometry(
+          trajectoryCollector,
+          body.bodyId,
+          trajectoryRenderObjects[bodyIndex].geometry
+        );
+      }
+    }
+
+    invalidate();
+  }, [
+    bodies,
+    invalidate,
+    trajectoriesVisible,
+    trajectoryCollector,
+    trajectoryRenderObjects,
+  ]);
 
   useEffect(() => {
     invalidate();
@@ -357,6 +473,27 @@ function GravityScene({
           bodies[bodyIndex].bodyId,
           mesh.position
         );
+      }
+    }
+
+    if (trajectoryCollector.shouldSample(deltaSeconds, runtime.isRunning)) {
+      for (let bodyIndex = 0; bodyIndex < bodies.length; bodyIndex += 1) {
+        const mesh = meshRefs.current[bodyIndex];
+
+        if (mesh === null || mesh === undefined) {
+          continue;
+        }
+
+        const bodyId = bodies[bodyIndex].bodyId;
+        trajectoryCollector.append(bodyId, mesh.position);
+
+        if (trajectoriesVisible) {
+          updateTrajectoryGeometry(
+            trajectoryCollector,
+            bodyId,
+            trajectoryRenderObjects[bodyIndex].geometry
+          );
+        }
       }
     }
 
@@ -399,6 +536,14 @@ function GravityScene({
         position={[0, -3.2, 0]}
       />
       <axesHelper args={[2.2]} />
+
+      {bodies.map((body, bodyIndex) => (
+        <primitive
+          key={`trajectory-${body.bodyId}`}
+          object={trajectoryRenderObjects[bodyIndex].line}
+          visible={trajectoriesVisible}
+        />
+      ))}
 
       <mesh position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[0.14, 0.025, 8, 32]} />
@@ -450,6 +595,7 @@ export const GravityCanvas = memo(function GravityCanvas({
   onTelemetry,
   onReady,
   renderRevision,
+  trajectoryResetRevision,
 }: GravityCanvasProps) {
   const [cameraResetRevision, setCameraResetRevision] = useState(0);
   const [cameraFramingRevision, setCameraFramingRevision] = useState(0);
@@ -458,6 +604,8 @@ export const GravityCanvas = memo(function GravityCanvas({
     bodyId: selectedBodyId,
   }));
   const [trackedBodyId, setTrackedBodyId] = useState<string | null>(null);
+  const [trajectoriesVisible, setTrajectoriesVisible] = useState(true);
+  const [trajectoryClearRevision, setTrajectoryClearRevision] = useState(0);
   const previousSession = useRef(session);
   const selectedBodyExists = session.bodies.some(
     ({ bodyId }) => bodyId === selectedBodyId
@@ -522,8 +670,32 @@ export const GravityCanvas = memo(function GravityCanvas({
             cameraFramingRevision={cameraFramingRevision}
             cameraFocusRequest={cameraFocusRequest}
             trackedBodyId={effectiveTrackedBodyId}
+            trajectoriesVisible={trajectoriesVisible}
+            trajectoryClearRevision={trajectoryClearRevision}
+            trajectoryResetRevision={trajectoryResetRevision}
           />
         </Canvas>
+      </div>
+      <div className="absolute bottom-3 left-3 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-2">
+        <button
+          type="button"
+          aria-pressed={trajectoriesVisible}
+          onClick={() => setTrajectoriesVisible((visible) => !visible)}
+          className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white aria-pressed:border-primary aria-pressed:bg-primary/80"
+        >
+          {trajectoriesVisible
+            ? "Masquer les trajectoires"
+            : "Afficher les trajectoires"}
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            setTrajectoryClearRevision((revision) => revision + 1)
+          }
+          className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        >
+          Effacer les trajectoires
+        </button>
       </div>
       <div className="absolute right-3 top-3 grid max-w-[calc(100%-1.5rem)] grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
         <button
