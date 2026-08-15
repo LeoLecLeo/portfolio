@@ -154,6 +154,9 @@ describe("generic gravity-lab session host", () => {
           ({ physicalRadiusM }) => physicalRadiusM
         )
       );
+    expect(session.bodies.map(({ massKg }) => massKg)).toEqual(
+      session.appliedScenario.physics.bodies.map(({ massKg }) => massKg)
+    );
     session.writeScenePosition("binary-a", first);
     session.writeScenePosition("binary-b", second);
     expect(Math.hypot(first.x, first.y, first.z)).toBeCloseTo(4, 14);

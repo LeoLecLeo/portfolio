@@ -21,6 +21,7 @@ export type SessionBodyPresentation = Readonly<{
   bodyId: string;
   name: string;
   color: string;
+  massKg: number;
   physicalRadiusM: number;
 }>;
 
@@ -123,6 +124,7 @@ export class GravityLabSession {
           name: body.name,
           color:
             request.appliedScenario.presentation.bodies[index].color,
+          massKg: body.massKg,
           physicalRadiusM: body.physicalRadiusM,
         })
       )

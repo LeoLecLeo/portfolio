@@ -929,6 +929,19 @@ La phase 2B est ordonnée en deux sous-étapes.
 
 ### Phase 2D — caméra, recentrage et trajectoires
 
+Ordre révisé des sous-phases :
+
+- 2D.1 caméra orbitale ;
+- 2D.2 cadrage automatique ;
+- 2D.3 focus et suivi optionnel ;
+- 2D.4 trajectoires bornées ;
+- 2D.5 modes de rayons visuels ;
+- 2D.6 grille de potentiel gravitationnel newtonien, représentation visuelle
+  amplifiée qui ne constitue pas une courbure de l’espace-temps ;
+- 2D.7 finition, performances et ergonomie, reprenant sans suppression les
+  objectifs de finition initialement prévus après 2D.5 ;
+- audit ciblé de fin de phase 2D.
+
 **Livrables**
 
 - caméra orbitale et zoom ;

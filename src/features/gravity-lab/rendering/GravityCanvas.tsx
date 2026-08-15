@@ -43,6 +43,7 @@ import {
   calculateVisualRadiusScene,
   type VisualRadiusMode,
 } from "./visualRadiusPolicy";
+import { GravityPotentialGrid } from "./GravityPotentialGrid";
 
 type GravityCanvasProps = Readonly<{
   session: GravityLabSession;
@@ -72,6 +73,7 @@ type GravitySceneProps = Omit<GravityCanvasProps, "onReady"> &
     trajectoriesVisible: boolean;
     trajectoryClearRevision: number;
     visualRadiusMode: VisualRadiusMode;
+    potentialGridVisible: boolean;
   }>;
 
 function updateTrajectoryGeometry(
@@ -371,6 +373,7 @@ function GravityScene({
   trajectoryClearRevision,
   trajectoryResetRevision,
   visualRadiusMode,
+  potentialGridVisible,
 }: GravitySceneProps) {
   const runtime = session.runtime;
   const invalidate = useThree((state) => state.invalidate);
@@ -537,9 +540,9 @@ function GravityScene({
       <directionalLight position={[5, 8, 6]} intensity={1.8} />
       <pointLight position={[0, 0, 0]} intensity={18} distance={28} />
 
-      <gridHelper
-        args={[24, 24, "#243548", "#13202f"]}
-        position={[0, -3.2, 0]}
+      <GravityPotentialGrid
+        session={session}
+        visible={potentialGridVisible}
       />
       <axesHelper args={[2.2]} />
 
@@ -621,6 +624,7 @@ export const GravityCanvas = memo(function GravityCanvas({
   const [trajectoryClearRevision, setTrajectoryClearRevision] = useState(0);
   const [visualRadiusMode, setVisualRadiusMode] =
     useState<VisualRadiusMode>("amplified");
+  const [potentialGridVisible, setPotentialGridVisible] = useState(true);
   const previousSession = useRef(session);
   const selectedBodyExists = session.bodies.some(
     ({ bodyId }) => bodyId === selectedBodyId
@@ -689,11 +693,33 @@ export const GravityCanvas = memo(function GravityCanvas({
             trajectoryClearRevision={trajectoryClearRevision}
             trajectoryResetRevision={trajectoryResetRevision}
             visualRadiusMode={visualRadiusMode}
+            potentialGridVisible={potentialGridVisible}
           />
         </Canvas>
       </div>
       <div className="pointer-events-none absolute inset-x-3 bottom-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div className="pointer-events-auto flex flex-wrap gap-2">
+          <div className="flex flex-col gap-1">
+            <button
+              type="button"
+              aria-pressed={potentialGridVisible}
+              onClick={() =>
+                setPotentialGridVisible((visible) => !visible)
+              }
+              className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white aria-pressed:border-primary aria-pressed:bg-primary/80"
+            >
+              {potentialGridVisible
+                ? "Grille gravitationnelle : Masquer"
+                : "Grille gravitationnelle : Afficher"}
+            </button>
+            {potentialGridVisible ? (
+              <p className="max-w-xs rounded bg-black/55 px-2 py-1 text-[0.68rem] leading-tight text-white/75">
+                Visualisation du potentiel gravitationnel newtonien —
+                déformation amplifiée pour la lisibilité. Ce réseau ne
+                représente pas une courbure relativiste de l’espace-temps.
+              </p>
+            ) : null}
+          </div>
           <button
             type="button"
             aria-pressed={trajectoriesVisible}
