@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
   type RefCallback,
+  type RefObject,
 } from "react";
 import {
   BufferAttribute,
@@ -79,6 +80,17 @@ type GravitySceneProps = Omit<GravityCanvasProps, "onReady"> &
     gravityFieldVisible: boolean;
   }>;
 
+type MutableCameraTarget = { x: number; y: number; z: number };
+
+function copyOrbitTarget(
+  targetRef: RefObject<MutableCameraTarget>,
+  controls: OrbitControls
+): void {
+  targetRef.current.x = controls.target.x;
+  targetRef.current.y = controls.target.y;
+  targetRef.current.z = controls.target.z;
+}
+
 function updateTrajectoryGeometry(
   collector: TrajectoryCollector,
   bodyId: string,
@@ -104,6 +116,7 @@ function OrbitCameraControls({
   framingRevision,
   focusRequest,
   trackedBodyId,
+  targetRef,
 }: Readonly<{
   session: GravityLabSession;
   resetRevision: number;
@@ -113,6 +126,7 @@ function OrbitCameraControls({
     bodyId: string;
   }>;
   trackedBodyId: string | null;
+  targetRef: RefObject<MutableCameraTarget>;
 }>) {
   const camera = useThree((state) => state.camera);
   const domElement = useThree((state) => state.gl.domElement);
@@ -128,7 +142,10 @@ function OrbitCameraControls({
 
   useEffect(() => {
     const controls = new OrbitControls(camera, domElement);
-    const invalidateOnChange = () => invalidate();
+    const invalidateOnChange = () => {
+      copyOrbitTarget(targetRef, controls);
+      invalidate();
+    };
 
     controls.enableDamping = false;
     controls.enablePan = true;
@@ -140,6 +157,7 @@ function OrbitCameraControls({
     controls.target.set(...DEFAULT_GRAVITY_CAMERA_TARGET);
     controls.addEventListener("change", invalidateOnChange);
     controls.update();
+    copyOrbitTarget(targetRef, controls);
     controlsRef.current = controls;
 
     return () => {
@@ -147,7 +165,7 @@ function OrbitCameraControls({
       controls.dispose();
       controlsRef.current = null;
     };
-  }, [camera, domElement, invalidate]);
+  }, [camera, domElement, invalidate, targetRef]);
 
   useEffect(() => {
     if (handledResetRevision.current === resetRevision) {
@@ -175,8 +193,9 @@ function OrbitCameraControls({
 
     controls.target.set(...DEFAULT_GRAVITY_CAMERA_TARGET);
     controls.update();
+    copyOrbitTarget(targetRef, controls);
     invalidate();
-  }, [camera, invalidate, resetRevision]);
+  }, [camera, invalidate, resetRevision, targetRef]);
 
   useEffect(() => {
     const sessionChanged = framedSession.current !== session;
@@ -239,8 +258,9 @@ function OrbitCameraControls({
       framing.target.z
     );
     controls.update();
+    copyOrbitTarget(targetRef, controls);
     invalidate();
-  }, [camera, framingRevision, invalidate, session]);
+  }, [camera, framingRevision, invalidate, session, targetRef]);
 
   useEffect(() => {
     if (handledFocusRevision.current === focusRequest.revision) {
@@ -276,8 +296,9 @@ function OrbitCameraControls({
       centred.target.z
     );
     controls.update();
+    copyOrbitTarget(targetRef, controls);
     invalidate();
-  }, [focusRequest, invalidate, session]);
+  }, [focusRequest, invalidate, session, targetRef]);
 
   useEffect(() => {
     const controls = controlsRef.current;
@@ -311,8 +332,9 @@ function OrbitCameraControls({
     );
     trackedPosition.current = renderedPosition;
     controls.update();
+    copyOrbitTarget(targetRef, controls);
     invalidate();
-  }, [invalidate, session, trackedBodyId]);
+  }, [invalidate, session, targetRef, trackedBodyId]);
 
   useFrame(() => {
     const controls = controlsRef.current;
@@ -357,6 +379,7 @@ function OrbitCameraControls({
     );
     trackedPosition.current = nextPosition;
     controls.update();
+    copyOrbitTarget(targetRef, controls);
   });
 
   return null;
@@ -386,6 +409,11 @@ function GravityScene({
     () => createSessionVisualizationLayout(session),
     [session]
   );
+  const cameraTargetRef = useRef<MutableCameraTarget>({
+    x: DEFAULT_GRAVITY_CAMERA_TARGET[0],
+    y: DEFAULT_GRAVITY_CAMERA_TARGET[1],
+    z: DEFAULT_GRAVITY_CAMERA_TARGET[2],
+  });
   const meshRefs = useRef<Array<Mesh | null>>([]);
   const telemetryElapsedSeconds = useRef(0);
   const trajectoryCollector = useMemo(
@@ -552,6 +580,7 @@ function GravityScene({
         framingRevision={cameraFramingRevision}
         focusRequest={cameraFocusRequest}
         trackedBodyId={trackedBodyId}
+        targetRef={cameraTargetRef}
       />
       <color attach="background" args={["#060912"]} />
       <ambientLight intensity={0.35} />
@@ -561,7 +590,8 @@ function GravityScene({
       {potentialGridVisible ? (
         <GravityPotentialGrid
           session={session}
-          bounds={visualizationLayout.bounds}
+          bounds={visualizationLayout.bodyBounds}
+          cameraTargetRef={cameraTargetRef}
           visible
         />
       ) : null}

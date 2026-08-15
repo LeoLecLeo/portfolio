@@ -942,6 +942,9 @@ Ordre révisé des sous-phases :
   réseau clairsemé de vecteurs ;
 - 2D.7 finition, performances et ergonomie, reprenant sans suppression les
   objectifs de finition initialement prévus après 2D.5 ;
+- 2D.8 grille gravitationnelle volumique quasi infinie : couverture de la
+  caméra et du système par chunks alignés sur une grille mondiale, avec budget
+  explicite et LOD graphique borné ;
 - audit ciblé de fin de phase 2D.
 
 **Livrables**
@@ -951,6 +954,7 @@ Ordre révisé des sous-phases :
 - mise en évidence visuelle du corps déjà sélectionné ;
 - rayon graphique distinct du rayon physique ;
 - trajectoires par identifiant dans des buffers circulaires ;
+- grille volumique étendue par chunks sans déplacement glissant avec la caméra ;
 - contrôle de visibilité ;
 - budgets desktop et mobile mesurés.
 
@@ -964,6 +968,9 @@ Ordre révisé des sous-phases :
 - la caméra ne se recadre pas automatiquement pendant l’évolution ;
 - les contrôles invalident une frame sur interaction sans entretenir une boucle
   permanente non justifiée par un damping ;
+- la couverture de grille ne change qu’après un déplacement de caméra pertinent,
+  reste alignée sur des coordonnées monde et respecte ses plafonds de chunks,
+  sommets et draw calls ;
 - le comportement tactile, le DPR et les budgets sont profilés ;
 - `npm run test`, `npm run lint` et `npm run build` réussissent.
 
