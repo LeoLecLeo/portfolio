@@ -44,6 +44,7 @@ import {
 import { GravityPresetCatalog } from "./GravityPresetCatalog";
 import { preparePresetDraftLoad } from "./presetDraftLoading";
 import {
+  getGravityLabApplyAvailability,
   getGravityLabMainControlState,
   invokeGravityLabMainControl,
 } from "./gravityLabMainControls";
@@ -202,6 +203,11 @@ export function GravityLabPrototype({
   const mainControlState = getGravityLabMainControlState({
     status: telemetry.status,
     rendererReady,
+    hasUnappliedChanges,
+    draftIsValid: draftValidation.ok,
+  });
+  const applyAvailability = getGravityLabApplyAvailability({
+    status: telemetry.status,
     hasUnappliedChanges,
     draftIsValid: draftValidation.ok,
   });
@@ -378,43 +384,87 @@ export function GravityLabPrototype({
 
   return (
     <section
-      className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]"
+      className="space-y-5"
       aria-labelledby="gravity-prototype-title"
     >
-      <div className="min-w-0">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              Laboratoire newtonien · phase 2C
-            </p>
-            <h2
-              id="gravity-prototype-title"
-              className="mt-1 text-2xl font-semibold tracking-tight"
-            >
-              Simulation active
-            </h2>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Caméra orbitale · anneau = barycentre
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+            Laboratoire newtonien · N-corps 3D
+          </p>
+          <h2
+            id="gravity-prototype-title"
+            className="mt-1 text-2xl font-semibold tracking-tight"
+          >
+            Session de simulation
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            La scène montre le scénario appliqué ; les paramètres se
+            préparent séparément dans le brouillon.
           </p>
         </div>
+        <div className="flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full border border-border bg-card px-3 py-1.5 font-medium">
+            Scénario simulé · {session.bodies.length} corps
+          </span>
+          <span
+            id="draft-state-message"
+            role="status"
+            className={
+              hasUnappliedChanges
+                ? "rounded-full border border-amber-400/50 bg-amber-400/10 px-3 py-1.5 font-medium text-amber-700 dark:text-amber-300"
+                : "rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 font-medium text-emerald-700 dark:text-emerald-300"
+            }
+          >
+            {hasUnappliedChanges
+              ? "Brouillon · modifications non appliquées"
+              : "Brouillon · synchronisé"}
+          </span>
+        </div>
+      </header>
 
-        <div
-          role="group"
-          aria-label="Contrôles principaux de la simulation"
-          className="mb-4 flex flex-col gap-3 rounded-xl border border-border/80 bg-card/70 p-3 sm:flex-row sm:items-center sm:justify-between"
-        >
+      <section
+        aria-labelledby="gravity-simulation-controls-title"
+        className="rounded-xl border border-border/80 bg-card/70 p-4 shadow-sm"
+      >
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <p
+              id="gravity-simulation-controls-title"
+              className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+            >
+              Simulation
+            </p>
           <p
             role="status"
             aria-live="polite"
-            className="text-sm text-muted-foreground"
+              className="mt-1 text-sm text-muted-foreground"
           >
             État courant :{" "}
             <strong className="text-foreground">
               {mainControlState.mode}
             </strong>
+            {telemetry.status === "running" ||
+            telemetry.status === "paused"
+              ? null
+              : ` · ${statusLabel(telemetry.status)}`}
           </p>
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+            <p
+              id="apply-availability-message"
+              className={
+                applyAvailability.tone === "blocked"
+                  ? "mt-1 text-xs text-amber-700 dark:text-amber-300"
+                  : "mt-1 text-xs text-muted-foreground"
+              }
+            >
+              {applyAvailability.message}
+            </p>
+          </div>
+          <div
+            role="group"
+            aria-label="Contrôles principaux de la simulation"
+            className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end"
+          >
             <button
               type="button"
               aria-label="Démarrer ou reprendre la simulation"
@@ -441,18 +491,45 @@ export function GravityLabPrototype({
             </button>
             <button
               type="button"
-              aria-describedby="draft-state-message"
+              aria-describedby="apply-availability-message draft-state-message"
               onClick={() =>
                 invokeGravityLabMainControl("apply", mainControlHandlers)
               }
               disabled={mainControlState.applyDisabled}
-              className="col-span-2 whitespace-nowrap rounded-lg border border-primary bg-background px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-45"
+              className="col-span-2 rounded-lg border border-primary bg-background px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-45 sm:whitespace-nowrap"
             >
               Appliquer et réinitialiser
             </button>
+            <button
+              type="button"
+              onClick={reset}
+              className="col-span-2 rounded-lg border border-border bg-transparent px-3 py-2 text-sm font-medium transition-colors hover:bg-secondary sm:col-span-1"
+            >
+              Reset physique
+            </button>
           </div>
         </div>
+        {applicationFailure === null ? null : (
+          <p
+            role="alert"
+            className="mt-3 rounded-lg border border-destructive/60 bg-destructive/10 p-3 text-sm text-destructive"
+          >
+            {applicationFailure}
+          </p>
+        )}
+        {applicationConfirmation === null ? null : (
+          <p
+            role="status"
+            aria-live="polite"
+            className="mt-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300"
+          >
+            {applicationConfirmation}
+          </p>
+        )}
+      </section>
 
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-w-0">
         <GravityCanvas
           session={session}
           selectedBodyId={labState.selectedSessionBodyId}
@@ -462,29 +539,73 @@ export function GravityLabPrototype({
           renderRevision={renderRevision}
           trajectoryResetRevision={trajectoryResetRevision}
         />
-      </div>
+        </div>
 
-      <aside className="flex flex-col gap-4 rounded-xl border border-border/80 bg-card/70 p-5 shadow-xl shadow-black/10">
-        <GravityPresetCatalog
-          presets={GRAVITY_PRESETS}
-          onLoad={loadPresetIntoDraft}
-        />
-        {presetLoadFailure === null ? null : (
-          <p
-            role="alert"
-            className="rounded-lg border border-destructive/60 bg-destructive/10 p-3 text-xs text-destructive"
+        <aside
+          aria-label="Configuration du laboratoire"
+          className="flex min-w-0 flex-col gap-4"
+        >
+          <details className="group rounded-xl border border-border/80 bg-card/70 shadow-lg shadow-black/5">
+            <summary className="cursor-pointer list-none rounded-xl p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
+              <span className="flex items-center justify-between gap-3">
+                <span>
+                  <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Scénarios / presets
+                  </span>
+                  <span className="mt-1 block text-sm text-muted-foreground">
+                    Charger un scénario dans le brouillon
+                  </span>
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="text-lg text-muted-foreground transition-transform group-open:rotate-45"
+                >
+                  +
+                </span>
+              </span>
+            </summary>
+            <div className="border-t border-border/80 p-4">
+              <GravityPresetCatalog
+                presets={GRAVITY_PRESETS}
+                onLoad={loadPresetIntoDraft}
+              />
+              {presetLoadFailure === null ? null : (
+                <p
+                  role="alert"
+                  className="mt-3 rounded-lg border border-destructive/60 bg-destructive/10 p-3 text-xs text-destructive"
+                >
+                  {presetLoadFailure}
+                </p>
+              )}
+            </div>
+          </details>
+
+          <section
+            aria-labelledby="gravity-body-editor-title"
+            className="rounded-xl border border-border/80 bg-card/70 p-4 shadow-lg shadow-black/5"
           >
-            {presetLoadFailure}
-          </p>
-        )}
-        <div>
+            <h3
+              id="gravity-body-editor-title"
+              className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+            >
+              Corps et paramètres
+            </h3>
+            <div className="mt-3 rounded-lg border border-border/70 bg-background/35 p-3">
+              <p className="text-xs font-medium text-foreground">
+                Scénario actuellement simulé
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {session.bodies.length} corps · les valeurs de la scène restent
+                inchangées jusqu’à une application réussie.
+              </p>
+            </div>
+            <div className="mt-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              Corps du brouillon
+                  Brouillon en cours d’édition
             </p>
             <div className="flex flex-wrap items-center justify-end gap-2">
               <span
-                id="draft-state-message"
                 role="status"
                 className={
                   hasUnappliedChanges
@@ -575,14 +696,6 @@ export function GravityLabPrototype({
               Annuler les modifications
             </button>
           </div>
-          {hasUnappliedChanges &&
-          draftValidation.ok &&
-          telemetry.status === "running" ? (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Mettez la simulation en pause avant d’appliquer les
-              modifications.
-            </p>
-          ) : null}
           {draftValidation.report.errors.length > 0 ? (
             <div
               role="alert"
@@ -606,23 +719,6 @@ export function GravityLabPrototype({
               </ul>
             </div>
           ) : null}
-          {applicationFailure === null ? null : (
-            <p
-              role="alert"
-              className="mt-3 text-xs text-destructive"
-            >
-              {applicationFailure}
-            </p>
-          )}
-          {applicationConfirmation === null ? null : (
-            <p
-              role="status"
-              aria-live="polite"
-              className="mt-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-300"
-            >
-              {applicationConfirmation}
-            </p>
-          )}
           <p
             aria-live="polite"
             className="mt-2 text-xs text-muted-foreground"
@@ -643,23 +739,35 @@ export function GravityLabPrototype({
           selectedBodyId={labState.selectedDraftBodyId}
           dispatch={updateDraft}
         />
+          </section>
 
+          <details className="group rounded-xl border border-border/80 bg-card/70 shadow-lg shadow-black/5">
+            <summary className="cursor-pointer list-none rounded-xl p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
+              <span className="flex items-center justify-between gap-3">
+                <span>
+                  <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Diagnostics scientifiques
+                  </span>
+                  <span className="mt-1 block text-sm text-muted-foreground">
+                    {statusLabel(telemetry.status)} ·{" "}
+                    {validityLevelLabel(validity.overallLevel)}
+                  </span>
+                  {notice === null || notice === undefined ? null : (
+                    <span className="mt-1 block text-xs text-destructive">
+                      {notice}
+                    </span>
+                  )}
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="text-lg text-muted-foreground transition-transform group-open:rotate-45"
+                >
+                  +
+                </span>
+              </span>
+            </summary>
+            <div className="space-y-4 border-t border-border/80 p-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Réinitialisation
-          </p>
-          <div className="mt-3">
-            <button
-              type="button"
-              onClick={reset}
-              className="w-full rounded-lg border border-border bg-transparent px-3 py-2.5 text-sm font-medium transition-colors hover:bg-secondary"
-            >
-              Réinitialiser en pause
-            </button>
-          </div>
-        </div>
-
-        <div className="border-t border-border/80 pt-4">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             Diagnostics newtoniens
           </p>
@@ -844,7 +952,10 @@ export function GravityLabPrototype({
           {(1 / TELEMETRY_INTERVAL_SECONDS).toFixed(0)} Hz, complétée par les
           actions et arrêts urgents.
         </p>
-      </aside>
+            </div>
+          </details>
+        </aside>
+      </div>
     </section>
   );
 }

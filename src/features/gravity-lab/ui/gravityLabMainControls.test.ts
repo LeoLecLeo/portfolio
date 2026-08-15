@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  getGravityLabApplyAvailability,
   getGravityLabMainControlState,
   invokeGravityLabMainControl,
   type GravityLabMainControlHandlers,
@@ -84,4 +85,39 @@ describe("gravityLabMainControls", () => {
       }
     }
   );
+
+  it("explique pourquoi l’application est disponible ou bloquée", () => {
+    expect(
+      getGravityLabApplyAvailability({
+        status: "paused",
+        hasUnappliedChanges: false,
+        draftIsValid: true,
+      })
+    ).toEqual({
+      tone: "synchronized",
+      message:
+        "Le brouillon correspond déjà au scénario actuellement simulé.",
+    });
+    expect(
+      getGravityLabApplyAvailability({
+        status: "paused",
+        hasUnappliedChanges: true,
+        draftIsValid: false,
+      }).tone
+    ).toBe("blocked");
+    expect(
+      getGravityLabApplyAvailability({
+        status: "running",
+        hasUnappliedChanges: true,
+        draftIsValid: true,
+      }).message
+    ).toContain("pause");
+    expect(
+      getGravityLabApplyAvailability({
+        status: "paused",
+        hasUnappliedChanges: true,
+        draftIsValid: true,
+      }).tone
+    ).toBe("ready");
+  });
 });

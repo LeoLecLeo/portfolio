@@ -36,10 +36,9 @@ export default function GravityLabPage() {
             Un noyau scientifique 3D, rendu en temps réel
           </h1>
           <p className="mt-5 text-base leading-7 text-muted-foreground sm:text-lg">
-            Cette première interface publique relie le moteur newtonien
-            N-corps testé à une visualisation React Three Fiber. Le scénario
-            montre deux étoiles mobiles de même masse sur une orbite inclinée,
-            sans spécialiser le moteur pour ce nombre de corps.
+            Explorez des scénarios newtoniens N-corps, modifiez leurs
+            conditions initiales et observez leur évolution dans une scène 3D
+            interactive accompagnée de diagnostics scientifiques.
           </p>
         </header>
 
@@ -60,8 +59,9 @@ export default function GravityLabPage() {
               Limites assumées
             </h2>
             <p className="mt-2">
-              Deux corps seulement dans ce preset, caméra fixe, aucune
-              édition et aucune trajectoire persistante dans cette sous-phase.
+              Le laboratoire public accepte de 1 à 16 corps et reste dans un
+              domaine newtonien explicitement contrôlé. Les expériences
+              relativistes seront des modules distincts.
             </p>
           </article>
           <article className="rounded-xl border border-border/80 bg-card/50 p-5">

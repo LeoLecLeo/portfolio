@@ -756,14 +756,28 @@ export const GravityCanvas = memo(function GravityCanvas({
             />
           </Canvas>
         </div>
-        <div
-          role="group"
-          aria-label="Caméra"
-          className="absolute right-3 top-3 grid max-w-[calc(100%-1.5rem)] grid-cols-2 gap-2 rounded-lg border border-white/15 bg-black/45 p-2 shadow-lg backdrop-blur-sm"
-        >
-          <p className="col-span-2 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white/70">
-            Caméra
+      </div>
+      <section
+        aria-labelledby="gravity-view-controls-title"
+        className="rounded-xl border border-border/80 bg-card/40 p-3"
+      >
+        <div className="mb-3">
+          <p
+            id="gravity-view-controls-title"
+            className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+          >
+            Caméra et visualisations
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Ces réglages changent uniquement la vue, jamais la simulation.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <fieldset className="rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
+          <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Caméra
+          </legend>
+          <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-2">
           <button
             type="button"
             disabled={!selectedBodyExists}
@@ -773,7 +787,7 @@ export const GravityCanvas = memo(function GravityCanvas({
                 bodyId: selectedBodyId,
               }))
             }
-            className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-45"
+            className="rounded-lg border border-border bg-secondary px-3 py-2 text-xs font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-45"
           >
             Centrer sur le corps
           </button>
@@ -786,7 +800,7 @@ export const GravityCanvas = memo(function GravityCanvas({
                 current === null ? selectedBodyId : null
               )
             }
-            className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-45 aria-pressed:border-primary aria-pressed:bg-primary/80"
+            className="rounded-lg border border-border bg-secondary px-3 py-2 text-xs font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-45 aria-pressed:border-primary aria-pressed:bg-primary/10"
           >
             Suivre le corps
           </button>
@@ -795,7 +809,7 @@ export const GravityCanvas = memo(function GravityCanvas({
             onClick={() =>
               setCameraFramingRevision((revision) => revision + 1)
             }
-            className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="rounded-lg border border-border bg-secondary px-3 py-2 text-xs font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             Cadrer le système
           </button>
@@ -804,16 +818,12 @@ export const GravityCanvas = memo(function GravityCanvas({
             onClick={() =>
               setCameraResetRevision((revision) => revision + 1)
             }
-            className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="rounded-lg border border-border bg-secondary px-3 py-2 text-xs font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             Réinitialiser la caméra
           </button>
-        </div>
-      </div>
-      <div
-        aria-label="Contrôles d’affichage"
-        className="grid gap-3 rounded-xl border border-border/80 bg-card/40 p-3 sm:grid-cols-2 xl:grid-cols-4"
-      >
+          </div>
+        </fieldset>
         <fieldset className="rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
           <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Affichage des astres
@@ -913,6 +923,7 @@ export const GravityCanvas = memo(function GravityCanvas({
           ) : null}
         </fieldset>
       </div>
+      </section>
     </div>
   );
 });
