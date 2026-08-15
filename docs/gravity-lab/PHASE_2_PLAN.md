@@ -938,6 +938,8 @@ Ordre révisé des sous-phases :
 - 2D.5 modes de rayons visuels ;
 - 2D.6 grille de potentiel gravitationnel newtonien, représentation visuelle
   amplifiée qui ne constitue pas une courbure de l’espace-temps ;
+- 2D.6b visualisation optionnelle du champ gravitationnel newtonien par un
+  réseau clairsemé de vecteurs ;
 - 2D.7 finition, performances et ergonomie, reprenant sans suppression les
   objectifs de finition initialement prévus après 2D.5 ;
 - audit ciblé de fin de phase 2D.

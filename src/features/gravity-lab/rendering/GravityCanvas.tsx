@@ -44,6 +44,7 @@ import {
   type VisualRadiusMode,
 } from "./visualRadiusPolicy";
 import { GravityPotentialGrid } from "./GravityPotentialGrid";
+import { GravityFieldVectors } from "./GravityFieldVectors";
 
 type GravityCanvasProps = Readonly<{
   session: GravityLabSession;
@@ -74,6 +75,7 @@ type GravitySceneProps = Omit<GravityCanvasProps, "onReady"> &
     trajectoryClearRevision: number;
     visualRadiusMode: VisualRadiusMode;
     potentialGridVisible: boolean;
+    gravityFieldVisible: boolean;
   }>;
 
 function updateTrajectoryGeometry(
@@ -374,6 +376,7 @@ function GravityScene({
   trajectoryResetRevision,
   visualRadiusMode,
   potentialGridVisible,
+  gravityFieldVisible,
 }: GravitySceneProps) {
   const runtime = session.runtime;
   const invalidate = useThree((state) => state.invalidate);
@@ -544,6 +547,10 @@ function GravityScene({
         session={session}
         visible={potentialGridVisible}
       />
+      <GravityFieldVectors
+        session={session}
+        visible={gravityFieldVisible}
+      />
       <axesHelper args={[2.2]} />
 
       {bodies.map((body, bodyIndex) => (
@@ -625,6 +632,7 @@ export const GravityCanvas = memo(function GravityCanvas({
   const [visualRadiusMode, setVisualRadiusMode] =
     useState<VisualRadiusMode>("amplified");
   const [potentialGridVisible, setPotentialGridVisible] = useState(true);
+  const [gravityFieldVisible, setGravityFieldVisible] = useState(false);
   const previousSession = useRef(session);
   const selectedBodyExists = session.bodies.some(
     ({ bodyId }) => bodyId === selectedBodyId
@@ -694,6 +702,7 @@ export const GravityCanvas = memo(function GravityCanvas({
             trajectoryResetRevision={trajectoryResetRevision}
             visualRadiusMode={visualRadiusMode}
             potentialGridVisible={potentialGridVisible}
+            gravityFieldVisible={gravityFieldVisible}
           />
         </Canvas>
       </div>
@@ -717,6 +726,26 @@ export const GravityCanvas = memo(function GravityCanvas({
                 Visualisation du potentiel gravitationnel newtonien —
                 déformation amplifiée pour la lisibilité. Ce réseau ne
                 représente pas une courbure relativiste de l’espace-temps.
+              </p>
+            ) : null}
+          </div>
+          <div className="flex flex-col gap-1">
+            <button
+              type="button"
+              aria-pressed={gravityFieldVisible}
+              onClick={() =>
+                setGravityFieldVisible((visible) => !visible)
+              }
+              className="rounded-lg border border-white/20 bg-black/65 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white aria-pressed:border-primary aria-pressed:bg-primary/80"
+            >
+              {gravityFieldVisible
+                ? "Champ gravitationnel : Masquer"
+                : "Champ gravitationnel : Afficher"}
+            </button>
+            {gravityFieldVisible ? (
+              <p className="max-w-xs rounded bg-black/55 px-2 py-1 text-[0.68rem] leading-tight text-white/75">
+                Les flèches indiquent la direction et l’intensité relative de
+                l’accélération gravitationnelle.
               </p>
             ) : null}
           </div>
