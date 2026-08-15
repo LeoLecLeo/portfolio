@@ -11,6 +11,17 @@ function orderedPoints(
   return Array.from(target.subarray(0, count * 3));
 }
 
+function lineSegmentVertices(
+  collector: TrajectoryCollector,
+  bodyId: string
+): number[] {
+  const target = new Float32Array(
+    (collector.maxPointsPerBody - 1) * 2 * 3
+  );
+  const vertexCount = collector.copyLineSegmentsTo(bodyId, target);
+  return Array.from(target.subarray(0, vertexCount * 3));
+}
+
 describe("TrajectoryCollector", () => {
   it("accumulates points in chronological order", () => {
     const collector = new TrajectoryCollector(["a"], {
@@ -21,6 +32,62 @@ describe("TrajectoryCollector", () => {
     collector.append("a", { x: 4, y: 5, z: 6 });
 
     expect(orderedPoints(collector, "a")).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it("renders an ordinary continuous trajectory as connected segments", () => {
+    const collector = new TrajectoryCollector(["a"], {
+      maxPointsPerBody: 4,
+    });
+
+    collector.append("a", { x: 1, y: 0, z: 0 });
+    collector.append("a", { x: 2, y: 0, z: 0 });
+    collector.append("a", { x: 3, y: 0, z: 0 });
+
+    expect(lineSegmentVertices(collector, "a")).toEqual([
+      1, 0, 0, 2, 0, 0,
+      2, 0, 0, 3, 0, 0,
+    ]);
+  });
+
+  it("starts a distinct segment after trajectories are shown again", () => {
+    const collector = new TrajectoryCollector(["a"], {
+      maxPointsPerBody: 6,
+    });
+
+    collector.append("a", { x: 1, y: 0, z: 0 });
+    collector.append("a", { x: 2, y: 0, z: 0 });
+    collector.startNewSegments();
+    collector.append("a", { x: 10, y: 0, z: 0 });
+    collector.append("a", { x: 11, y: 0, z: 0 });
+
+    expect(orderedPoints(collector, "a")).toEqual([
+      1, 0, 0, 2, 0, 0, 10, 0, 0, 11, 0, 0,
+    ]);
+    expect(lineSegmentVertices(collector, "a")).toEqual([
+      1, 0, 0, 2, 0, 0,
+      10, 0, 0, 11, 0, 0,
+    ]);
+  });
+
+  it("preserves multiple independent breaks", () => {
+    const collector = new TrajectoryCollector(["a"], {
+      maxPointsPerBody: 8,
+    });
+
+    collector.append("a", { x: 1, y: 0, z: 0 });
+    collector.append("a", { x: 2, y: 0, z: 0 });
+    collector.startNewSegments();
+    collector.append("a", { x: 3, y: 0, z: 0 });
+    collector.append("a", { x: 4, y: 0, z: 0 });
+    collector.startNewSegments();
+    collector.append("a", { x: 5, y: 0, z: 0 });
+    collector.append("a", { x: 6, y: 0, z: 0 });
+
+    expect(lineSegmentVertices(collector, "a")).toEqual([
+      1, 0, 0, 2, 0, 0,
+      3, 0, 0, 4, 0, 0,
+      5, 0, 0, 6, 0, 0,
+    ]);
   });
 
   it("keeps only the newest points at its strict capacity", () => {
@@ -35,6 +102,10 @@ describe("TrajectoryCollector", () => {
     expect(collector.pointCount("a")).toBe(3);
     expect(orderedPoints(collector, "a")).toEqual([
       3, 0, 0, 4, 0, 0, 5, 0, 0,
+    ]);
+    expect(lineSegmentVertices(collector, "a")).toEqual([
+      3, 0, 0, 4, 0, 0,
+      4, 0, 0, 5, 0, 0,
     ]);
   });
 
@@ -76,6 +147,8 @@ describe("TrajectoryCollector", () => {
     expect(collector.pointCount("same")).toBe(0);
     expect(collector.hasBody("old")).toBe(false);
     expect(collector.pointCount("new")).toBe(0);
+    expect(lineSegmentVertices(collector, "same")).toEqual([]);
+    expect(lineSegmentVertices(collector, "new")).toEqual([]);
   });
 
   it("supports explicit manual clearing", () => {
@@ -87,6 +160,8 @@ describe("TrajectoryCollector", () => {
 
     expect(collector.pointCount("a")).toBe(0);
     expect(collector.pointCount("b")).toBe(0);
+    expect(lineSegmentVertices(collector, "a")).toEqual([]);
+    expect(lineSegmentVertices(collector, "b")).toEqual([]);
   });
 
   it("does not schedule samples while paused or catch up paused time", () => {

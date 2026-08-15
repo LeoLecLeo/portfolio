@@ -12,8 +12,8 @@ import {
 import {
   BufferAttribute,
   BufferGeometry,
-  Line,
   LineBasicMaterial,
+  LineSegments,
   PerspectiveCamera,
   type Mesh,
 } from "three";
@@ -89,11 +89,11 @@ function updateTrajectoryGeometry(
     return;
   }
 
-  const pointCount = collector.copyPositionsTo(
+  const vertexCount = collector.copyLineSegmentsTo(
     bodyId,
     positionAttribute.array as Float32Array
   );
-  geometry.setDrawRange(0, pointCount);
+  geometry.setDrawRange(0, vertexCount);
   positionAttribute.needsUpdate = true;
 }
 
@@ -388,6 +388,7 @@ function GravityScene({
       new TrajectoryCollector(bodies.map(({ bodyId }) => bodyId)),
     [bodies]
   );
+  const previousTrajectoriesVisible = useRef(trajectoriesVisible);
   const trajectoryRenderObjects = useMemo(
     () =>
       bodies.map((body) => {
@@ -395,7 +396,9 @@ function GravityScene({
         geometry.setAttribute(
           "position",
           new BufferAttribute(
-            new Float32Array(TRAJECTORY_MAX_POINTS_PER_BODY * 3),
+            new Float32Array(
+              (TRAJECTORY_MAX_POINTS_PER_BODY - 1) * 2 * 3
+            ),
             3
           )
         );
@@ -406,7 +409,7 @@ function GravityScene({
           opacity: 0.7,
           depthWrite: false,
         });
-        const line = new Line(geometry, material);
+        const line = new LineSegments(geometry, material);
         line.frustumCulled = false;
 
         return { geometry, line, material };
@@ -451,6 +454,12 @@ function GravityScene({
   ]);
 
   useEffect(() => {
+    if (trajectoriesVisible && !previousTrajectoriesVisible.current) {
+      trajectoryCollector.startNewSegments();
+    }
+
+    previousTrajectoriesVisible.current = trajectoriesVisible;
+
     if (trajectoriesVisible) {
       for (const [bodyIndex, body] of bodies.entries()) {
         updateTrajectoryGeometry(

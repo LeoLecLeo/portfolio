@@ -11,8 +11,10 @@ export const TRAJECTORY_MAX_POINTS_PER_BODY = 512;
 
 type BodyTrajectory = {
   readonly positions: Float32Array;
+  readonly segmentStarts: Uint8Array;
   startPoint: number;
   pointCount: number;
+  nextPointStartsSegment: boolean;
 };
 
 function validateBodyIds(bodyIds: readonly string[]): void {
@@ -38,8 +40,10 @@ function validateBodyIds(bodyIds: readonly string[]): void {
 function createBodyTrajectory(maxPoints: number): BodyTrajectory {
   return {
     positions: new Float32Array(maxPoints * 3),
+    segmentStarts: new Uint8Array(maxPoints),
     startPoint: 0,
     pointCount: 0,
+    nextPointStartsSegment: true,
   };
 }
 
@@ -156,12 +160,24 @@ export class TrajectoryCollector {
     trajectory.positions[offset] = point.x;
     trajectory.positions[offset + 1] = point.y;
     trajectory.positions[offset + 2] = point.z;
+    trajectory.segmentStarts[writePoint] =
+      trajectory.pointCount === 0 || trajectory.nextPointStartsSegment ? 1 : 0;
+    trajectory.nextPointStartsSegment = false;
 
     if (trajectory.pointCount < this.#maxPointsPerBody) {
       trajectory.pointCount += 1;
     } else {
       trajectory.startPoint =
         (trajectory.startPoint + 1) % this.#maxPointsPerBody;
+      // Once the preceding point is evicted, the oldest retained point must
+      // become the beginning of a drawable segment.
+      trajectory.segmentStarts[trajectory.startPoint] = 1;
+    }
+  }
+
+  startNewSegments(): void {
+    for (const trajectory of this.#trajectories.values()) {
+      trajectory.nextPointStartsSegment = true;
     }
   }
 
@@ -188,10 +204,49 @@ export class TrajectoryCollector {
     return trajectory.pointCount;
   }
 
+  copyLineSegmentsTo(bodyId: string, target: Float32Array): number {
+    const requiredLength = (this.#maxPointsPerBody - 1) * 2 * 3;
+
+    if (target.length < requiredLength) {
+      throw new RangeError(
+        "Trajectory line-segment target buffer is smaller than the configured capacity."
+      );
+    }
+
+    const trajectory = this.#trajectory(bodyId);
+    let targetVertexCount = 0;
+
+    for (let pointIndex = 1; pointIndex < trajectory.pointCount; pointIndex += 1) {
+      const currentPoint =
+        (trajectory.startPoint + pointIndex) % this.#maxPointsPerBody;
+
+      if (trajectory.segmentStarts[currentPoint] === 1) {
+        continue;
+      }
+
+      const previousPoint =
+        (trajectory.startPoint + pointIndex - 1) % this.#maxPointsPerBody;
+      const previousOffset = previousPoint * 3;
+      const currentOffset = currentPoint * 3;
+      const targetOffset = targetVertexCount * 3;
+
+      target[targetOffset] = trajectory.positions[previousOffset];
+      target[targetOffset + 1] = trajectory.positions[previousOffset + 1];
+      target[targetOffset + 2] = trajectory.positions[previousOffset + 2];
+      target[targetOffset + 3] = trajectory.positions[currentOffset];
+      target[targetOffset + 4] = trajectory.positions[currentOffset + 1];
+      target[targetOffset + 5] = trajectory.positions[currentOffset + 2];
+      targetVertexCount += 2;
+    }
+
+    return targetVertexCount;
+  }
+
   clear(): void {
     for (const trajectory of this.#trajectories.values()) {
       trajectory.startPoint = 0;
       trajectory.pointCount = 0;
+      trajectory.nextPointStartsSegment = true;
     }
 
     this.#elapsedActiveSeconds = 0;
