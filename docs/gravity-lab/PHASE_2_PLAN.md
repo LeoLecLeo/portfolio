@@ -981,7 +981,12 @@ Ordre des sous-phases :
 - 2E.1 hiérarchie UX et organisation générale de l’interface : scène 3D
   prioritaire, commandes de simulation explicites et panneaux distincts pour
   scénarios, corps, caméra, visualisations et diagnostics ;
-- 2E.2+ à détailler au moment de leur mise en œuvre.
+- 2E.2 aide contextuelle et pédagogie courte : définitions repliables des états,
+  commandes, visualisations et principaux diagnostics scientifiques, sans
+  modifier le rendu ni le modèle ;
+- 2E.3 robustesse responsive et accessibilité : navigation clavier, focus du
+  CRUD, états accessibles et mise en page éprouvée de 320 px au desktop ;
+- 2E.4+ à détailler au moment de leur mise en œuvre.
 
 **Livrables**
 

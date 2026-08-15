@@ -49,6 +49,10 @@ import { GravityFieldVectors } from "./GravityFieldVectors";
 import { createSessionVisualizationLayout } from "./sessionVisualizationLayout";
 import { ContextualHelp } from "../ui/ContextualHelp";
 import { VISUALIZATION_HELP } from "../ui/gravityLabHelp";
+import {
+  cameraFollowLabel,
+  visualizationToggleLabel,
+} from "../ui/gravityLabPresentation";
 
 type GravityCanvasProps = Readonly<{
   session: GravityLabSession;
@@ -712,11 +716,11 @@ export const GravityCanvas = memo(function GravityCanvas({
   }, [selectedBodyId, session]);
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3">
       <div className="relative h-[65svh] min-h-72 max-h-[28rem] w-full overflow-hidden rounded-xl border border-border/80 bg-black/30 md:h-[70svh] md:max-h-[36rem]">
         <div
           role="img"
-          aria-label={`Simulation gravitationnelle tridimensionnelle de ${session.bodies.length} corps célestes.`}
+          aria-label={`Simulation gravitationnelle tridimensionnelle de ${session.bodies.length} corps célestes. Corps sélectionné : ${selectedBodyId}.`}
           className="h-full w-full"
         >
           <Canvas
@@ -761,7 +765,7 @@ export const GravityCanvas = memo(function GravityCanvas({
       </div>
       <section
         aria-labelledby="gravity-view-controls-title"
-        className="rounded-xl border border-border/80 bg-card/40 p-3"
+        className="min-w-0 overflow-hidden rounded-xl border border-border/80 bg-card/40 p-3"
       >
         <div className="mb-3">
           <p
@@ -774,14 +778,15 @@ export const GravityCanvas = memo(function GravityCanvas({
             Ces réglages changent uniquement la vue, jamais la simulation.
           </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <fieldset className="rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <fieldset className="min-w-0 rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
           <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Caméra
           </legend>
           <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-2">
           <button
             type="button"
+            aria-label={`Centrer la caméra sur le corps ${selectedBodyId}`}
             disabled={!selectedBodyExists}
             onClick={() =>
               setCameraFocusRequest((request) => ({
@@ -795,6 +800,10 @@ export const GravityCanvas = memo(function GravityCanvas({
           </button>
           <button
             type="button"
+            aria-label={cameraFollowLabel(
+              selectedBodyId,
+              effectiveTrackedBodyId
+            )}
             aria-pressed={effectiveTrackedBodyId !== null}
             disabled={!selectedBodyExists}
             onClick={() =>
@@ -826,7 +835,7 @@ export const GravityCanvas = memo(function GravityCanvas({
           </button>
           </div>
         </fieldset>
-        <fieldset className="rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
+        <fieldset className="min-w-0 rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
           <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Affichage des astres
           </legend>
@@ -837,7 +846,9 @@ export const GravityCanvas = memo(function GravityCanvas({
                 name="gravity-visual-radius-mode"
                 value="amplified"
                 checked={visualRadiusMode === "amplified"}
+                aria-describedby="gravity-radius-mode-status"
                 onChange={() => setVisualRadiusMode("amplified")}
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               />
               Rayons amplifiés
             </label>
@@ -847,29 +858,43 @@ export const GravityCanvas = memo(function GravityCanvas({
                 name="gravity-visual-radius-mode"
                 value="physical-scale"
                 checked={visualRadiusMode === "physical-scale"}
+                aria-describedby="gravity-radius-mode-status"
                 onChange={() => setVisualRadiusMode("physical-scale")}
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               />
               Rayons à l’échelle
             </label>
           </div>
-          {visualRadiusMode === "amplified" ? (
-            <p role="status" className="mt-2 text-xs text-muted-foreground">
-              Tailles visuelles amplifiées · physique inchangée.
-            </p>
-          ) : null}
+          <p
+            id="gravity-radius-mode-status"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="mt-2 text-xs text-muted-foreground"
+          >
+            Mode actuel :{" "}
+            {visualRadiusMode === "amplified"
+              ? "rayons amplifiés · physique inchangée"
+              : "rayons à l’échelle physique"}
+            .
+          </p>
           <ContextualHelp
             summary="Comprendre les tailles"
             description={VISUALIZATION_HELP.radii}
           />
         </fieldset>
 
-        <fieldset className="rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
+        <fieldset className="min-w-0 rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
           <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Trajectoires
           </legend>
           <div className="grid gap-2">
             <button
               type="button"
+              aria-label={visualizationToggleLabel(
+                "trajectories",
+                trajectoriesVisible
+              )}
               aria-pressed={trajectoriesVisible}
               onClick={() => setTrajectoriesVisible((visible) => !visible)}
               className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary aria-pressed:bg-primary/10"
@@ -892,12 +917,16 @@ export const GravityCanvas = memo(function GravityCanvas({
           />
         </fieldset>
 
-        <fieldset className="rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
+        <fieldset className="min-w-0 rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
           <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Grille gravitationnelle
           </legend>
           <button
             type="button"
+            aria-label={visualizationToggleLabel(
+              "potential-grid",
+              potentialGridVisible
+            )}
             aria-pressed={potentialGridVisible}
             onClick={() => setPotentialGridVisible((visible) => !visible)}
             className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary aria-pressed:bg-primary/10"
@@ -910,12 +939,16 @@ export const GravityCanvas = memo(function GravityCanvas({
           />
         </fieldset>
 
-        <fieldset className="rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
+        <fieldset className="min-w-0 rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
           <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Champ gravitationnel
           </legend>
           <button
             type="button"
+            aria-label={visualizationToggleLabel(
+              "gravity-field",
+              gravityFieldVisible
+            )}
             aria-pressed={gravityFieldVisible}
             onClick={() => setGravityFieldVisible((visible) => !visible)}
             className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary aria-pressed:bg-primary/10"

@@ -20,10 +20,10 @@ export default function GravityLabPage() {
         <div className="absolute right-[-12rem] top-[30rem] h-112 w-112 rounded-full bg-chart-2/10 blur-[120px]" />
       </div>
 
-      <main className="mx-auto max-w-6xl px-6 py-10 md:py-16">
+      <main className="mx-auto max-w-6xl px-3 py-8 sm:px-6 sm:py-10 md:py-16">
         <Link
           href="/"
-          className="inline-flex rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+          className="inline-flex rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring motion-reduce:transition-none"
         >
           ← Retour au portfolio
         </Link>

@@ -121,3 +121,30 @@ export function bodyListLabel(
     ? `Corps ${body.id}`
     : body.name;
 }
+
+export type GravityVisualizationToggle =
+  | "trajectories"
+  | "potential-grid"
+  | "gravity-field";
+
+const VISUALIZATION_TOGGLE_LABELS = Object.freeze({
+  trajectories: "les trajectoires",
+  "potential-grid": "la grille gravitationnelle",
+  "gravity-field": "le champ gravitationnel",
+} satisfies Record<GravityVisualizationToggle, string>);
+
+export function visualizationToggleLabel(
+  visualization: GravityVisualizationToggle,
+  visible: boolean
+): string {
+  return `${visible ? "Masquer" : "Afficher"} ${VISUALIZATION_TOGGLE_LABELS[visualization]}`;
+}
+
+export function cameraFollowLabel(
+  selectedBodyId: string,
+  trackedBodyId: string | null
+): string {
+  return trackedBodyId === null
+    ? `Activer le suivi caméra du corps ${selectedBodyId}`
+    : `Désactiver le suivi caméra du corps ${trackedBodyId}`;
+}

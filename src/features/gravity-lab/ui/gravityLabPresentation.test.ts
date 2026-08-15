@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   bodyListLabel,
+  cameraFollowLabel,
   diagnosticMessageFr,
+  visualizationToggleLabel,
 } from "./gravityLabPresentation";
 
 describe("gravity-lab UI presentation", () => {
@@ -48,6 +50,24 @@ describe("gravity-lab UI presentation", () => {
       diagnosticMessageFr({ code: "future.unknown-code" })
     ).toBe(
       "Un diagnostic non reconnu a été produit (code : future.unknown-code)."
+    );
+  });
+
+  it("provides explicit accessible names for visual toggles and camera tracking", () => {
+    expect(visualizationToggleLabel("trajectories", false)).toBe(
+      "Afficher les trajectoires"
+    );
+    expect(
+      visualizationToggleLabel("potential-grid", true)
+    ).toBe("Masquer la grille gravitationnelle");
+    expect(
+      visualizationToggleLabel("gravity-field", false)
+    ).toBe("Afficher le champ gravitationnel");
+    expect(cameraFollowLabel("earth", null)).toBe(
+      "Activer le suivi caméra du corps earth"
+    );
+    expect(cameraFollowLabel("earth", "sun")).toBe(
+      "Désactiver le suivi caméra du corps sun"
     );
   });
 });

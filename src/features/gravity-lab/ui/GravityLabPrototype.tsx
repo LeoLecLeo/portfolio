@@ -184,6 +184,10 @@ export function GravityLabPrototype({
   const [presetLoadFailure, setPresetLoadFailure] = useState<
     string | null
   >(null);
+  const bodySelectionButtonRefs = useRef(
+    new Map<string, HTMLButtonElement>()
+  );
+  const pendingBodyListFocus = useRef(false);
   const initialRendererStartHandled = useRef(false);
   const telemetry = labState.sessionTelemetry;
   const session = labState.activeSession;
@@ -304,8 +308,28 @@ export function GravityLabPrototype({
   }, []);
 
   const addBody = useCallback(() => {
+    if (labState.draft.bodies.length >= MAX_NEWTONIAN_BODIES) {
+      return;
+    }
+
+    pendingBodyListFocus.current = true;
     updateDraft({ type: "add-body" });
-  }, [updateDraft]);
+  }, [labState.draft.bodies.length, updateDraft]);
+
+  const removeBody = useCallback(
+    (bodyId: string) => {
+      if (
+        labState.draft.bodies.length <= 1 ||
+        !labState.draft.bodies.some(({ id }) => id === bodyId)
+      ) {
+        return;
+      }
+
+      pendingBodyListFocus.current = true;
+      updateDraft({ type: "remove-body", bodyId });
+    },
+    [labState.draft.bodies, updateDraft]
+  );
 
   const cancelDraft = useCallback(() => {
     dispatch({ type: "cancel-draft" });
@@ -350,6 +374,21 @@ export function GravityLabPrototype({
     []
   );
 
+  useEffect(() => {
+    if (!pendingBodyListFocus.current) {
+      return;
+    }
+
+    const target = bodySelectionButtonRefs.current.get(
+      labState.selectedDraftBodyId
+    );
+
+    if (target !== undefined) {
+      target.focus();
+      pendingBodyListFocus.current = false;
+    }
+  }, [labState.draft.bodies, labState.selectedDraftBodyId]);
+
   const applyDraft = useCallback(() => {
     const result = applyGravityLabDraft(labState, host);
 
@@ -390,11 +429,11 @@ export function GravityLabPrototype({
 
   return (
     <section
-      className="space-y-5"
+      className="min-w-0 space-y-5"
       aria-labelledby="gravity-prototype-title"
     >
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
             Laboratoire newtonien · N-corps 3D
           </p>
@@ -420,6 +459,7 @@ export function GravityLabPrototype({
           <span
             id="draft-state-message"
             role="status"
+            aria-atomic="true"
             className={
               hasUnappliedChanges
                 ? "rounded-full border border-amber-400/50 bg-amber-400/10 px-3 py-1.5 font-medium text-amber-700 dark:text-amber-300"
@@ -435,7 +475,7 @@ export function GravityLabPrototype({
 
       <section
         aria-labelledby="gravity-simulation-controls-title"
-        className="rounded-xl border border-border/80 bg-card/70 p-4 shadow-sm"
+        className="min-w-0 overflow-hidden rounded-xl border border-border/80 bg-card/70 p-4 shadow-sm"
       >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
@@ -448,6 +488,7 @@ export function GravityLabPrototype({
           <p
             role="status"
             aria-live="polite"
+            aria-atomic="true"
               className="mt-1 text-sm text-muted-foreground"
           >
             État courant :{" "}
@@ -473,7 +514,7 @@ export function GravityLabPrototype({
           <div
             role="group"
             aria-label="Contrôles principaux de la simulation"
-            className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end"
+            className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end"
           >
             <button
               type="button"
@@ -482,7 +523,7 @@ export function GravityLabPrototype({
                 invokeGravityLabMainControl("resume", mainControlHandlers)
               }
               disabled={mainControlState.resumeDisabled}
-              className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
+              className="min-w-0 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transition-none"
             >
               <span aria-hidden="true">▶ </span>
               Lecture
@@ -494,7 +535,7 @@ export function GravityLabPrototype({
                 invokeGravityLabMainControl("pause", mainControlHandlers)
               }
               disabled={mainControlState.pauseDisabled}
-              className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45"
+              className="min-w-0 rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transition-none"
             >
               <span aria-hidden="true">■ </span>
               Stop
@@ -506,14 +547,15 @@ export function GravityLabPrototype({
                 invokeGravityLabMainControl("apply", mainControlHandlers)
               }
               disabled={mainControlState.applyDisabled}
-              className="col-span-2 rounded-lg border border-primary bg-background px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-45 sm:whitespace-nowrap"
+              className="col-span-2 min-w-0 break-words rounded-lg border border-primary bg-background px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45 sm:whitespace-nowrap motion-reduce:transition-none"
             >
               Appliquer et réinitialiser
             </button>
             <button
               type="button"
+              aria-label="Réinitialiser l’état physique du scénario appliqué"
               onClick={reset}
-              className="col-span-2 rounded-lg border border-border bg-transparent px-3 py-2 text-sm font-medium transition-colors hover:bg-secondary sm:col-span-1"
+              className="col-span-2 min-w-0 rounded-lg border border-border bg-transparent px-3 py-2 text-sm font-medium transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:col-span-1 motion-reduce:transition-none"
             >
               Reset physique
             </button>
@@ -559,7 +601,7 @@ export function GravityLabPrototype({
           aria-label="Configuration du laboratoire"
           className="flex min-w-0 flex-col gap-4"
         >
-          <details className="group rounded-xl border border-border/80 bg-card/70 shadow-lg shadow-black/5">
+          <details className="group min-w-0 overflow-hidden rounded-xl border border-border/80 bg-card/70 shadow-lg shadow-black/5">
             <summary className="cursor-pointer list-none rounded-xl p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
               <span className="flex items-center justify-between gap-3">
                 <span>
@@ -572,7 +614,7 @@ export function GravityLabPrototype({
                 </span>
                 <span
                   aria-hidden="true"
-                  className="text-lg text-muted-foreground transition-transform group-open:rotate-45"
+                  className="text-lg text-muted-foreground transition-transform group-open:rotate-45 motion-reduce:transition-none"
                 >
                   +
                 </span>
@@ -596,7 +638,7 @@ export function GravityLabPrototype({
 
           <section
             aria-labelledby="gravity-body-editor-title"
-            className="rounded-xl border border-border/80 bg-card/70 p-4 shadow-lg shadow-black/5"
+            className="min-w-0 overflow-hidden rounded-xl border border-border/80 bg-card/70 p-4 shadow-lg shadow-black/5"
           >
             <h3
               id="gravity-body-editor-title"
@@ -620,7 +662,6 @@ export function GravityLabPrototype({
             </p>
             <div className="flex flex-wrap items-center justify-end gap-2">
               <span
-                role="status"
                 className={
                   hasUnappliedChanges
                     ? "rounded-full border border-amber-400/50 bg-amber-400/10 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-300"
@@ -656,6 +697,13 @@ export function GravityLabPrototype({
                   className="grid grid-cols-[minmax(0,1fr)_auto] gap-2"
                 >
                   <button
+                    ref={(element) => {
+                      if (element === null) {
+                        bodySelectionButtonRefs.current.delete(body.id);
+                      } else {
+                        bodySelectionButtonRefs.current.set(body.id, element);
+                      }
+                    }}
                     type="button"
                     aria-pressed={selected}
                     onClick={() =>
@@ -666,8 +714,8 @@ export function GravityLabPrototype({
                     }
                     className={
                       selected
-                        ? "truncate rounded-lg border border-primary bg-primary/10 px-3 py-2 text-left text-sm font-medium"
-                        : "truncate rounded-lg border border-border bg-secondary/50 px-3 py-2 text-left text-sm hover:bg-secondary"
+                        ? "truncate rounded-lg border border-primary bg-primary/10 px-3 py-2 text-left text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                        : "truncate rounded-lg border border-border bg-secondary/50 px-3 py-2 text-left text-sm hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                     }
                   >
                     {label}
@@ -676,13 +724,8 @@ export function GravityLabPrototype({
                     type="button"
                     aria-label={`Supprimer ${label}`}
                     disabled={labState.draft.bodies.length === 1}
-                    onClick={() =>
-                      updateDraft({
-                        type: "remove-body",
-                        bodyId: body.id,
-                      })
-                    }
-                    className="rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
+                    onClick={() => removeBody(body.id)}
+                    className="rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     ×
                   </button>
@@ -697,7 +740,7 @@ export function GravityLabPrototype({
               disabled={
                 labState.draft.bodies.length >= MAX_NEWTONIAN_BODIES
               }
-              className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45"
+              className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45"
             >
               Ajouter un corps
             </button>
@@ -705,7 +748,7 @@ export function GravityLabPrototype({
               type="button"
               onClick={cancelDraft}
               disabled={!hasUnappliedChanges}
-              className="rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-45"
+              className="rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45"
             >
               Annuler les modifications
             </button>
@@ -735,6 +778,7 @@ export function GravityLabPrototype({
           ) : null}
           <p
             aria-live="polite"
+            aria-atomic="true"
             className="mt-2 text-xs text-muted-foreground"
           >
             Corps affiché sélectionné :{" "}
@@ -755,7 +799,7 @@ export function GravityLabPrototype({
         />
           </section>
 
-          <details className="group rounded-xl border border-border/80 bg-card/70 shadow-lg shadow-black/5">
+          <details className="group min-w-0 overflow-hidden rounded-xl border border-border/80 bg-card/70 shadow-lg shadow-black/5">
             <summary className="cursor-pointer list-none rounded-xl p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
               <span className="flex items-center justify-between gap-3">
                 <span>
@@ -774,7 +818,7 @@ export function GravityLabPrototype({
                 </span>
                 <span
                   aria-hidden="true"
-                  className="text-lg text-muted-foreground transition-transform group-open:rotate-45"
+                  className="text-lg text-muted-foreground transition-transform group-open:rotate-45 motion-reduce:transition-none"
                 >
                   +
                 </span>

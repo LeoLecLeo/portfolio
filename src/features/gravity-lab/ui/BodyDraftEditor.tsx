@@ -72,13 +72,13 @@ function NumberEditor<Unit extends string>({
           aria-invalid={hasErrors}
           aria-describedby={hasErrors ? errorId : undefined}
           onChange={(event) => onRawText(event.target.value)}
-          className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5 font-mono text-xs aria-[invalid=true]:border-destructive"
+          className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5 font-mono text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-[invalid=true]:border-destructive"
         />
         <select
           aria-label={`Unité — ${label}`}
           value={field.unit}
           onChange={(event) => onUnit(event.target.value as Unit)}
-          className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5 text-xs"
+          className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           {units.map((unit) => (
             <option key={unit} value={unit}>
@@ -162,7 +162,7 @@ export function BodyDraftEditor({
     });
 
   return (
-    <fieldset className="space-y-4 border-t border-border/80 pt-4">
+    <fieldset className="min-w-0 space-y-4 border-t border-border/80 pt-4">
       <legend className="px-1 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
         Corps sélectionné
       </legend>
@@ -196,7 +196,7 @@ export function BodyDraftEditor({
               name: event.target.value,
             })
           }
-          className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm aria-[invalid=true]:border-destructive"
+          className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-[invalid=true]:border-destructive"
         />
         {nameError === null ? null : (
           <p
@@ -230,7 +230,7 @@ export function BodyDraftEditor({
                 color: event.target.value,
               })
             }
-            className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5 font-mono text-xs aria-[invalid=true]:border-destructive"
+            className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5 font-mono text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-[invalid=true]:border-destructive"
           />
           <span
             aria-hidden="true"
@@ -251,7 +251,7 @@ export function BodyDraftEditor({
         )}
       </div>
 
-      <fieldset className="space-y-3 rounded-lg border border-border/80 p-3">
+      <fieldset className="min-w-0 space-y-3 rounded-lg border border-border/80 p-3">
         <legend className="px-1 text-xs font-semibold">
           Propriétés physiques
         </legend>
@@ -283,7 +283,7 @@ export function BodyDraftEditor({
         />
       </fieldset>
 
-      <fieldset className="space-y-3 rounded-lg border border-border/80 p-3">
+      <fieldset className="min-w-0 space-y-3 rounded-lg border border-border/80 p-3">
         <legend className="px-1 text-xs font-semibold">
           Position initiale
         </legend>
@@ -304,7 +304,7 @@ export function BodyDraftEditor({
         ))}
       </fieldset>
 
-      <fieldset className="space-y-3 rounded-lg border border-border/80 p-3">
+      <fieldset className="min-w-0 space-y-3 rounded-lg border border-border/80 p-3">
         <legend className="px-1 text-xs font-semibold">
           Vitesse initiale
         </legend>
@@ -325,13 +325,14 @@ export function BodyDraftEditor({
         ))}
       </fieldset>
 
-      <fieldset className="space-y-2 rounded-lg border border-border/80 p-3">
+      <fieldset className="min-w-0 space-y-2 rounded-lg border border-border/80 p-3">
         <legend className="px-1 text-xs font-semibold">Mobilité</legend>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="radio"
             name={`${prefix}-mobility`}
             checked={!body.fixed}
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             onChange={() =>
               dispatch({
                 type: "set-body-fixed",
@@ -347,6 +348,7 @@ export function BodyDraftEditor({
             type="radio"
             name={`${prefix}-mobility`}
             checked={body.fixed}
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             onChange={() =>
               dispatch({
                 type: "set-body-fixed",
