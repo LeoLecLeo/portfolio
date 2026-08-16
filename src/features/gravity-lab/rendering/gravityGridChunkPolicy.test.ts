@@ -3,35 +3,33 @@ import { describe, expect, it } from "vitest";
 import type { PotentialGridBounds } from "./gravityPotentialGridPolicy";
 import {
   GRAVITY_GRID_BASE_CHUNK_SIZE_SCENE,
-  GRAVITY_GRID_CHUNK_INTERVALS,
-  GRAVITY_GRID_COVERAGE_RECALCULATION_DISTANCE_SCENE,
   GRAVITY_GRID_MAX_CHUNKS,
   GRAVITY_GRID_MAX_CHUNK_VERTICES,
   GRAVITY_GRID_MAX_DRAW_CALLS,
-  GRAVITY_GRID_TARGET_LINE_SPACING_SCENE,
-  calculateGravityGridLodVisibility,
+  GRAVITY_GRID_TARGET_PROJECTED_LINE_SPACING_PIXELS,
   calculateGravityGridCoverage,
+  calculateGravityGridProjectedSpacingPixels,
   createGravityGridCoverageAnchor,
   gravityGridChunkBounds,
+  gravityGridChunksShareFace,
   gravityGridCoverageUpdateRequired,
   writeGravityGridChunkPositions,
   type GravityGridCameraCoverage,
+  type GravityGridCoverage,
 } from "./gravityGridChunkPolicy";
 
 function bounds(
   minimum: Readonly<{ x: number; y: number; z: number }>,
   maximum: Readonly<{ x: number; y: number; z: number }>
 ): PotentialGridBounds {
-  const center = {
-    x: minimum.x * 0.5 + maximum.x * 0.5,
-    y: minimum.y * 0.5 + maximum.y * 0.5,
-    z: minimum.z * 0.5 + maximum.z * 0.5,
-  };
-
   return {
     minimum,
     maximum,
-    center,
+    center: {
+      x: minimum.x * 0.5 + maximum.x * 0.5,
+      y: minimum.y * 0.5 + maximum.y * 0.5,
+      z: minimum.z * 0.5 + maximum.z * 0.5,
+    },
     halfExtents: {
       x: (maximum.x - minimum.x) * 0.5,
       y: (maximum.y - minimum.y) * 0.5,
@@ -44,269 +42,173 @@ const compactSystem = bounds(
   { x: -10, y: -10, z: -10 },
   { x: 10, y: 10, z: 10 }
 );
-const defaultCamera: GravityGridCameraCoverage = {
-  position: { x: 11, y: 8, z: 14 },
-  target: { x: 0, y: 0, z: 0 },
-  verticalFieldOfViewRadians: (46 * Math.PI) / 180,
-  aspectRatio: 16 / 9,
-};
 
-function coveredBounds(
-  coverage: ReturnType<typeof calculateGravityGridCoverage>
-) {
+function cameraAt(
+  z: number,
+  overrides: Partial<GravityGridCameraCoverage> = {}
+): GravityGridCameraCoverage {
+  return {
+    position: { x: 0, y: 0, z },
+    target: { x: 0, y: 0, z: 0 },
+    verticalFieldOfViewRadians: (46 * Math.PI) / 180,
+    aspectRatio: 16 / 9,
+    viewportHeightPixels: 720,
+    ...overrides,
+  };
+}
+
+function aggregateBounds(coverage: GravityGridCoverage) {
   const first = gravityGridChunkBounds(coverage.chunks[0]);
-  const result = {
+  const aggregate = {
     minimum: { ...first.minimum },
     maximum: { ...first.maximum },
   };
-
   for (const chunk of coverage.chunks.slice(1)) {
     const current = gravityGridChunkBounds(chunk);
-    result.minimum.x = Math.min(result.minimum.x, current.minimum.x);
-    result.minimum.y = Math.min(result.minimum.y, current.minimum.y);
-    result.minimum.z = Math.min(result.minimum.z, current.minimum.z);
-    result.maximum.x = Math.max(result.maximum.x, current.maximum.x);
-    result.maximum.y = Math.max(result.maximum.y, current.maximum.y);
-    result.maximum.z = Math.max(result.maximum.z, current.maximum.z);
+    aggregate.minimum.x = Math.min(aggregate.minimum.x, current.minimum.x);
+    aggregate.minimum.y = Math.min(aggregate.minimum.y, current.minimum.y);
+    aggregate.minimum.z = Math.min(aggregate.minimum.z, current.minimum.z);
+    aggregate.maximum.x = Math.max(aggregate.maximum.x, current.maximum.x);
+    aggregate.maximum.y = Math.max(aggregate.maximum.y, current.maximum.y);
+    aggregate.maximum.z = Math.max(aggregate.maximum.z, current.maximum.z);
   }
-
-  return result;
+  return aggregate;
 }
 
-describe("quasi-infinite gravity-grid chunk policy", () => {
-  it("covers the requested system and camera region", () => {
-    const coverage = calculateGravityGridCoverage(
-      compactSystem,
-      defaultCamera
-    );
-    const covered = coveredBounds(coverage);
+function minimumDistanceSquared(
+  point: Readonly<{ x: number; y: number; z: number }>,
+  chunk: GravityGridCoverage["chunks"][number]
+): number {
+  const center = gravityGridChunkBounds(chunk).center;
+  return (
+    (center.x - point.x) ** 2 +
+    (center.y - point.y) ** 2 +
+    (center.z - point.z) ** 2
+  );
+}
 
-    expect(covered.minimum.x).toBeLessThanOrEqual(
-      coverage.requestedBounds.minimum.x
-    );
-    expect(covered.minimum.y).toBeLessThanOrEqual(
-      coverage.requestedBounds.minimum.y
-    );
-    expect(covered.minimum.z).toBeLessThanOrEqual(
-      coverage.requestedBounds.minimum.z
-    );
-    expect(covered.maximum.x).toBeGreaterThanOrEqual(
-      coverage.requestedBounds.maximum.x
-    );
-    expect(covered.maximum.y).toBeGreaterThanOrEqual(
-      coverage.requestedBounds.maximum.y
-    );
-    expect(covered.maximum.z).toBeGreaterThanOrEqual(
-      coverage.requestedBounds.maximum.z
-    );
+describe("camera-projected gravity-grid LOD policy", () => {
+  it("covers the system and the camera view with one non-overlapping leaf partition", () => {
+    const coverage = calculateGravityGridCoverage(compactSystem, cameraAt(30));
+    const aggregate = aggregateBounds(coverage);
+
+    expect(aggregate.minimum.x).toBeLessThanOrEqual(coverage.requestedBounds.minimum.x);
+    expect(aggregate.minimum.y).toBeLessThanOrEqual(coverage.requestedBounds.minimum.y);
+    expect(aggregate.minimum.z).toBeLessThanOrEqual(coverage.requestedBounds.minimum.z);
+    expect(aggregate.maximum.x).toBeGreaterThanOrEqual(coverage.requestedBounds.maximum.x);
+    expect(aggregate.maximum.y).toBeGreaterThanOrEqual(coverage.requestedBounds.maximum.y);
+    expect(aggregate.maximum.z).toBeGreaterThanOrEqual(coverage.requestedBounds.maximum.z);
+    expect(new Set(coverage.chunks.map(({ x, y, z, lod }) => `${lod}:${x}:${y}:${z}`)).size).toBe(coverage.chunks.length);
   });
 
-  it("adds coverage or raises LOD when the camera zooms out", () => {
-    const near = calculateGravityGridCoverage(compactSystem, defaultCamera);
-    const far = calculateGravityGridCoverage(compactSystem, {
-      ...defaultCamera,
-      position: { x: 55, y: 40, z: 70 },
-    });
+  it("selects detail from camera projection rather than a fixed dense system box", () => {
+    const displacedSystem = bounds(
+      { x: 75, y: -2, z: -2 },
+      { x: 79, y: 2, z: 2 }
+    );
+    const camera = cameraAt(24, { target: { x: 0, y: 0, z: 0 } });
+    const coverage = calculateGravityGridCoverage(displacedSystem, camera);
+    const nearestCamera = [...coverage.chunks].sort(
+      (a, b) => minimumDistanceSquared(camera.position, a) - minimumDistanceSquared(camera.position, b)
+    )[0];
+    const nearestSystem = [...coverage.chunks].sort(
+      (a, b) => minimumDistanceSquared(displacedSystem.center, a) - minimumDistanceSquared(displacedSystem.center, b)
+    )[0];
 
-    expect(
-      far.chunks.length > near.chunks.length ||
-        far.outerLod > near.outerLod
-    ).toBe(true);
-    expect(far.requestedBounds).not.toEqual(near.requestedBounds);
+    expect(nearestCamera.lod).toBeLessThanOrEqual(nearestSystem.lod);
   });
 
-  it("changes aligned chunks after a material pan", () => {
-    const initial = calculateGravityGridCoverage(
-      compactSystem,
-      defaultCamera
-    );
-    const panned = calculateGravityGridCoverage(compactSystem, {
-      ...defaultCamera,
-      position: { x: 51, y: 8, z: 14 },
-      target: { x: 40, y: 0, z: 0 },
-    });
-
-    expect(panned.key).not.toBe(initial.key);
+  it("is deterministic for identical camera and region inputs", () => {
+    const first = calculateGravityGridCoverage(compactSystem, cameraAt(40));
+    const second = calculateGravityGridCoverage(compactSystem, cameraAt(40));
+    expect(second.key).toBe(first.key);
+    expect(second.chunks).toEqual(first.chunks);
   });
 
-  it("keeps coverage stable below the explicit movement threshold", () => {
-    const anchor = createGravityGridCoverageAnchor(defaultCamera);
-    const slightlyMoved = {
-      ...defaultCamera,
-      position: {
-        x:
-          11 +
-          GRAVITY_GRID_COVERAGE_RECALCULATION_DISTANCE_SCENE -
-          0.01,
-        y: 8,
-        z: 14,
-      },
-    };
-
-    expect(
-      gravityGridCoverageUpdateRequired(true, anchor, slightlyMoved)
-    ).toBe(false);
-    expect(
-      gravityGridCoverageUpdateRequired(true, anchor, {
-        ...defaultCamera,
-        position: {
-          x:
-            11 +
-            GRAVITY_GRID_COVERAGE_RECALCULATION_DISTANCE_SCENE,
-          y: 8,
-          z: 14,
-        },
-      })
-    ).toBe(true);
-    expect(
-      gravityGridCoverageUpdateRequired(false, anchor, {
-        ...defaultCamera,
-        position: { x: 1e6, y: 1e6, z: 1e6 },
-      })
-    ).toBe(false);
-  });
-
-  it("aligns neighboring chunks without gaps", () => {
-    const left = gravityGridChunkBounds({ x: -1, y: 0, z: 0, lod: 0 });
-    const right = gravityGridChunkBounds({ x: 0, y: 0, z: 0, lod: 0 });
-
-    expect(left.maximum.x).toBe(right.minimum.x);
-    expect(left.minimum.y).toBe(right.minimum.y);
-    expect(left.maximum.y).toBe(right.maximum.y);
-    expect(left.maximum.x - left.minimum.x).toBe(
-      GRAVITY_GRID_BASE_CHUNK_SIZE_SCENE
-    );
-  });
-
-  it("does not duplicate segments at neighboring chunk boundaries", () => {
-    const coverage = calculateGravityGridCoverage(
-      compactSystem,
-      defaultCamera
-    );
-    const target = new Float32Array(
-      GRAVITY_GRID_MAX_CHUNK_VERTICES * 3
-    );
-    const vertexCount = writeGravityGridChunkPositions(coverage, target);
-    const segments = new Set<string>();
-
-    for (let offset = 0; offset < vertexCount * 3; offset += 6) {
-      const first = Array.from(target.subarray(offset, offset + 3)).join(",");
-      const second = Array.from(target.subarray(offset + 3, offset + 6)).join(",");
-      const key = first < second ? `${first}|${second}` : `${second}|${first}`;
-      expect(segments.has(key)).toBe(false);
-      segments.add(key);
+  it("keeps face-adjacent leaves within one LOD level", () => {
+    const coverage = calculateGravityGridCoverage(compactSystem, cameraAt(60));
+    for (let first = 0; first < coverage.chunks.length; first += 1) {
+      for (let second = first + 1; second < coverage.chunks.length; second += 1) {
+        if (gravityGridChunksShareFace(coverage.chunks[first], coverage.chunks[second])) {
+          expect(Math.abs(coverage.chunks[first].lod - coverage.chunks[second].lod)).toBeLessThanOrEqual(1);
+        }
+      }
     }
-
-    expect(segments.size).toBe(vertexCount / 2);
   });
 
-  it("keeps chunks, vertices, and draw calls within explicit budgets", () => {
-    const coverage = calculateGravityGridCoverage(compactSystem, {
-      ...defaultCamera,
-      position: { x: 1e6, y: -2e6, z: 3e6 },
-      target: { x: 1e6 - 10, y: -2e6, z: 3e6 },
-    });
+  it("changes zoom detail progressively rather than jumping several levels", () => {
+    const coverages = [34, 38, 42, 46].map((distance) =>
+      calculateGravityGridCoverage(compactSystem, cameraAt(distance))
+    );
+    for (let index = 1; index < coverages.length; index += 1) {
+      expect(Math.abs(coverages[index].minimumLod - coverages[index - 1].minimumLod)).toBeLessThanOrEqual(1);
+      expect(Math.abs(coverages[index].maximumLod - coverages[index - 1].maximumLod)).toBeLessThanOrEqual(1);
+    }
+  });
 
-    expect(coverage.chunks.length).toBeLessThanOrEqual(
-      GRAVITY_GRID_MAX_CHUNKS
+  it("uses camera pan to redistribute detail", () => {
+    const first = calculateGravityGridCoverage(compactSystem, cameraAt(45));
+    const panned = cameraAt(45, {
+      position: { x: 24, y: 0, z: 45 },
+      target: { x: 24, y: 0, z: 0 },
+    });
+    const second = calculateGravityGridCoverage(compactSystem, panned);
+    expect(second.key).not.toBe(first.key);
+  });
+
+  it("keeps coverage stable for sub-threshold camera motion", () => {
+    const initial = cameraAt(40);
+    const anchor = createGravityGridCoverageAnchor(initial);
+    expect(
+      gravityGridCoverageUpdateRequired(true, anchor, cameraAt(40.1))
+    ).toBe(false);
+    expect(
+      gravityGridCoverageUpdateRequired(true, anchor, cameraAt(44))
+    ).toBe(true);
+    expect(gravityGridCoverageUpdateRequired(false, anchor, cameraAt(80))).toBe(false);
+  });
+
+  it("keeps projected detail dense until the bounded budget prevents refinement", () => {
+    const coverage = calculateGravityGridCoverage(compactSystem, cameraAt(30));
+    const overTarget = coverage.chunks.filter(
+      (chunk) =>
+        chunk.lod > 0 &&
+        calculateGravityGridProjectedSpacingPixels(chunk, cameraAt(30)) >
+          GRAVITY_GRID_TARGET_PROJECTED_LINE_SPACING_PIXELS
     );
-    expect(coverage.vertexCount).toBeLessThanOrEqual(
-      GRAVITY_GRID_MAX_CHUNK_VERTICES
+    expect(coverage.chunks.length).toBeLessThanOrEqual(GRAVITY_GRID_MAX_CHUNKS);
+    if (overTarget.length > 0) {
+      expect(coverage.chunks.length + 7).toBeGreaterThan(GRAVITY_GRID_MAX_CHUNKS);
+    }
+  });
+
+  it("respects the strict chunk, vertex and draw-call budgets on a large zoom-out", () => {
+    const huge = bounds(
+      { x: -1e6, y: -5e5, z: -2e5 },
+      { x: 1e6, y: 5e5, z: 2e5 }
     );
+    const coverage = calculateGravityGridCoverage(huge, cameraAt(3e6));
+    expect(coverage.chunks.length).toBeLessThanOrEqual(GRAVITY_GRID_MAX_CHUNKS);
+    expect(coverage.vertexCount).toBeLessThanOrEqual(GRAVITY_GRID_MAX_CHUNK_VERTICES);
     expect(GRAVITY_GRID_MAX_DRAW_CALLS).toBe(1);
   });
 
-  it("uses deterministic, progressively coarser LOD for extreme zoom", () => {
-    const extremeCamera = {
-      ...defaultCamera,
-      position: { x: 1e12, y: 5e11, z: -2e11 },
-    };
-    const first = calculateGravityGridCoverage(
-      compactSystem,
-      extremeCamera
-    );
-    const second = calculateGravityGridCoverage(
-      compactSystem,
-      extremeCamera
-    );
-
-    expect(first).toEqual(second);
-    expect(first.outerLod).toBeGreaterThan(0);
-    expect(first.chunks.some(({ lod }) => lod === first.denseLod)).toBe(true);
-    expect(first.chunks.some(({ lod }) => lod === first.outerLod)).toBe(true);
-    expect(
-      calculateGravityGridLodVisibility(
-        first.denseBounds.center,
-        first.outerLod,
-        first
-      )
-    ).toBe(0);
-    expect(
-      calculateGravityGridLodVisibility(
-        first.denseBounds.center,
-        first.denseLod,
-        first
-      )
-    ).toBe(1);
-    expect(first.chunks.length).toBeLessThanOrEqual(
-      GRAVITY_GRID_MAX_CHUNKS
-    );
+  it("keeps all chunk lines aligned to the immutable world lattice", () => {
+    const coverage = calculateGravityGridCoverage(compactSystem, cameraAt(35));
+    for (const chunk of coverage.chunks) {
+      const chunkBounds = gravityGridChunkBounds(chunk);
+      const size = GRAVITY_GRID_BASE_CHUNK_SIZE_SCENE * 2 ** chunk.lod;
+      expect(chunkBounds.minimum.x / size).toBe(chunk.x);
+      expect(chunkBounds.minimum.y / size).toBe(chunk.y);
+      expect(chunkBounds.minimum.z / size).toBe(chunk.z);
+    }
   });
 
-  it("handles compact and extended systems deterministically", () => {
-    const extendedSystem = bounds(
-      { x: -2e4, y: -1e4, z: -5e3 },
-      { x: 2e4, y: 1e4, z: 5e3 }
-    );
-    const compact = calculateGravityGridCoverage(
-      compactSystem,
-      defaultCamera
-    );
-    const extended = calculateGravityGridCoverage(
-      extendedSystem,
-      defaultCamera
-    );
-
-    expect(extended.outerLod).toBeGreaterThan(compact.outerLod);
-    expect(extended.chunks.length).toBeLessThanOrEqual(
-      GRAVITY_GRID_MAX_CHUNKS
-    );
-    expect(calculateGravityGridCoverage(extendedSystem, defaultCamera)).toEqual(
-      extended
-    );
-  });
-
-  it("does not reuse stale spatial coverage for a replacement session", () => {
-    const previous = calculateGravityGridCoverage(
-      compactSystem,
-      defaultCamera
-    );
-    const replacement = calculateGravityGridCoverage(
-      bounds(
-        { x: 90, y: 90, z: 90 },
-        { x: 110, y: 110, z: 110 }
-      ),
-      defaultCamera
-    );
-
-    expect(replacement.key).not.toBe(previous.key);
-    expect(replacement.requestedBounds).not.toEqual(
-      previous.requestedBounds
-    );
-  });
-
-  it("uses the base visual spacing near the system", () => {
-    const coverage = calculateGravityGridCoverage(
-      compactSystem,
-      defaultCamera
-    );
-
-    expect(coverage.denseLod).toBe(0);
-    expect(coverage.chunks.some(({ lod }) => lod === 0)).toBe(true);
-    expect(
-      GRAVITY_GRID_BASE_CHUNK_SIZE_SCENE /
-        GRAVITY_GRID_CHUNK_INTERVALS
-    ).toBe(GRAVITY_GRID_TARGET_LINE_SPACING_SCENE);
-    expect(GRAVITY_GRID_CHUNK_INTERVALS).toBe(6);
+  it("writes finite geometry into the reusable maximum-sized GPU buffer", () => {
+    const coverage = calculateGravityGridCoverage(compactSystem, cameraAt(50));
+    const target = new Float32Array(GRAVITY_GRID_MAX_CHUNK_VERTICES * 3);
+    const vertexCount = writeGravityGridChunkPositions(coverage, target);
+    expect(vertexCount).toBe(coverage.vertexCount);
+    expect([...target.subarray(0, vertexCount * 3)].every(Number.isFinite)).toBe(true);
   });
 });

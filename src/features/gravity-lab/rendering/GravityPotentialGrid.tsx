@@ -19,7 +19,6 @@ import {
   type PotentialGridBounds,
 } from "./gravityPotentialGridPolicy";
 import {
-  GRAVITY_GRID_BASE_CHUNK_SIZE_SCENE,
   GRAVITY_GRID_MAX_CHUNK_VERTICES,
   calculateGravityGridCoverage,
   createGravityGridCoverageAnchor,
@@ -36,11 +35,13 @@ type MutableGravityGridCameraCoverage = {
   target: { x: number; y: number; z: number };
   verticalFieldOfViewRadians: number;
   aspectRatio: number;
+  viewportHeightPixels: number;
 };
 
 function writeCoverageCamera(
   camera: PerspectiveCamera,
   target: Readonly<{ x: number; y: number; z: number }>,
+  viewportHeightPixels: number,
   current: MutableGravityGridCameraCoverage
 ): GravityGridCameraCoverage {
   current.position.x = camera.position.x;
@@ -51,12 +52,11 @@ function writeCoverageCamera(
   current.target.z = target.z;
   current.verticalFieldOfViewRadians = (camera.fov * Math.PI) / 180;
   current.aspectRatio = camera.aspect;
+  current.viewportHeightPixels = viewportHeightPixels;
   return current;
 }
 
 const POTENTIAL_GRID_VERTEX_SHADER = /* glsl */ `
-  attribute float aGridLod;
-
   uniform int uBodyCount;
   uniform vec3 uBodyPositions[${MAX_SHADER_BODIES}];
   uniform float uMassWeights[${MAX_SHADER_BODIES}];
@@ -65,8 +65,6 @@ const POTENTIAL_GRID_VERTEX_SHADER = /* glsl */ `
   uniform float uMaxDisplacement;
 
   varying float vNormalizedDisplacement;
-  varying vec3 vGridPosition;
-  varying float vGridLod;
 
   void main() {
     vec3 field = vec3(0.0);
@@ -94,46 +92,18 @@ const POTENTIAL_GRID_VERTEX_SHADER = /* glsl */ `
       : vec3(0.0);
     vec3 transformed = position + displacement;
     vNormalizedDisplacement = amplitude / uMaxDisplacement;
-    vGridPosition = position;
-    vGridLod = aGridLod;
-
     gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
   }
 `;
 
 const POTENTIAL_GRID_FRAGMENT_SHADER = /* glsl */ `
-  uniform vec3 uDenseMinimum;
-  uniform vec3 uDenseMaximum;
-  uniform float uDenseLod;
-  uniform float uBaseChunkSize;
-
   varying float vNormalizedDisplacement;
-  varying vec3 vGridPosition;
-  varying float vGridLod;
 
   void main() {
     vec3 quietColor = vec3(0.16, 0.43, 0.62);
     vec3 influencedColor = vec3(0.57, 0.32, 0.88);
     vec3 color = mix(quietColor, influencedColor, vNormalizedDisplacement);
-    vec3 outsideDense = max(
-      max(uDenseMinimum - vGridPosition, vGridPosition - uDenseMaximum),
-      vec3(0.0)
-    );
-    float denseDistance = length(outsideDense);
-    float coarseVisibility = vGridLod <= uDenseLod + 0.1
-      ? 1.0
-      : smoothstep(
-          0.0,
-          uBaseChunkSize * exp2(uDenseLod),
-          denseDistance
-        );
-    float alpha =
-      mix(0.24, 0.72, vNormalizedDisplacement) * coarseVisibility;
-
-    if (alpha < 0.01) {
-      discard;
-    }
-
+    float alpha = mix(0.24, 0.72, vNormalizedDisplacement);
     gl_FragColor = vec4(color, alpha);
   }
 `;
@@ -174,6 +144,7 @@ export function GravityPotentialGrid({
   visible: boolean;
 }>) {
   const camera = useThree((state) => state.camera);
+  const viewportHeightPixels = useThree((state) => state.size.height);
   const invalidate = useThree((state) => state.invalidate);
   const activity = resolvePotentialGridActivity(visible);
   const scratchPosition = useRef({ x: 0, y: 0, z: 0 });
@@ -182,6 +153,7 @@ export function GravityPotentialGrid({
     target: { x: 0, y: 0, z: 0 },
     verticalFieldOfViewRadians: 1,
     aspectRatio: 1,
+    viewportHeightPixels: 1,
   });
 
   if (!(camera instanceof PerspectiveCamera)) {
@@ -192,14 +164,10 @@ export function GravityPotentialGrid({
     const linePositions = new Float32Array(
       GRAVITY_GRID_MAX_CHUNK_VERTICES * 3
     );
-    const lineLods = new Float32Array(GRAVITY_GRID_MAX_CHUNK_VERTICES);
     const geometry = new BufferGeometry();
     const positionAttribute = new BufferAttribute(linePositions, 3);
-    const lodAttribute = new BufferAttribute(lineLods, 1);
     positionAttribute.setUsage(DynamicDrawUsage);
-    lodAttribute.setUsage(DynamicDrawUsage);
     geometry.setAttribute("position", positionAttribute);
-    geometry.setAttribute("aGridLod", lodAttribute);
     geometry.setDrawRange(0, 0);
     const preparedMasses = preparePotentialMasses(
       session.bodies.map(({ massKg }) => massKg)
@@ -208,8 +176,6 @@ export function GravityPotentialGrid({
       { length: MAX_SHADER_BODIES },
       () => new Vector3()
     );
-    const denseMinimum = new Vector3();
-    const denseMaximum = new Vector3();
     writeBodyPositionUniforms(
       session,
       bodyPositions,
@@ -223,10 +189,6 @@ export function GravityPotentialGrid({
         uSoftening: { value: GRAVITY_GRID_VISUAL_SOFTENING_SCENE },
         uFieldCompression: { value: GRAVITY_GRID_FIELD_COMPRESSION },
         uMaxDisplacement: { value: GRAVITY_GRID_MAX_DISPLACEMENT_SCENE },
-        uDenseMinimum: { value: denseMinimum },
-        uDenseMaximum: { value: denseMaximum },
-        uDenseLod: { value: 0 },
-        uBaseChunkSize: { value: GRAVITY_GRID_BASE_CHUNK_SIZE_SCENE },
       },
       vertexShader: POTENTIAL_GRID_VERTEX_SHADER,
       fragmentShader: POTENTIAL_GRID_FRAGMENT_SHADER,
@@ -238,10 +200,7 @@ export function GravityPotentialGrid({
       bodyPositions,
       coverageAnchor: null as GravityGridCoverageAnchor | null,
       coverageKey: null as string | null,
-      denseMaximum,
-      denseMinimum,
       geometry,
-      lodAttribute,
       material,
       positionAttribute,
     };
@@ -267,6 +226,7 @@ export function GravityPotentialGrid({
     const currentCamera = writeCoverageCamera(
       camera,
       cameraTargetRef.current,
+      viewportHeightPixels,
       coverageCamera.current
     );
 
@@ -287,23 +247,9 @@ export function GravityPotentialGrid({
       if (nextCoverage.key !== activeResources.coverageKey) {
         const vertexCount = writeGravityGridChunkPositions(
           nextCoverage,
-          activeResources.positionAttribute.array as Float32Array,
-          activeResources.lodAttribute.array as Float32Array
+          activeResources.positionAttribute.array as Float32Array
         );
         activeResources.coverageKey = nextCoverage.key;
-        activeResources.denseMinimum.set(
-          nextCoverage.denseBounds.minimum.x,
-          nextCoverage.denseBounds.minimum.y,
-          nextCoverage.denseBounds.minimum.z
-        );
-        activeResources.denseMaximum.set(
-          nextCoverage.denseBounds.maximum.x,
-          nextCoverage.denseBounds.maximum.y,
-          nextCoverage.denseBounds.maximum.z
-        );
-        activeResources.material.uniforms.uDenseLod.value =
-          nextCoverage.denseLod;
-        activeResources.material.uniformsNeedUpdate = true;
         activeResources.geometry.setDrawRange(0, vertexCount);
         activeResources.positionAttribute.clearUpdateRanges();
         activeResources.positionAttribute.addUpdateRange(
@@ -311,9 +257,6 @@ export function GravityPotentialGrid({
           vertexCount * 3
         );
         activeResources.positionAttribute.needsUpdate = true;
-        activeResources.lodAttribute.clearUpdateRanges();
-        activeResources.lodAttribute.addUpdateRange(0, vertexCount);
-        activeResources.lodAttribute.needsUpdate = true;
       }
     }
 
