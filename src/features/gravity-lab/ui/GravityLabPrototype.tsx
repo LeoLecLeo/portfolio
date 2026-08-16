@@ -54,6 +54,7 @@ import {
   getGravityLabMainControlState,
   invokeGravityLabMainControl,
 } from "./gravityLabMainControls";
+import { createGravityLabHostLifecycle } from "./gravityLabLifecycle";
 
 const SECONDS_PER_DAY = 86_400;
 
@@ -168,6 +169,9 @@ export function GravityLabPrototype({
         sessionRequest ?? createInitialSessionRequest()
       )
   );
+  const [hostLifecycle] = useState(() =>
+    createGravityLabHostLifecycle(host)
+  );
   const [labState, dispatch] = useReducer(
     gravityLabReducer,
     host.snapshot,
@@ -221,6 +225,8 @@ export function GravityLabPrototype({
     hasUnappliedChanges,
     draftIsValid: draftValidation.ok,
   });
+
+  useEffect(() => hostLifecycle.activate(), [hostLifecycle]);
 
   useEffect(() => {
     if (
