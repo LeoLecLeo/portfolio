@@ -100,10 +100,10 @@ const POTENTIAL_GRID_FRAGMENT_SHADER = /* glsl */ `
   varying float vNormalizedDisplacement;
 
   void main() {
-    vec3 quietColor = vec3(0.16, 0.43, 0.62);
-    vec3 influencedColor = vec3(0.57, 0.32, 0.88);
+    vec3 quietColor = vec3(0.12, 0.34, 0.50);
+    vec3 influencedColor = vec3(0.46, 0.28, 0.70);
     vec3 color = mix(quietColor, influencedColor, vNormalizedDisplacement);
-    float alpha = mix(0.24, 0.72, vNormalizedDisplacement);
+    float alpha = mix(0.11, 0.36, vNormalizedDisplacement);
     gl_FragColor = vec4(color, alpha);
   }
 `;

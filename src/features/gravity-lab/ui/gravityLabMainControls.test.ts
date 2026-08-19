@@ -2,12 +2,65 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   getGravityLabApplyAvailability,
+  getGravityLabHydrationControlInput,
   getGravityLabMainControlState,
   invokeGravityLabMainControl,
   type GravityLabMainControlHandlers,
 } from "./gravityLabMainControls";
 
 describe("gravityLabMainControls", () => {
+  it("conserve un premier rendu SSR/hydratation identique avant de publier le runtime", () => {
+    const authoritativeRunningInput = {
+      status: "running" as const,
+      rendererReady: true,
+      hasUnappliedChanges: false,
+      draftIsValid: true,
+    };
+    const serverInput = getGravityLabHydrationControlInput(
+      authoritativeRunningInput,
+      false
+    );
+    const firstClientInput = getGravityLabHydrationControlInput(
+      authoritativeRunningInput,
+      false
+    );
+
+    expect(serverInput).toEqual(firstClientInput);
+    expect(getGravityLabMainControlState(serverInput)).toEqual({
+      mode: "Pause",
+      resumeDisabled: true,
+      pauseDisabled: true,
+      applyDisabled: true,
+    });
+
+    const mountedInput = getGravityLabHydrationControlInput(
+      authoritativeRunningInput,
+      true
+    );
+    expect(getGravityLabMainControlState(mountedInput)).toEqual({
+      mode: "Lecture",
+      resumeDisabled: true,
+      pauseDisabled: false,
+      applyDisabled: true,
+    });
+
+    expect(
+      getGravityLabMainControlState(
+        getGravityLabHydrationControlInput(
+          {
+            ...authoritativeRunningInput,
+            status: "paused",
+          },
+          true
+        )
+      )
+    ).toMatchObject({
+      mode: "Pause",
+      resumeDisabled: false,
+      pauseDisabled: true,
+    });
+  });
+
   it("active Stop et bloque Lecture et Appliquer pendant l'exécution", () => {
     expect(
       getGravityLabMainControlState({

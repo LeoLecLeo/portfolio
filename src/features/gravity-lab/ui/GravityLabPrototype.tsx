@@ -7,6 +7,7 @@ import {
   useReducer,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import { GravityCanvas } from "../rendering/GravityCanvas";
@@ -48,15 +49,25 @@ import {
   SIMULATION_CONTROL_HELP,
 } from "./gravityLabHelp";
 import { GravityPresetCatalog } from "./GravityPresetCatalog";
+import {
+  GravityLabWorkspace,
+  GravityWorkspaceDiagnostics,
+  GravityWorkspaceInspector,
+  GravityWorkspaceMain,
+} from "./GravityLabWorkspace";
 import { preparePresetDraftLoad } from "./presetDraftLoading";
 import {
   getGravityLabApplyAvailability,
+  getGravityLabHydrationControlInput,
   getGravityLabMainControlState,
   invokeGravityLabMainControl,
 } from "./gravityLabMainControls";
 import { createGravityLabHostLifecycle } from "./gravityLabLifecycle";
 
 const SECONDS_PER_DAY = 86_400;
+const subscribeToHydration = () => () => {};
+const getHydratedClientSnapshot = () => true;
+const getHydratedServerSnapshot = () => false;
 
 function createInitialSessionRequest(): GravityLabSessionRequest {
   return {
@@ -195,6 +206,11 @@ export function GravityLabPrototype({
   const initialRendererStartHandled = useRef(false);
   const telemetry = labState.sessionTelemetry;
   const session = labState.activeSession;
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    getHydratedClientSnapshot,
+    getHydratedServerSnapshot
+  );
   const draftValidation = useMemo(
     () =>
       validateGravityLabDraft(
@@ -214,14 +230,20 @@ export function GravityLabPrototype({
       ),
     [labState.appliedScenario, labState.draft]
   );
-  const mainControlState = getGravityLabMainControlState({
-    status: telemetry.status,
-    rendererReady,
-    hasUnappliedChanges,
-    draftIsValid: draftValidation.ok,
-  });
+  const hydrationControlInput = getGravityLabHydrationControlInput(
+    {
+      status: telemetry.status,
+      rendererReady,
+      hasUnappliedChanges,
+      draftIsValid: draftValidation.ok,
+    },
+    hydrated
+  );
+  const mainControlState = getGravityLabMainControlState(
+    hydrationControlInput
+  );
   const applyAvailability = getGravityLabApplyAvailability({
-    status: telemetry.status,
+    status: hydrationControlInput.status,
     hasUnappliedChanges,
     draftIsValid: draftValidation.ok,
   });
@@ -262,9 +284,8 @@ export function GravityLabPrototype({
   );
 
   const startWhenRendererIsReady = useCallback(() => {
-    setRendererReady(true);
-
     if (initialRendererStartHandled.current) {
+      setRendererReady(true);
       return;
     }
 
@@ -279,6 +300,8 @@ export function GravityLabPrototype({
         snapshot: host.resume(),
       });
     }
+
+    setRendererReady(true);
   }, [host, sessionRequest]);
 
   const pause = useCallback(() => {
@@ -590,104 +613,78 @@ export function GravityLabPrototype({
         />
       </section>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="min-w-0">
-        <GravityCanvas
-          session={session}
-          selectedBodyId={labState.selectedSessionBodyId}
-          onSelectBody={selectSessionBody}
-          onTelemetry={publishTelemetry}
-          onReady={startWhenRendererIsReady}
-          renderRevision={renderRevision}
-          trajectoryResetRevision={trajectoryResetRevision}
-        />
-        </div>
-
-        <aside
-          aria-label="Configuration du laboratoire"
-          className="flex min-w-0 flex-col gap-4"
+      <GravityLabWorkspace>
+        <GravityWorkspaceInspector
+          side="left"
+          eyebrow="Bibliothèque"
+          title="Scénarios / presets"
+          compactLabel="Presets"
         >
-          <details className="group min-w-0 overflow-hidden rounded-xl border border-border/80 bg-card/70 shadow-lg shadow-black/5">
-            <summary className="cursor-pointer list-none rounded-xl p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
-              <span className="flex items-center justify-between gap-3">
-                <span>
-                  <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    Scénarios / presets
-                  </span>
-                  <span className="mt-1 block text-sm text-muted-foreground">
-                    Charger un scénario dans le brouillon
-                  </span>
-                </span>
-                <span
-                  aria-hidden="true"
-                  className="text-lg text-muted-foreground transition-transform group-open:rotate-45 motion-reduce:transition-none"
-                >
-                  +
-                </span>
-              </span>
-            </summary>
-            <div className="border-t border-border/80 p-4">
-              <GravityPresetCatalog
-                presets={GRAVITY_PRESETS}
-                onLoad={loadPresetIntoDraft}
-              />
-              {presetLoadFailure === null ? null : (
-                <p
-                  role="alert"
-                  className="mt-3 rounded-lg border border-destructive/60 bg-destructive/10 p-3 text-xs text-destructive"
-                >
-                  {presetLoadFailure}
-                </p>
-              )}
-            </div>
-          </details>
-
-          <section
-            aria-labelledby="gravity-body-editor-title"
-            className="min-w-0 overflow-hidden rounded-xl border border-border/80 bg-card/70 p-4 shadow-lg shadow-black/5"
-          >
-            <h3
-              id="gravity-body-editor-title"
-              className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+          <GravityPresetCatalog
+            presets={GRAVITY_PRESETS}
+            onLoad={loadPresetIntoDraft}
+          />
+          {presetLoadFailure === null ? null : (
+            <p
+              role="alert"
+              className="mt-3 rounded-lg border border-destructive/60 bg-destructive/10 p-3 text-xs text-destructive"
             >
-              Corps et paramètres
-            </h3>
-            <div className="mt-3 rounded-lg border border-border/70 bg-background/35 p-3">
-              <p className="text-xs font-medium text-foreground">
-                Scénario actuellement simulé
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {session.bodies.length} corps · les valeurs de la scène restent
-                inchangées jusqu’à une application réussie.
-              </p>
+              {presetLoadFailure}
+            </p>
+          )}
+        </GravityWorkspaceInspector>
+
+        <GravityWorkspaceMain>
+          <GravityCanvas
+            session={session}
+            selectedBodyId={labState.selectedSessionBodyId}
+            onSelectBody={selectSessionBody}
+            onTelemetry={publishTelemetry}
+            onReady={startWhenRendererIsReady}
+            renderRevision={renderRevision}
+            trajectoryResetRevision={trajectoryResetRevision}
+          />
+        </GravityWorkspaceMain>
+
+        <GravityWorkspaceInspector
+          side="right"
+          eyebrow="Inspecteur"
+          title="Corps et paramètres"
+          compactLabel="Corps"
+        >
+            <div className="grid min-w-0 grid-cols-2 gap-2 rounded-lg border border-border/70 bg-background/35 p-3 text-xs">
+              <div className="min-w-0">
+                <span className="block text-muted-foreground">
+                  Scénario actif
+                </span>
+                <strong className="mt-0.5 block truncate text-foreground">
+                  {session.bodies.length} corps simulés
+                </strong>
+              </div>
+              <div className="min-w-0 text-right">
+                <span className="block text-muted-foreground">
+                  Brouillon
+                </span>
+                <strong
+                  className={
+                    hasUnappliedChanges
+                      ? "mt-0.5 block text-amber-700 dark:text-amber-300"
+                      : "mt-0.5 block text-emerald-700 dark:text-emerald-300"
+                  }
+                >
+                  {hasUnappliedChanges ? "Non appliqué" : "Synchronisé"}
+                </strong>
+              </div>
             </div>
-            <div className="mt-4">
+            <div className="mt-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  Brouillon en cours d’édition
+                  Corps du brouillon
             </p>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <span
-                className={
-                  hasUnappliedChanges
-                    ? "rounded-full border border-amber-400/50 bg-amber-400/10 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-300"
-                    : "rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300"
-                }
-              >
-                {hasUnappliedChanges
-                  ? "Modifications non appliquées"
-                  : "Synchronisé avec le scénario appliqué"}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {labState.draft.bodies.length}/{MAX_NEWTONIAN_BODIES}
-              </span>
-            </div>
+            <span className="text-xs text-muted-foreground">
+              {labState.draft.bodies.length}/{MAX_NEWTONIAN_BODIES}
+            </span>
           </div>
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-            {hasUnappliedChanges
-              ? "La simulation active utilise encore le dernier scénario appliqué."
-              : "Les valeurs éditées correspondent au scénario de la session active."}
-          </p>
           <ul
             aria-label="Corps du brouillon"
             className="mt-3 max-h-48 space-y-2 overflow-y-auto"
@@ -803,8 +800,9 @@ export function GravityLabPrototype({
           selectedBodyId={labState.selectedDraftBodyId}
           dispatch={updateDraft}
         />
-          </section>
+        </GravityWorkspaceInspector>
 
+        <GravityWorkspaceDiagnostics>
           <details className="group min-w-0 overflow-hidden rounded-xl border border-border/80 bg-card/70 shadow-lg shadow-black/5">
             <summary className="cursor-pointer list-none rounded-xl p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
               <span className="flex items-center justify-between gap-3">
@@ -835,170 +833,187 @@ export function GravityLabPrototype({
           summary="Comprendre les diagnostics"
           items={SCIENTIFIC_DIAGNOSTIC_HELP}
         />
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Diagnostics newtoniens
-          </p>
-          <dl className="mt-3 space-y-3 text-sm">
-            <div className="flex items-start justify-between gap-4">
-              <dt className="text-muted-foreground">État</dt>
-              <dd className="text-right font-medium">
-                {statusLabel(telemetry.status)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Temps simulé</dt>
-              <dd className="mt-0.5 break-all font-mono text-xs">
-                {formatSimulationTime(telemetry.timeSeconds)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Énergie totale</dt>
-              <dd className="mt-0.5 break-all font-mono text-xs">
-                {formatScientific(telemetry.totalEnergyJ)} J
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">
-                Dérive énergétique relative
-              </dt>
-              <dd className="mt-0.5 break-all font-mono text-xs">
-                {telemetry.relativeEnergyDrift === null
-                  ? "indéfinie (E₀ = 0)"
-                  : formatScientific(telemetry.relativeEnergyDrift, 3)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">
-                Norme du moment cinétique
-              </dt>
-              <dd className="mt-0.5 break-all font-mono text-xs">
-                {formatScientific(
-                  telemetry.angularMomentumNormKgM2ps
-                )}{" "}
-                kg·m²·s⁻¹
-              </dd>
-            </div>
-          </dl>
-        </div>
-
-        <div className="border-t border-border/80 pt-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Validité du modèle
-          </p>
-          {telemetry.rejectedNewtonianValidity !== null ? (
-            <p className="mt-2 text-xs text-destructive">
-              Mesures du candidat rejeté ; la scène conserve le dernier état
-              valide.
-            </p>
-          ) : null}
-          <dl className="mt-3 space-y-3 text-sm">
-            <div className="flex items-start justify-between gap-4">
-              <dt className="text-muted-foreground">Profil</dt>
-              <dd className="text-right font-medium">
-                {profileLabel(telemetry.precisionProfile)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Pas physique fixe</dt>
-              <dd className="mt-0.5 break-all font-mono text-xs">
-                {formatScientific(telemetry.timeStepSeconds, 6)} s
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Pas recommandé</dt>
-              <dd className="mt-0.5 break-all font-mono text-xs">
-                {telemetry.recommendedTimeStepSeconds === null
-                  ? telemetry.precisionProfile === null
-                    ? "non disponible — configuration directe"
-                    : "non contraint — plafond explicite"
-                  : `${formatScientific(
-                      telemetry.recommendedTimeStepSeconds,
-                      6
-                    )} s`}
-              </dd>
-            </div>
-            {telemetry.timeStepBudgetAssessment.exceedsBudget ? (
-              <div>
-                <dt className="text-destructive">Budget de sous-pas</dt>
-                <dd className="mt-0.5 text-xs text-destructive">
-                  {
-                    telemetry.timeStepBudgetAssessment
-                      .requiredSubStepsAtMaximumFrame
-                  }{" "}
-                  sous-pas seraient requis au delta maximal ; le pas n’a pas
-                  été agrandi.
+        <div className="grid min-w-0 gap-3 md:grid-cols-2">
+          <section className="min-w-0 rounded-lg border border-border/70 bg-background/35 p-3">
+            <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              État de la simulation
+            </h4>
+            <dl className="mt-3 space-y-3 text-sm">
+              <div className="flex items-start justify-between gap-4">
+                <dt className="text-muted-foreground">État</dt>
+                <dd className="text-right font-medium">
+                  {statusLabel(telemetry.status)}
                 </dd>
               </div>
+              <div>
+                <dt className="text-muted-foreground">Temps simulé</dt>
+                <dd className="mt-0.5 break-all font-mono text-xs">
+                  {formatSimulationTime(telemetry.timeSeconds)}
+                </dd>
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <dt className="text-muted-foreground">Profil</dt>
+                <dd className="text-right font-medium">
+                  {profileLabel(telemetry.precisionProfile)}
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <section className="min-w-0 rounded-lg border border-border/70 bg-background/35 p-3">
+            <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Conservation
+            </h4>
+            <dl className="mt-3 space-y-3 text-sm">
+              <div>
+                <dt className="text-muted-foreground">Énergie totale</dt>
+                <dd className="mt-0.5 break-all font-mono text-xs">
+                  {formatScientific(telemetry.totalEnergyJ)} J
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  Dérive énergétique relative
+                </dt>
+                <dd className="mt-0.5 break-all font-mono text-xs">
+                  {telemetry.relativeEnergyDrift === null
+                    ? "indéfinie (E₀ = 0)"
+                    : formatScientific(telemetry.relativeEnergyDrift, 3)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  Norme du moment cinétique
+                </dt>
+                <dd className="mt-0.5 break-all font-mono text-xs">
+                  {formatScientific(
+                    telemetry.angularMomentumNormKgM2ps
+                  )}{" "}
+                  kg·m²·s⁻¹
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <section className="min-w-0 rounded-lg border border-border/70 bg-background/35 p-3">
+            <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Intégration
+            </h4>
+            <dl className="mt-3 space-y-3 text-sm">
+              <div>
+                <dt className="text-muted-foreground">Pas physique fixe</dt>
+                <dd className="mt-0.5 break-all font-mono text-xs">
+                  {formatScientific(telemetry.timeStepSeconds, 6)} s
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Pas recommandé</dt>
+                <dd className="mt-0.5 break-all font-mono text-xs">
+                  {telemetry.recommendedTimeStepSeconds === null
+                    ? telemetry.precisionProfile === null
+                      ? "non disponible — configuration directe"
+                      : "non contraint — plafond explicite"
+                    : `${formatScientific(
+                        telemetry.recommendedTimeStepSeconds,
+                        6
+                      )} s`}
+                </dd>
+              </div>
+              {telemetry.timeStepBudgetAssessment.exceedsBudget ? (
+                <div>
+                  <dt className="text-destructive">Budget de sous-pas</dt>
+                  <dd className="mt-0.5 text-xs text-destructive">
+                    {
+                      telemetry.timeStepBudgetAssessment
+                        .requiredSubStepsAtMaximumFrame
+                    }{" "}
+                    sous-pas seraient requis au delta maximal ; le pas n’a pas
+                    été agrandi.
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
+          </section>
+
+          <section className="min-w-0 rounded-lg border border-border/70 bg-background/35 p-3">
+            <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Validité du modèle
+            </h4>
+            {telemetry.rejectedNewtonianValidity !== null ? (
+              <p className="mt-2 text-xs text-destructive">
+                Mesures du candidat rejeté ; la scène conserve le dernier état
+                valide.
+              </p>
             ) : null}
-            <div>
-              <dt className="text-muted-foreground">
-                β maximal ·{" "}
-                {responsibilityLabel(validity.beta.responsible)}
-              </dt>
-              <dd className="mt-0.5 break-all font-mono text-xs">
-                {formatScientific(validity.beta.value, 6)}
-                {" · "}
-                {velocityFrameLabel(validity.beta.responsible.frame)}
-                {validity.hasExternalConstraint
-                  ? " · contrainte externe présente"
-                  : ""}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">
-                χ paire
-                {validity.chiPair === null
-                  ? ""
-                  : ` · ${responsibilityLabel(
-                      validity.chiPair.responsible
-                    )}`}
-              </dt>
-              <dd className="mt-0.5 break-all font-mono text-xs">
-                {validity.chiPair === null
-                  ? "sans paire"
-                  : formatScientific(validity.chiPair.value, 6)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">
-                χ propre
-                {validity.chiSelf === null
-                  ? ""
-                  : ` · ${responsibilityLabel(
-                      validity.chiSelf.responsible
-                    )}`}
-              </dt>
-              <dd className="mt-0.5 break-all font-mono text-xs">
-                {validity.chiSelf === null
-                  ? unknownSelfCompactness ?? "sans valeur connue"
-                  : `${formatScientific(validity.chiSelf.value, 6)}${
-                      unknownSelfCompactness === null
-                        ? ""
-                        : ` · ${unknownSelfCompactness}`
-                    }`}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">
-                ψ local · {responsibilityLabel(validity.psi.responsible)}
-              </dt>
-              <dd className="mt-0.5 break-all font-mono text-xs">
-                {formatScientific(validity.psi.value, 6)}
-              </dd>
-            </div>
-            <div className="flex items-start justify-between gap-4">
-              <dt className="text-muted-foreground">Synthèse</dt>
-              <dd className="text-right font-medium">
-                {validityLevelLabel(validity.overallLevel)}
-              </dd>
-            </div>
-          </dl>
-          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-            Les seuils β sont une politique pédagogique fondée sur l’ordre
-            attendu des corrections en β², et non une garantie universelle
-            d’erreur.
-          </p>
+            <dl className="mt-3 space-y-3 text-sm">
+              <div>
+                <dt className="text-muted-foreground">
+                  β maximal · {responsibilityLabel(validity.beta.responsible)}
+                </dt>
+                <dd className="mt-0.5 break-all font-mono text-xs">
+                  {formatScientific(validity.beta.value, 6)}
+                  {" · "}
+                  {velocityFrameLabel(validity.beta.responsible.frame)}
+                  {validity.hasExternalConstraint
+                    ? " · contrainte externe présente"
+                    : ""}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  χ paire
+                  {validity.chiPair === null
+                    ? ""
+                    : ` · ${responsibilityLabel(
+                        validity.chiPair.responsible
+                      )}`}
+                </dt>
+                <dd className="mt-0.5 break-all font-mono text-xs">
+                  {validity.chiPair === null
+                    ? "sans paire"
+                    : formatScientific(validity.chiPair.value, 6)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  χ propre
+                  {validity.chiSelf === null
+                    ? ""
+                    : ` · ${responsibilityLabel(
+                        validity.chiSelf.responsible
+                      )}`}
+                </dt>
+                <dd className="mt-0.5 break-all font-mono text-xs">
+                  {validity.chiSelf === null
+                    ? unknownSelfCompactness ?? "sans valeur connue"
+                    : `${formatScientific(validity.chiSelf.value, 6)}${
+                        unknownSelfCompactness === null
+                          ? ""
+                          : ` · ${unknownSelfCompactness}`
+                      }`}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  ψ local · {responsibilityLabel(validity.psi.responsible)}
+                </dt>
+                <dd className="mt-0.5 break-all font-mono text-xs">
+                  {formatScientific(validity.psi.value, 6)}
+                </dd>
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <dt className="text-muted-foreground">Synthèse</dt>
+                <dd className="text-right font-medium">
+                  {validityLevelLabel(validity.overallLevel)}
+                </dd>
+              </div>
+            </dl>
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              Les seuils β sont une politique pédagogique fondée sur l’ordre
+              attendu des corrections en β², et non une garantie universelle
+              d’erreur.
+            </p>
+          </section>
         </div>
 
         <div
@@ -1022,8 +1037,8 @@ export function GravityLabPrototype({
         </p>
             </div>
           </details>
-        </aside>
-      </div>
+        </GravityWorkspaceDiagnostics>
+      </GravityLabWorkspace>
     </section>
   );
 }

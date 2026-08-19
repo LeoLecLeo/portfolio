@@ -20,12 +20,34 @@ export type GravityLabMainControlHandlers = Readonly<{
   apply: () => void;
 }>;
 
-export function getGravityLabMainControlState(input: Readonly<{
+export type GravityLabMainControlInput = Readonly<{
   status: PrototypeTelemetry["status"];
   rendererReady: boolean;
   hasUnappliedChanges: boolean;
   draftIsValid: boolean;
-}>): GravityLabMainControlState {
+}>;
+
+/**
+ * SSR and the first hydration render cannot observe the WebGL renderer. Keep
+ * their control snapshot identical and safe until React has mounted, then use
+ * the authoritative session and renderer state without changing their rules.
+ */
+export function getGravityLabHydrationControlInput(
+  input: GravityLabMainControlInput,
+  hydrated: boolean
+): GravityLabMainControlInput {
+  return hydrated
+    ? input
+    : {
+        ...input,
+        status: "paused",
+        rendererReady: false,
+      };
+}
+
+export function getGravityLabMainControlState(
+  input: GravityLabMainControlInput
+): GravityLabMainControlState {
   const running = input.status === "running";
 
   return {

@@ -88,10 +88,10 @@ const FIELD_VECTOR_FRAGMENT_SHADER = /* glsl */ `
   varying float vRelativeIntensity;
 
   void main() {
-    vec3 weakColor = vec3(0.20, 0.72, 1.0);
-    vec3 strongColor = vec3(1.0, 0.34, 0.08);
+    vec3 weakColor = vec3(0.24, 0.76, 1.0);
+    vec3 strongColor = vec3(1.0, 0.42, 0.10);
     vec3 color = mix(weakColor, strongColor, vRelativeIntensity);
-    float alpha = mix(0.48, 0.95, vRelativeIntensity);
+    float alpha = mix(0.34, 0.76, vRelativeIntensity);
     gl_FragColor = vec4(color, alpha);
   }
 `;

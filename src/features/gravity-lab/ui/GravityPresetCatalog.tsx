@@ -69,28 +69,24 @@ export function GravityPresetCatalog({
         >
           Charger un scénario dans le brouillon
         </h3>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+        <p className="mt-1 text-xs leading-snug text-muted-foreground">
           Le chargement ne modifie jamais la simulation active avant une
           application explicite.
         </p>
       </div>
 
-      <ul className="mt-3 grid min-w-0 grid-cols-1 gap-3">
+      <ul className="mt-3 grid min-w-0 grid-cols-1 gap-2">
         {presets.map((preset) => {
           const presentation = presentGravityPreset(preset);
 
           return (
             <li key={preset.id} className="min-w-0">
-              <article className="min-w-0 rounded-lg border border-border bg-secondary/25 p-3">
+              <article className="min-w-0 rounded-lg border border-border bg-secondary/25 p-2.5">
                 <h4 className="break-words text-sm font-semibold">
                   {preset.name}
                 </h4>
-                <p className="mt-1 break-words text-xs leading-relaxed text-muted-foreground">
+                <p className="mt-1 break-words text-xs leading-snug text-muted-foreground">
                   {preset.shortDescription}
-                </p>
-                <p className="mt-2 break-words rounded-md bg-background/55 px-2 py-1.5 text-xs leading-relaxed">
-                  <span className="font-semibold">Objectif : </span>
-                  {preset.pedagogy.learningObjective}
                 </p>
                 <dl className="mt-2 grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
                   <div className="min-w-0">
@@ -120,11 +116,17 @@ export function GravityPresetCatalog({
                     </dd>
                   </div>
                 </dl>
-                <details className="mt-3 rounded-md border border-border/70 bg-background/35 text-xs">
+                <details className="mt-2 rounded-md border border-border/70 bg-background/35 text-xs">
                   <summary className="cursor-pointer rounded-md px-2 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                     Repères pédagogiques
                   </summary>
-                  <div className="space-y-3 border-t border-border/70 px-2 py-3">
+                  <div className="space-y-2.5 border-t border-border/70 px-2 py-2.5">
+                    <div>
+                      <h5 className="font-semibold">Objectif pédagogique</h5>
+                      <p className="mt-0.5 break-words leading-relaxed text-muted-foreground">
+                        {preset.pedagogy.learningObjective}
+                      </p>
+                    </div>
                     <div>
                       <h5 className="font-semibold">Phénomène observé</h5>
                       <p className="mt-0.5 break-words leading-relaxed text-muted-foreground">
@@ -170,7 +172,7 @@ export function GravityPresetCatalog({
                 <button
                   type="button"
                   onClick={() => onLoad(preset)}
-                  className="mt-3 w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                  className="mt-2 w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 >
                   Charger dans le brouillon
                 </button>

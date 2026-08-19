@@ -44,6 +44,7 @@ import {
   calculateVisualRadiusScene,
   type VisualRadiusMode,
 } from "./visualRadiusPolicy";
+import { GRAVITY_VISUALIZATION_DEFAULTS } from "./visualizationDefaults";
 import { GravityPotentialGrid } from "./GravityPotentialGrid";
 import { GravityFieldVectors } from "./GravityFieldVectors";
 import { createSessionVisualizationLayout } from "./sessionVisualizationLayout";
@@ -445,7 +446,7 @@ function GravityScene({
         const material = new LineBasicMaterial({
           color: body.color,
           transparent: true,
-          opacity: 0.7,
+          opacity: 0.82,
           depthWrite: false,
         });
         const line = new LineSegments(geometry, material);
@@ -658,7 +659,7 @@ function GravityScene({
             <meshStandardMaterial
               color={body.color}
               emissive={body.color}
-              emissiveIntensity={selected ? 1.4 : 0.5}
+              emissiveIntensity={selected ? 1.55 : 0.58}
               roughness={0.5}
             />
           </mesh>
@@ -684,12 +685,20 @@ export const GravityCanvas = memo(function GravityCanvas({
     bodyId: selectedBodyId,
   }));
   const [trackedBodyId, setTrackedBodyId] = useState<string | null>(null);
-  const [trajectoriesVisible, setTrajectoriesVisible] = useState(true);
+  const [trajectoriesVisible, setTrajectoriesVisible] = useState(
+    GRAVITY_VISUALIZATION_DEFAULTS.trajectoriesVisible
+  );
   const [trajectoryClearRevision, setTrajectoryClearRevision] = useState(0);
   const [visualRadiusMode, setVisualRadiusMode] =
-    useState<VisualRadiusMode>("amplified");
-  const [potentialGridVisible, setPotentialGridVisible] = useState(true);
-  const [gravityFieldVisible, setGravityFieldVisible] = useState(false);
+    useState<VisualRadiusMode>(
+      GRAVITY_VISUALIZATION_DEFAULTS.visualRadiusMode
+    );
+  const [potentialGridVisible, setPotentialGridVisible] = useState(
+    GRAVITY_VISUALIZATION_DEFAULTS.potentialGridVisible
+  );
+  const [gravityFieldVisible, setGravityFieldVisible] = useState(
+    GRAVITY_VISUALIZATION_DEFAULTS.gravityFieldVisible
+  );
   const previousSession = useRef(session);
   const selectedBodyExists = session.bodies.some(
     ({ bodyId }) => bodyId === selectedBodyId
@@ -717,7 +726,7 @@ export const GravityCanvas = memo(function GravityCanvas({
 
   return (
     <div className="min-w-0 space-y-3">
-      <div className="relative h-[65svh] min-h-72 max-h-[28rem] w-full overflow-hidden rounded-xl border border-border/80 bg-black/30 md:h-[70svh] md:max-h-[36rem]">
+      <div className="relative h-[65svh] min-h-72 max-h-[28rem] w-full overflow-hidden rounded-xl border border-border/80 bg-black/30 shadow-xl shadow-black/20 md:h-[70svh] md:max-h-[36rem]">
         <div
           role="img"
           aria-label={`Simulation gravitationnelle tridimensionnelle de ${session.bodies.length} corps célestes. Corps sélectionné : ${selectedBodyId}.`}
@@ -811,7 +820,7 @@ export const GravityCanvas = memo(function GravityCanvas({
                 current === null ? selectedBodyId : null
               )
             }
-            className="rounded-lg border border-border bg-secondary px-3 py-2 text-xs font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-45 aria-pressed:border-primary aria-pressed:bg-primary/10"
+            className="rounded-lg border border-border bg-secondary px-3 py-2 text-xs font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-45 aria-pressed:border-primary aria-pressed:bg-primary/10 aria-pressed:text-primary"
           >
             Suivre le corps
           </button>
@@ -897,7 +906,7 @@ export const GravityCanvas = memo(function GravityCanvas({
               )}
               aria-pressed={trajectoriesVisible}
               onClick={() => setTrajectoriesVisible((visible) => !visible)}
-              className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary aria-pressed:bg-primary/10"
+              className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary aria-pressed:bg-primary/10 aria-pressed:text-primary"
             >
               {trajectoriesVisible ? "Masquer" : "Afficher"}
             </button>
@@ -929,7 +938,7 @@ export const GravityCanvas = memo(function GravityCanvas({
             )}
             aria-pressed={potentialGridVisible}
             onClick={() => setPotentialGridVisible((visible) => !visible)}
-            className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary aria-pressed:bg-primary/10"
+            className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary aria-pressed:bg-primary/10 aria-pressed:text-primary"
           >
             {potentialGridVisible ? "Masquer" : "Afficher"}
           </button>
@@ -951,7 +960,7 @@ export const GravityCanvas = memo(function GravityCanvas({
             )}
             aria-pressed={gravityFieldVisible}
             onClick={() => setGravityFieldVisible((visible) => !visible)}
-            className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary aria-pressed:bg-primary/10"
+            className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary aria-pressed:bg-primary/10 aria-pressed:text-primary"
           >
             {gravityFieldVisible ? "Masquer" : "Afficher"}
           </button>

@@ -1,6 +1,6 @@
 "use client";
 
-import type { Dispatch } from "react";
+import type { Dispatch, ReactNode } from "react";
 
 import {
   type DraftNumber,
@@ -100,6 +100,38 @@ function NumberEditor<Unit extends string>({
   );
 }
 
+function EditorSection({
+  title,
+  defaultOpen = false,
+  children,
+}: Readonly<{
+  title: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}>) {
+  return (
+    <details
+      open={defaultOpen}
+      className="group min-w-0 overflow-hidden rounded-lg border border-border/80 bg-background/30"
+    >
+      <summary className="cursor-pointer list-none px-3 py-2.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center justify-between gap-2">
+          <span>{title}</span>
+          <span
+            aria-hidden="true"
+            className="text-base text-muted-foreground transition-transform group-open:rotate-45 motion-reduce:transition-none"
+          >
+            +
+          </span>
+        </span>
+      </summary>
+      <div className="min-w-0 space-y-3 border-t border-border/70 p-3">
+        {children}
+      </div>
+    </details>
+  );
+}
+
 export type BodyDraftEditorProps = Readonly<{
   draft: ScenarioDraft;
   validationReport: ScenarioValidationReport;
@@ -162,99 +194,96 @@ export function BodyDraftEditor({
     });
 
   return (
-    <fieldset className="min-w-0 space-y-4 border-t border-border/80 pt-4">
-      <legend className="px-1 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-        Corps sélectionné
-      </legend>
+    <section
+      aria-labelledby={`${prefix}-editor-title`}
+      className="mt-4 min-w-0 space-y-2 border-t border-border/80 pt-4"
+    >
+      <h4
+        id={`${prefix}-editor-title`}
+        className="truncate text-sm font-semibold"
+      >
+        Modifier {body.name.trim() || body.id}
+      </h4>
 
-      <div className="space-y-1">
-        <span className="text-xs font-medium">Identifiant technique</span>
-        <output
-          aria-label="Identifiant technique"
-          className="block rounded-md border border-border bg-muted/40 px-2 py-1.5 font-mono text-xs"
-        >
-          {body.id}
-        </output>
-      </div>
-
-      <div className="space-y-1">
-        <label htmlFor={`${prefix}-name`} className="text-xs font-medium">
-          Nom
-        </label>
-        <input
-          id={`${prefix}-name`}
-          type="text"
-          value={body.name}
-          aria-invalid={nameError !== null}
-          aria-describedby={
-            nameError === null ? undefined : `${prefix}-name-error`
-          }
-          onChange={(event) =>
-            dispatch({
-              type: "edit-body-name",
-              bodyId: body.id,
-              name: event.target.value,
-            })
-          }
-          className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-[invalid=true]:border-destructive"
-        />
-        {nameError === null ? null : (
-          <p
-            id={`${prefix}-name-error`}
-            className="text-xs text-destructive"
+      <EditorSection title="Général" defaultOpen>
+        <div className="space-y-1">
+          <span className="text-xs font-medium">Identifiant technique</span>
+          <output
+            aria-label="Identifiant technique"
+            className="block break-all rounded-md border border-border bg-muted/40 px-2 py-1.5 font-mono text-xs"
           >
-            {nameError}
-          </p>
-        )}
-      </div>
+            {body.id}
+          </output>
+        </div>
 
-      <div className="space-y-1">
-        <label htmlFor={`${prefix}-color`} className="text-xs font-medium">
-          Couleur
-        </label>
-        <div className="grid grid-cols-[minmax(0,1fr)_2.5rem] gap-2">
+        <div className="space-y-1">
+          <label htmlFor={`${prefix}-name`} className="text-xs font-medium">
+            Nom
+          </label>
           <input
-            id={`${prefix}-color`}
+            id={`${prefix}-name`}
             type="text"
-            value={body.color}
-            aria-invalid={colorError !== null}
+            value={body.name}
+            aria-invalid={nameError !== null}
             aria-describedby={
-              colorError === null
-                ? undefined
-                : `${prefix}-color-error`
+              nameError === null ? undefined : `${prefix}-name-error`
             }
             onChange={(event) =>
               dispatch({
-                type: "edit-body-color",
+                type: "edit-body-name",
                 bodyId: body.id,
-                color: event.target.value,
+                name: event.target.value,
               })
             }
-            className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5 font-mono text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-[invalid=true]:border-destructive"
+            className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-[invalid=true]:border-destructive"
           />
-          <span
-            aria-hidden="true"
-            className="rounded-md border border-border"
-            style={{
-              backgroundColor:
-                colorError === null ? body.color : "transparent",
-            }}
-          />
+          {nameError === null ? null : (
+            <p id={`${prefix}-name-error`} className="text-xs text-destructive">
+              {nameError}
+            </p>
+          )}
         </div>
-        {colorError === null ? null : (
-          <p
-            id={`${prefix}-color-error`}
-            className="text-xs text-destructive"
-          >
-            {colorError}
-          </p>
-        )}
-      </div>
 
-      <fieldset className="min-w-0 space-y-3 rounded-lg border border-border/80 p-3">
-        <legend className="px-1 text-xs font-semibold">
-          Propriétés physiques
-        </legend>
+        <div className="space-y-1">
+          <label htmlFor={`${prefix}-color`} className="text-xs font-medium">
+            Couleur
+          </label>
+          <div className="grid grid-cols-[minmax(0,1fr)_2.5rem] gap-2">
+            <input
+              id={`${prefix}-color`}
+              type="text"
+              value={body.color}
+              aria-invalid={colorError !== null}
+              aria-describedby={
+                colorError === null ? undefined : `${prefix}-color-error`
+              }
+              onChange={(event) =>
+                dispatch({
+                  type: "edit-body-color",
+                  bodyId: body.id,
+                  color: event.target.value,
+                })
+              }
+              className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5 font-mono text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-[invalid=true]:border-destructive"
+            />
+            <span
+              aria-hidden="true"
+              className="rounded-md border border-border"
+              style={{
+                backgroundColor:
+                  colorError === null ? body.color : "transparent",
+              }}
+            />
+          </div>
+          {colorError === null ? null : (
+            <p id={`${prefix}-color-error`} className="text-xs text-destructive">
+              {colorError}
+            </p>
+          )}
+        </div>
+      </EditorSection>
+
+      <EditorSection title="Propriétés physiques" defaultOpen>
         <NumberEditor
           id={`${prefix}-mass`}
           label="Masse"
@@ -281,12 +310,44 @@ export function BodyDraftEditor({
             changeDistanceUnit("physicalRadius", unit)
           }
         />
-      </fieldset>
+        <fieldset className="min-w-0 space-y-2 border-t border-border/70 pt-3">
+          <legend className="px-1 text-xs font-semibold">Mobilité</legend>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name={`${prefix}-mobility`}
+              checked={!body.fixed}
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              onChange={() =>
+                dispatch({
+                  type: "set-body-fixed",
+                  bodyId: body.id,
+                  fixed: false,
+                })
+              }
+            />
+            Mobile
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name={`${prefix}-mobility`}
+              checked={body.fixed}
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              onChange={() =>
+                dispatch({
+                  type: "set-body-fixed",
+                  bodyId: body.id,
+                  fixed: true,
+                })
+              }
+            />
+            Fixe
+          </label>
+        </fieldset>
+      </EditorSection>
 
-      <fieldset className="min-w-0 space-y-3 rounded-lg border border-border/80 p-3">
-        <legend className="px-1 text-xs font-semibold">
-          Position initiale
-        </legend>
+      <EditorSection title="Position initiale">
         {(["x", "y", "z"] as const).map((axis) => (
           <NumberEditor
             key={axis}
@@ -302,12 +363,9 @@ export function BodyDraftEditor({
             }
           />
         ))}
-      </fieldset>
+      </EditorSection>
 
-      <fieldset className="min-w-0 space-y-3 rounded-lg border border-border/80 p-3">
-        <legend className="px-1 text-xs font-semibold">
-          Vitesse initiale
-        </legend>
+      <EditorSection title="Vitesse initiale">
         {(["x", "y", "z"] as const).map((axis) => (
           <NumberEditor
             key={axis}
@@ -323,43 +381,7 @@ export function BodyDraftEditor({
             }
           />
         ))}
-      </fieldset>
-
-      <fieldset className="min-w-0 space-y-2 rounded-lg border border-border/80 p-3">
-        <legend className="px-1 text-xs font-semibold">Mobilité</legend>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="radio"
-            name={`${prefix}-mobility`}
-            checked={!body.fixed}
-            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-            onChange={() =>
-              dispatch({
-                type: "set-body-fixed",
-                bodyId: body.id,
-                fixed: false,
-              })
-            }
-          />
-          Mobile
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="radio"
-            name={`${prefix}-mobility`}
-            checked={body.fixed}
-            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-            onChange={() =>
-              dispatch({
-                type: "set-body-fixed",
-                bodyId: body.id,
-                fixed: true,
-              })
-            }
-          />
-          Fixe
-        </label>
-      </fieldset>
-    </fieldset>
+      </EditorSection>
+    </section>
   );
 }
