@@ -2,6 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import {
+  getGravityWorkspaceCenterClassName,
+  getGravityWorkspaceInspectorPlacement,
   GravityLabWorkspace,
   GravityWorkspaceDiagnostics,
   GravityWorkspaceInspector,
@@ -44,5 +46,48 @@ describe("gravity lab workspace", () => {
     expect(markup.match(/aria-expanded="false"/g)).toHaveLength(2);
     expect(markup).not.toContain("Catalogue");
     expect(markup).not.toContain("Éditeur");
+    expect(markup.match(/class="fixed bottom-2/g)).toHaveLength(2);
+    expect(markup).toContain("left-2 sm:left-4");
+    expect(markup).toContain("right-2 sm:right-4");
+    expect(markup).toContain("min-[1888px]:bottom-auto");
+    expect(markup).not.toContain("sticky");
+    expect(markup).toContain(
+      "min-[1888px]:ml-[calc(50%_-_50vw_+_1rem)]"
+    );
+    expect(markup).not.toContain("translate-x");
+  });
+
+  it("keeps the central width contract identical for every inspector state", () => {
+    const states = [
+      { leftOpen: false, rightOpen: false },
+      { leftOpen: true, rightOpen: false },
+      { leftOpen: false, rightOpen: true },
+      { leftOpen: true, rightOpen: true },
+    ];
+    const classNames = states.map(getGravityWorkspaceCenterClassName);
+
+    expect(new Set(classNames)).toEqual(
+      new Set([
+        "min-w-0 min-[1888px]:col-start-2 min-[1888px]:row-start-1",
+      ])
+    );
+  });
+
+  it("anchors Presets left and Corps right outside the central track", () => {
+    expect(getGravityWorkspaceInspectorPlacement("left")).toContain(
+      "left-4!"
+    );
+    expect(getGravityWorkspaceInspectorPlacement("left")).toContain(
+      "right-auto!"
+    );
+    expect(getGravityWorkspaceInspectorPlacement("right")).toContain(
+      "right-4!"
+    );
+    expect(getGravityWorkspaceInspectorPlacement("right")).toContain(
+      "left-auto!"
+    );
+    expect(getGravityWorkspaceInspectorPlacement("right")).not.toContain(
+      "left-4!"
+    );
   });
 });
