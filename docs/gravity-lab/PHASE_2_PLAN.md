@@ -986,7 +986,22 @@ Ordre des sous-phases :
   modifier le rendu ni le modèle ;
 - 2E.3 robustesse responsive et accessibilité : navigation clavier, focus du
   CRUD, états accessibles et mise en page éprouvée de 320 px au desktop ;
-- 2E.4+ à détailler au moment de leur mise en œuvre.
+- 2E.4 robustesse produit et gestion des états limites : enchaînements de
+  sessions, brouillons invalides, remplacements, couches visuelles et cycle de
+  vie éprouvés sans modification de la physique ;
+- 2E.5 finition visuelle de la V1 newtonienne : hiérarchie finale, contrastes,
+  coexistence des corps et visualisations, et états initiaux sobres ;
+- 2E.6 finalisation du workspace et de ses inspecteurs : zone centrale stable,
+  panneaux latéraux fixes sur desktop large, launchers repliés et contenu
+  responsive à scroll indépendant ;
+- 2E.7 profilage et stabilisation des performances UI : suppression des coûts
+  de composition importants, isolation des sous-arbres statiques et démontage
+  du contenu des inspecteurs fermés.
+
+Les sous-phases 2E.1 à 2E.7 sont terminées. Leur audit final ciblé a confirmé
+les garanties de layout, d’hydratation, de cycle de vie et de rendu à la
+demande ; les corrections de clôture confirmées par cet audit ont été
+appliquées.
 
 **Livrables**
 

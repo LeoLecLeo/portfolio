@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, type Dispatch, type ReactNode } from "react";
+import { memo, useState, type Dispatch, type ReactNode } from "react";
 
 import {
   type DraftNumber,
@@ -109,9 +109,12 @@ function EditorSection({
   defaultOpen?: boolean;
   children: ReactNode;
 }>) {
+  const [open, setOpen] = useState(defaultOpen);
+
   return (
     <details
-      open={defaultOpen}
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
       className="group min-w-0 border-b border-border/50"
     >
       <summary className="cursor-pointer list-none px-1 py-2.5 text-sm font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset motion-reduce:transition-none [&::-webkit-details-marker]:hidden">

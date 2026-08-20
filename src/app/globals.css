@@ -113,6 +113,12 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 @layer utilities {
   .gravity-lab-scrollbar {
     scrollbar-color: color-mix(in oklab, var(--muted-foreground) 42%, transparent)
