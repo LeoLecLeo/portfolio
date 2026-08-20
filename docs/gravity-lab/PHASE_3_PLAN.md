@@ -405,6 +405,14 @@ comme oracle. Pour RK4, on mesure une dérive numérique qui doit converger avec
 le pas ; on ne prétend pas à une conservation exacte. Les scénarios comportant
 un corps fixe sont exclus de ces assertions.
 
+**Décision 3C.** Les expressions normatives de ces invariants n'ayant pas été
+fixées en 3A dans la même convention harmonique que l'accélération EIH, leur
+implémentation est reportée. La validation 3C repose sur des solutions
+analytiques indépendantes de RK4, la convergence en pas et la précession
+différentielle Newtonien–1PN. L'énergie newtonienne n'est pas utilisée comme
+invariant relativiste. Aucun diagnostic de conservation 1PN ne devra être
+affiché avant la spécification et les tests séparés de ces expressions.
+
 ### 5.4 Précession du périhélie
 
 La première démonstration forte utilise des conditions Soleil–Mercure
