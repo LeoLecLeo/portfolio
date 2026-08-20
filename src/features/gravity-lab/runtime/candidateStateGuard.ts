@@ -203,6 +203,75 @@ export function inspectCompletedVelocityVerletCandidate(
   return guardWorkspace.rejectionKind;
 }
 
+/**
+ * Checks a complete phase-space candidate produced by an integrator that does
+ * not expose Velocity Verlet's intermediate drift. The swept encounter check,
+ * finiteness checks and scientific-domain guard all run before the caller may
+ * commit any candidate buffer.
+ */
+export function inspectCompletedPhaseSpaceCandidate(
+  state: NewtonianState,
+  timeStepSeconds: number,
+  thresholds: EncounterThresholds,
+  candidatePositionsM: Float64Array,
+  candidateVelocitiesMps: Float64Array,
+  candidateAccelerationsMps2: Float64Array,
+  guardWorkspace: CandidateStateGuardWorkspace
+): CandidateGuardRejectionKind | null {
+  resetRejection(guardWorkspace);
+
+  if (
+    rejectFirstNonFinite(
+      candidatePositionsM,
+      "candidate-positions",
+      guardWorkspace
+    ) ||
+    rejectFirstNonFinite(
+      candidateVelocitiesMps,
+      "candidate-velocities",
+      guardWorkspace
+    ) ||
+    rejectFirstNonFinite(
+      candidateAccelerationsMps2,
+      "candidate-accelerations",
+      guardWorkspace
+    )
+  ) {
+    return guardWorkspace.rejectionKind;
+  }
+
+  const encounter = inspectEncounterAcrossStep(
+    state.positionsM,
+    candidatePositionsM,
+    state.massesKg,
+    state.physicalRadiiM,
+    state.fixed,
+    timeStepSeconds,
+    thresholds,
+    guardWorkspace.encounter
+  );
+
+  if (encounter.kind !== "none") {
+    guardWorkspace.rejectionKind = encounter.kind;
+    return guardWorkspace.rejectionKind;
+  }
+
+  evaluateNewtonianValidityInto(
+    state.massesKg,
+    state.physicalRadiiM,
+    state.fixed,
+    candidatePositionsM,
+    candidateVelocitiesMps,
+    guardWorkspace.newtonianValidity
+  );
+
+  if (hasNewtonianDomainViolation(guardWorkspace.newtonianValidity)) {
+    guardWorkspace.rejectionKind = "newtonian-domain-violation";
+  }
+
+  return guardWorkspace.rejectionKind;
+}
+
 function responsibilityWithoutFrame(
   responsible:
     | NewtonianValidityReport["beta"]["responsible"]

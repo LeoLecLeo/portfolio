@@ -28,6 +28,10 @@ import {
   type ValidationDiagnosticCode,
 } from "./validation";
 import type { NewtonianValidityReport } from "../physics/newtonianValidity";
+import {
+  isGravityModelId,
+  type GravityModelId,
+} from "../physics/gravityModel";
 import { vector3 } from "./vector3";
 import {
   recommendTimeStep,
@@ -513,6 +517,7 @@ const APPLIED_SCENARIO_KIND =
 export type AppliedScenario = Readonly<{
   kind: typeof APPLIED_SCENARIO_KIND;
   physics: Readonly<{
+    modelId: GravityModelId;
     bodies: readonly CelestialBodyDefinition[];
   }>;
   presentation: Readonly<{
@@ -727,7 +732,8 @@ export function isAppliedScenario(value: unknown): value is AppliedScenario {
     value.kind !== APPLIED_SCENARIO_KIND ||
     !isDeepFrozen(value) ||
     !isRecord(value.physics) ||
-    !hasExactOwnKeys(value.physics, ["bodies"]) ||
+    !hasExactOwnKeys(value.physics, ["modelId", "bodies"]) ||
+    !isGravityModelId(value.physics.modelId) ||
     !Array.isArray(value.physics.bodies) ||
     value.physics.bodies.length < 1 ||
     !value.physics.bodies.every(hasBodyShape) ||
@@ -851,6 +857,47 @@ export function isAppliedScenario(value: unknown): value is AppliedScenario {
       validation.newtonianValidity
     )
   );
+}
+
+/**
+ * Produces an immutable simulation specification with identical physical and
+ * numerical initial conditions but an explicitly selected gravity model.
+ * The already-frozen bodies and reports are safely shared; no mutable object is
+ * introduced or exposed.
+ */
+export function appliedScenarioWithGravityModel(
+  scenario: AppliedScenario,
+  modelId: GravityModelId
+): AppliedScenario {
+  if (!isAppliedScenario(scenario)) {
+    throw new TypeError(
+      "Only a valid immutable applied scenario can select a gravity model."
+    );
+  }
+
+  if (!isGravityModelId(modelId)) {
+    throw new RangeError("The selected gravity model is not supported.");
+  }
+
+  if (scenario.physics.modelId === modelId) {
+    return scenario;
+  }
+
+  const result = Object.freeze({
+    ...scenario,
+    physics: Object.freeze({
+      ...scenario.physics,
+      modelId,
+    }),
+  });
+
+  if (!isAppliedScenario(result)) {
+    throw new TypeError(
+      "Selecting the gravity model produced an invalid applied scenario."
+    );
+  }
+
+  return result;
 }
 
 export function appliedScenarioToDraft(

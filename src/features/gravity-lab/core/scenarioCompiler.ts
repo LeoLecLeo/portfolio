@@ -702,6 +702,7 @@ export function compileScenarioDraft(
   const scenario: AppliedScenario = deepFreeze({
     kind: "gravity-lab-applied-scenario-v1",
     physics: {
+      modelId: "newtonian",
       bodies: bodies.map((body) => ({
         ...body,
         initialPositionM: vector3(

@@ -1,4 +1,15 @@
-import { SimulationEngine } from "./SimulationEngine";
+import type {
+  SimulationStatus,
+  SimulationStopEvent,
+} from "../core/types";
+
+export type FixedStepSchedulableEngine = Readonly<{
+  status: SimulationStatus;
+  timeStepSeconds: number;
+  stopEvent: SimulationStopEvent | null;
+  pause: () => void;
+  advanceOneStep: () => boolean;
+}>;
 
 export type FixedStepSchedulerConfig = Readonly<{
   simulatedSecondsPerRealSecond: number;
@@ -26,13 +37,13 @@ function assertPositiveFinite(value: number, label: string): void {
 }
 
 export class FixedStepScheduler {
-  readonly #engine: SimulationEngine;
+  readonly #engine: FixedStepSchedulableEngine;
   readonly #config: FixedStepSchedulerConfig;
   #accumulatorSeconds = 0;
   #discardNextFrameDelta = false;
 
   constructor(
-    engine: SimulationEngine,
+    engine: FixedStepSchedulableEngine,
     config: FixedStepSchedulerConfig
   ) {
     assertPositiveFinite(

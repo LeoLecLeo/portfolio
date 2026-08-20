@@ -9,6 +9,11 @@ import {
   type PrototypeTelemetry,
 } from "./GravityPrototypeRuntime";
 import type { MutablePosition3 } from "./SimulationReadView";
+import {
+  productionIntegratorForModel,
+  type GravityIntegratorId,
+  type GravityModelId,
+} from "../physics/gravityModel";
 
 const TARGET_SCENE_RADIUS = 4;
 const FALLBACK_PHYSICAL_EXTENT_M = 1;
@@ -28,6 +33,12 @@ export type SessionBodyPresentation = Readonly<{
 export type GravityLabSessionRequest = Readonly<{
   appliedScenario: AppliedScenario;
   schedulerConfig: FixedStepSchedulerConfig;
+}>;
+
+export type GravitySimulationSpecification = Readonly<{
+  modelId: GravityModelId;
+  integratorId: GravityIntegratorId;
+  timeStepSeconds: number;
 }>;
 
 function createSceneTransform(
@@ -98,6 +109,9 @@ export class GravityLabSession {
   readonly sceneTransform: SceneTransform;
   readonly bodies: readonly SessionBodyPresentation[];
   readonly schedulerConfig: FixedStepSchedulerConfig;
+  readonly modelId: GravityModelId;
+  readonly integratorId: GravityIntegratorId;
+  readonly specification: GravitySimulationSpecification;
 
   constructor(request: GravityLabSessionRequest) {
     if (!isAppliedScenario(request.appliedScenario)) {
@@ -109,6 +123,14 @@ export class GravityLabSession {
     this.appliedScenario = request.appliedScenario;
     this.schedulerConfig = Object.freeze({
       ...request.schedulerConfig,
+    });
+    this.modelId = request.appliedScenario.physics.modelId;
+    this.integratorId = productionIntegratorForModel(this.modelId);
+    this.specification = Object.freeze({
+      modelId: this.modelId,
+      integratorId: this.integratorId,
+      timeStepSeconds:
+        request.appliedScenario.numericalPolicy.timeStepSeconds,
     });
     this.runtime = new GravityPrototypeRuntime(
       request.appliedScenario,

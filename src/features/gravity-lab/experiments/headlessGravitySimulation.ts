@@ -7,8 +7,9 @@ import {
 } from "../integrators/fixedStepRk4";
 import { computeFirstPostNewtonianAccelerations } from "../physics/firstPostNewtonian";
 import { computeNewtonianAccelerations } from "../physics/newtonian";
+import type { GravityModelId } from "../physics/gravityModel";
 
-export type HeadlessGravityModel = "newtonian" | "first-post-newtonian";
+export type HeadlessGravityModel = GravityModelId;
 
 export type HeadlessGravityInitialState = Readonly<{
   massesKg: Float64Array;

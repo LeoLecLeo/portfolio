@@ -12,6 +12,13 @@ import {
 import { magnitudeVector3 } from "../core/vector3";
 import type { NewtonianValidityReport } from "../physics/newtonianValidity";
 import {
+  classifyFirstPostNewtonianDomain,
+  productionIntegratorForModel,
+  type FirstPostNewtonianDomain,
+  type GravityIntegratorId,
+  type GravityModelId,
+} from "../physics/gravityModel";
+import {
   assessTimeStepBudget,
   type PrecisionProfile,
   type TimeStepBudgetAssessment,
@@ -21,6 +28,7 @@ import {
   type FixedStepSchedulerConfig,
 } from "./FixedStepScheduler";
 import { SimulationEngine } from "./SimulationEngine";
+import { Rk4SimulationEngine } from "./Rk4SimulationEngine";
 import { SimulationReadView } from "./SimulationReadView";
 
 export const TELEMETRY_INTERVAL_SECONDS = 0.2;
@@ -40,6 +48,9 @@ function createGenericSchedulerConfig(
 }
 
 export type PrototypeTelemetry = Readonly<{
+  modelId: GravityModelId;
+  integratorId: GravityIntegratorId;
+  firstPostNewtonianDomain: FirstPostNewtonianDomain | null;
   timeSeconds: number;
   status: SimulationStatus;
   precisionProfile: PrecisionProfile | null;
@@ -66,13 +77,15 @@ export type PrototypeTelemetry = Readonly<{
 }>;
 
 export class GravityPrototypeRuntime {
-  readonly #engine: SimulationEngine;
+  readonly #engine: SimulationEngine | Rk4SimulationEngine;
   readonly #scheduler: FixedStepScheduler;
   readonly #readView: SimulationReadView;
   readonly #initialTotalEnergyJ: number;
   readonly #precisionProfile: PrecisionProfile | null;
   readonly #recommendedTimeStepSeconds: number | null;
   readonly #timeStepBudgetAssessment: TimeStepBudgetAssessment;
+  readonly #modelId: GravityModelId;
+  readonly #integratorId: GravityIntegratorId;
   #schedulerMessage: string | null = null;
   #disposed = false;
 
@@ -90,11 +103,18 @@ export class GravityPrototypeRuntime {
     const config = applied
       ? appliedScenarioToSimulationConfig(scenario)
       : scenario;
+    this.#modelId = applied
+      ? scenario.physics.modelId
+      : "newtonian";
+    this.#integratorId = productionIntegratorForModel(this.#modelId);
     const resolvedSchedulerConfig =
       schedulerConfig ??
       createGenericSchedulerConfig(config.timeStepSeconds);
 
-    this.#engine = new SimulationEngine(config);
+    this.#engine =
+      this.#modelId === "newtonian"
+        ? new SimulationEngine(config)
+        : new Rk4SimulationEngine(config, this.#modelId);
     const recommendation = applied
       ? scenario.numericalPolicy.timeStepRecommendation
       : null;
@@ -188,8 +208,9 @@ export class GravityPrototypeRuntime {
 
   telemetry(): PrototypeTelemetry {
     const diagnostics = this.#engine.diagnostics();
+    const newtonianValidity = this.#engine.newtonianValidity();
     const relativeEnergyDrift =
-      this.#initialTotalEnergyJ === 0
+      this.#modelId !== "newtonian" || this.#initialTotalEnergyJ === 0
         ? null
         : Math.abs(
             (diagnostics.totalEnergyJ - this.#initialTotalEnergyJ) /
@@ -198,13 +219,19 @@ export class GravityPrototypeRuntime {
     const stopEvent = this.#engine.stopEvent;
 
     return {
+      modelId: this.#modelId,
+      integratorId: this.#integratorId,
+      firstPostNewtonianDomain:
+        this.#modelId === "first-post-newtonian"
+          ? classifyFirstPostNewtonianDomain(newtonianValidity)
+          : null,
       timeSeconds: this.#engine.state.timeSeconds,
       status: this.#engine.status,
       precisionProfile: this.#precisionProfile,
       timeStepSeconds: this.#engine.timeStepSeconds,
       recommendedTimeStepSeconds: this.#recommendedTimeStepSeconds,
       timeStepBudgetAssessment: this.#timeStepBudgetAssessment,
-      newtonianValidity: this.#engine.newtonianValidity(),
+      newtonianValidity,
       rejectedNewtonianValidity:
         this.#engine.rejectedNewtonianValidity,
       totalEnergyJ: diagnostics.totalEnergyJ,

@@ -1,4 +1,8 @@
-import { SimulationEngine } from "./SimulationEngine";
+type PositionReadableSimulation = Readonly<{
+  bodyCount: number;
+  copyBodyIds: () => readonly string[];
+  copyPositionsTo: (targetPositionsM: Float64Array) => void;
+}>;
 
 export type MutablePosition3 = {
   x: number;
@@ -7,12 +11,12 @@ export type MutablePosition3 = {
 };
 
 export class SimulationReadView {
-  readonly #engine: SimulationEngine;
+  readonly #engine: PositionReadableSimulation;
   readonly #positionsM: Float64Array;
   readonly #bodyIds: readonly string[];
   readonly #bodyIndexById: ReadonlyMap<string, number>;
 
-  constructor(engine: SimulationEngine) {
+  constructor(engine: PositionReadableSimulation) {
     this.#engine = engine;
     this.#bodyIds = engine.copyBodyIds();
     this.#bodyIndexById = new Map(
