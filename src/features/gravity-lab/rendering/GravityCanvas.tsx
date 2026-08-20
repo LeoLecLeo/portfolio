@@ -85,6 +85,7 @@ type GravitySceneProps = Omit<GravityCanvasProps, "onReady"> &
     visualRadiusMode: VisualRadiusMode;
     potentialGridVisible: boolean;
     gravityFieldVisible: boolean;
+    comparisonActive: boolean;
   }>;
 
 type MutableCameraTarget = { x: number; y: number; z: number };
@@ -408,6 +409,7 @@ function GravityScene({
   visualRadiusMode,
   potentialGridVisible,
   gravityFieldVisible,
+  comparisonActive,
 }: GravitySceneProps) {
   const runtime = session.runtime;
   const invalidate = useThree((state) => state.invalidate);
@@ -456,6 +458,49 @@ function GravityScene({
       }),
     [bodies]
   );
+  const comparisonTrajectoryCollector = useMemo(
+    () =>
+      comparisonActive
+        ? new TrajectoryCollector(bodies.map(({ bodyId }) => bodyId))
+        : null,
+    [bodies, comparisonActive]
+  );
+  const comparisonSamplePoints = useMemo(
+    () =>
+      comparisonActive
+        ? bodies.map(() => ({ x: 0, y: 0, z: 0 }))
+        : [],
+    [bodies, comparisonActive]
+  );
+  const comparisonTrajectoryRenderObjects = useMemo(
+    () =>
+      comparisonActive
+        ? bodies.map(() => {
+            const geometry = new BufferGeometry();
+            geometry.setAttribute(
+              "position",
+              new BufferAttribute(
+                new Float32Array(
+                  (TRAJECTORY_MAX_POINTS_PER_BODY - 1) * 2 * 3
+                ),
+                3
+              )
+            );
+            geometry.setDrawRange(0, 0);
+            const material = new LineBasicMaterial({
+              color: "#dbeafe",
+              transparent: true,
+              opacity: 0.38,
+              depthWrite: false,
+            });
+            const line = new LineSegments(geometry, material);
+            line.frustumCulled = false;
+
+            return { geometry, line, material };
+          })
+        : [],
+    [bodies, comparisonActive]
+  );
 
   useEffect(
     () => () => {
@@ -465,6 +510,19 @@ function GravityScene({
       }
     },
     [trajectoryRenderObjects]
+  );
+
+  useEffect(
+    () => () => {
+      for (const {
+        geometry,
+        material,
+      } of comparisonTrajectoryRenderObjects) {
+        geometry.dispose();
+        material.dispose();
+      }
+    },
+    [comparisonTrajectoryRenderObjects]
   );
 
   useEffect(() => {
@@ -483,6 +541,11 @@ function GravityScene({
     for (const { geometry } of trajectoryRenderObjects) {
       geometry.setDrawRange(0, 0);
     }
+    comparisonTrajectoryCollector?.clear();
+
+    for (const { geometry } of comparisonTrajectoryRenderObjects) {
+      geometry.setDrawRange(0, 0);
+    }
 
     invalidate();
   }, [
@@ -491,11 +554,14 @@ function GravityScene({
     trajectoryCollector,
     trajectoryResetRevision,
     trajectoryRenderObjects,
+    comparisonTrajectoryCollector,
+    comparisonTrajectoryRenderObjects,
   ]);
 
   useEffect(() => {
     if (trajectoriesVisible && !previousTrajectoriesVisible.current) {
       trajectoryCollector.startNewSegments();
+      comparisonTrajectoryCollector?.startNewSegments();
     }
 
     previousTrajectoriesVisible.current = trajectoriesVisible;
@@ -517,6 +583,7 @@ function GravityScene({
     trajectoriesVisible,
     trajectoryCollector,
     trajectoryRenderObjects,
+    comparisonTrajectoryCollector,
   ]);
 
   useEffect(() => {
@@ -555,6 +622,35 @@ function GravityScene({
           trajectoryCollector,
           bodyId,
           trajectoryRenderObjects[bodyIndex].geometry
+        );
+      }
+    }
+
+    if (
+      comparisonActive &&
+      trajectoriesVisible &&
+      comparisonTrajectoryCollector !== null &&
+      comparisonTrajectoryCollector.shouldSample(
+        deltaSeconds,
+        runtime.isRunning
+      )
+    ) {
+      for (let bodyIndex = 0; bodyIndex < bodies.length; bodyIndex += 1) {
+        const bodyId = bodies[bodyIndex].bodyId;
+        const point = comparisonSamplePoints[bodyIndex];
+
+        if (
+          point === undefined ||
+          !session.writeNewtonianComparisonScenePosition(bodyId, point)
+        ) {
+          continue;
+        }
+
+        comparisonTrajectoryCollector.append(bodyId, point);
+        updateTrajectoryGeometry(
+          comparisonTrajectoryCollector,
+          bodyId,
+          comparisonTrajectoryRenderObjects[bodyIndex].geometry
         );
       }
     }
@@ -615,6 +711,13 @@ function GravityScene({
         <primitive
           key={`trajectory-${body.bodyId}`}
           object={trajectoryRenderObjects[bodyIndex].line}
+          visible={trajectoriesVisible}
+        />
+      ))}
+      {comparisonTrajectoryRenderObjects.map(({ line }, bodyIndex) => (
+        <primitive
+          key={`newtonian-reference-trajectory-${bodies[bodyIndex].bodyId}`}
+          object={line}
           visible={trajectoriesVisible}
         />
       ))}
@@ -699,6 +802,9 @@ export const GravityCanvas = memo(function GravityCanvas({
   const [gravityFieldVisible, setGravityFieldVisible] = useState(
     GRAVITY_VISUALIZATION_DEFAULTS.gravityFieldVisible
   );
+  const [comparisonActive, setComparisonActive] = useState(
+    session.runtime.comparisonActive
+  );
   const previousSession = useRef(session);
   const selectedBodyExists = session.bodies.some(
     ({ bodyId }) => bodyId === selectedBodyId
@@ -722,7 +828,30 @@ export const GravityCanvas = memo(function GravityCanvas({
         sessionChanged,
       })
     );
+    setComparisonActive(session.runtime.comparisonActive);
   }, [selectedBodyId, session]);
+
+  const comparisonEligible = session.modelId === "first-post-newtonian";
+  const comparisonToggleDisabled = comparisonActive
+    ? session.runtime.status === "running" ||
+      session.runtime.timeSeconds !== 0
+    : !comparisonEligible ||
+      session.runtime.status !== "paused" ||
+      session.runtime.timeSeconds !== 0;
+
+  const toggleComparison = () => {
+    const changed = comparisonActive
+      ? session.runtime.disableSynchronizedComparison()
+      : session.runtime.enableSynchronizedComparison();
+
+    if (!changed) {
+      return;
+    }
+
+    setComparisonActive(session.runtime.comparisonActive);
+    setTrajectoryClearRevision((revision) => revision + 1);
+    onTelemetry(session, session.runtime.telemetry());
+  };
 
   return (
     <div className="min-w-0 space-y-3">
@@ -768,6 +897,7 @@ export const GravityCanvas = memo(function GravityCanvas({
               visualRadiusMode={visualRadiusMode}
               potentialGridVisible={potentialGridVisible}
               gravityFieldVisible={gravityFieldVisible}
+              comparisonActive={comparisonActive}
             />
           </Canvas>
         </div>
@@ -788,6 +918,44 @@ export const GravityCanvas = memo(function GravityCanvas({
           </p>
         </div>
         <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <fieldset className="min-w-0 rounded-lg border border-primary/25 bg-primary/5 p-3 text-sm">
+          <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-primary/80">
+            Comparaison des modèles
+          </legend>
+          <button
+            type="button"
+            aria-pressed={comparisonActive}
+            aria-describedby="gravity-comparison-help"
+            disabled={comparisonToggleDisabled}
+            onClick={toggleComparison}
+            className="w-full rounded-md border border-primary/40 bg-background/35 px-3 py-2 text-sm font-medium text-primary transition-colors hover:border-primary/65 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-40 aria-pressed:bg-primary/15 motion-reduce:transition-none"
+          >
+            Comparer au modèle Newtonien
+          </button>
+          <p
+            id="gravity-comparison-help"
+            className="mt-2 text-xs leading-relaxed text-muted-foreground"
+          >
+            {comparisonEligible
+              ? comparisonActive
+                ? session.runtime.timeSeconds === 0
+                  ? "Comparaison active · les deux branches sont prêtes."
+                  : "Comparaison active · réinitialisez avant de la désactiver."
+                : session.runtime.timeSeconds === 0
+                  ? "Mêmes conditions initiales et RK4 des deux côtés : seule la gravitation diffère."
+                  : "Réinitialisez la session à t = 0 pour activer la comparaison."
+              : "Disponible pour une expérience 1PN compatible."}
+          </p>
+          {comparisonActive ? (
+            <div
+              aria-label="Légende de la comparaison"
+              className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t border-border/45 pt-2 text-xs"
+            >
+              <span className="font-medium text-primary">● 1PN</span>
+              <span className="text-slate-300">— Newtonien (référence)</span>
+            </div>
+          ) : null}
+        </fieldset>
         <fieldset className="min-w-0 rounded-lg border border-border/45 bg-background/25 p-3 text-sm">
           <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Caméra

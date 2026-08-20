@@ -4,10 +4,12 @@ import {
   type AppliedScenario,
 } from "../core/scenario";
 import type {
+  NewtonianDiagnostics,
   SimulationStatus,
   SimulationStopEvent,
 } from "../core/types";
 import type { GravityModelId } from "../physics/gravityModel";
+import type { NewtonianValidityReport } from "../physics/newtonianValidity";
 import {
   FixedStepScheduler,
   type FixedStepSchedulerConfig,
@@ -78,6 +80,18 @@ export class SynchronizedGravityComparisonEngine {
     return this.#newtonian.timeStepSeconds;
   }
 
+  get bodyCount(): number {
+    return this.#firstPostNewtonian.bodyCount;
+  }
+
+  get timeSeconds(): number {
+    return this.#firstPostNewtonian.state.timeSeconds;
+  }
+
+  get rejectedNewtonianValidity(): NewtonianValidityReport | null {
+    return this.#firstPostNewtonian.rejectedNewtonianValidity;
+  }
+
   get stopEvent(): SimulationStopEvent | null {
     return (
       this.#newtonian.stopEvent ??
@@ -116,6 +130,28 @@ export class SynchronizedGravityComparisonEngine {
     this.#newtonian.reset();
     this.#firstPostNewtonian.reset();
     this.#status = "paused";
+  }
+
+  copyBodyIds(): readonly string[] {
+    return this.#firstPostNewtonian.copyBodyIds();
+  }
+
+  copyFirstPostNewtonianPositionsTo(
+    targetPositionsM: Float64Array
+  ): void {
+    this.#firstPostNewtonian.copyPositionsTo(targetPositionsM);
+  }
+
+  copyNewtonianPositionsTo(targetPositionsM: Float64Array): void {
+    this.#newtonian.copyPositionsTo(targetPositionsM);
+  }
+
+  firstPostNewtonianDiagnostics(): NewtonianDiagnostics {
+    return this.#firstPostNewtonian.diagnostics();
+  }
+
+  firstPostNewtonianValidity(): NewtonianValidityReport {
+    return this.#firstPostNewtonian.newtonianValidity();
   }
 
   advanceOneStep(): boolean {
@@ -178,6 +214,7 @@ export class SynchronizedGravityComparisonSession {
   readonly #engine: SynchronizedGravityComparisonEngine;
   readonly #scheduler: FixedStepScheduler;
   #schedulerMessage: string | null = null;
+  #disposed = false;
 
   constructor(request: SynchronizedGravityComparisonRequest) {
     this.#engine = new SynchronizedGravityComparisonEngine(
@@ -190,7 +227,35 @@ export class SynchronizedGravityComparisonSession {
   }
 
   get isRunning(): boolean {
-    return this.#engine.status === "running";
+    return !this.#disposed && this.#engine.status === "running";
+  }
+
+  get isDisposed(): boolean {
+    return this.#disposed;
+  }
+
+  get status(): SimulationStatus {
+    return this.#engine.status;
+  }
+
+  get timeSeconds(): number {
+    return this.#engine.timeSeconds;
+  }
+
+  get timeStepSeconds(): number {
+    return this.#engine.timeStepSeconds;
+  }
+
+  get bodyCount(): number {
+    return this.#engine.bodyCount;
+  }
+
+  get stopEvent(): SimulationStopEvent | null {
+    return this.#engine.stopEvent;
+  }
+
+  get rejectedNewtonianValidity(): NewtonianValidityReport | null {
+    return this.#engine.rejectedNewtonianValidity;
   }
 
   get schedulerMessage(): string | null {
@@ -198,6 +263,10 @@ export class SynchronizedGravityComparisonSession {
   }
 
   resume(): boolean {
+    if (this.#disposed) {
+      return false;
+    }
+
     const started = this.#engine.start();
     if (started) {
       this.#scheduler.rebaseFrameClock();
@@ -207,16 +276,33 @@ export class SynchronizedGravityComparisonSession {
   }
 
   pause(): void {
+    if (this.#disposed) {
+      return;
+    }
+
     this.#engine.pause();
   }
 
   reset(): void {
+    if (this.#disposed) {
+      return;
+    }
+
     this.#engine.reset();
     this.#scheduler.reset();
     this.#schedulerMessage = null;
   }
 
   advanceFrame(realDeltaSeconds: number): SchedulerTickResult {
+    if (this.#disposed) {
+      return {
+        stepsAdvanced: 0,
+        simulatedSecondsAdvanced: 0,
+        stopReason: "engine-not-running",
+        message: null,
+      };
+    }
+
     const result = this.#scheduler.tick(realDeltaSeconds);
     if (result.message !== null) {
       this.#schedulerMessage = result.message;
@@ -226,5 +312,38 @@ export class SynchronizedGravityComparisonSession {
 
   snapshot(): SynchronizedComparisonSnapshot {
     return this.#engine.snapshot();
+  }
+
+  copyBodyIds(): readonly string[] {
+    return this.#engine.copyBodyIds();
+  }
+
+  copyFirstPostNewtonianPositionsTo(
+    targetPositionsM: Float64Array
+  ): void {
+    this.#engine.copyFirstPostNewtonianPositionsTo(targetPositionsM);
+  }
+
+  copyNewtonianPositionsTo(targetPositionsM: Float64Array): void {
+    this.#engine.copyNewtonianPositionsTo(targetPositionsM);
+  }
+
+  firstPostNewtonianDiagnostics(): NewtonianDiagnostics {
+    return this.#engine.firstPostNewtonianDiagnostics();
+  }
+
+  firstPostNewtonianValidity(): NewtonianValidityReport {
+    return this.#engine.firstPostNewtonianValidity();
+  }
+
+  dispose(): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    this.#engine.pause();
+    this.#scheduler.reset();
+    this.#schedulerMessage = null;
+    this.#disposed = true;
   }
 }

@@ -30,6 +30,7 @@ import {
 import { SimulationEngine } from "./SimulationEngine";
 import { Rk4SimulationEngine } from "./Rk4SimulationEngine";
 import { SimulationReadView } from "./SimulationReadView";
+import { SynchronizedGravityComparisonSession } from "./SynchronizedGravityComparison";
 
 export const TELEMETRY_INTERVAL_SECONDS = 0.2;
 
@@ -86,6 +87,11 @@ export class GravityPrototypeRuntime {
   readonly #timeStepBudgetAssessment: TimeStepBudgetAssessment;
   readonly #modelId: GravityModelId;
   readonly #integratorId: GravityIntegratorId;
+  readonly #appliedScenario: AppliedScenario | null;
+  readonly #schedulerConfig: FixedStepSchedulerConfig;
+  #comparison: SynchronizedGravityComparisonSession | null = null;
+  #comparisonPrimaryReadView: SimulationReadView | null = null;
+  #comparisonReferenceReadView: SimulationReadView | null = null;
   #schedulerMessage: string | null = null;
   #disposed = false;
 
@@ -106,10 +112,14 @@ export class GravityPrototypeRuntime {
     this.#modelId = applied
       ? scenario.physics.modelId
       : "newtonian";
+    this.#appliedScenario = applied ? scenario : null;
     this.#integratorId = productionIntegratorForModel(this.#modelId);
     const resolvedSchedulerConfig =
       schedulerConfig ??
       createGenericSchedulerConfig(config.timeStepSeconds);
+    this.#schedulerConfig = Object.freeze({
+      ...resolvedSchedulerConfig,
+    });
 
     this.#engine =
       this.#modelId === "newtonian"
@@ -136,7 +146,23 @@ export class GravityPrototypeRuntime {
   }
 
   get positions(): SimulationReadView {
-    return this.#readView;
+    return this.#comparisonPrimaryReadView ?? this.#readView;
+  }
+
+  get newtonianComparisonPositions(): SimulationReadView | null {
+    return this.#comparisonReferenceReadView;
+  }
+
+  get comparisonActive(): boolean {
+    return this.#comparison !== null;
+  }
+
+  get status(): SimulationStatus {
+    return this.#comparison?.status ?? this.#engine.status;
+  }
+
+  get timeSeconds(): number {
+    return this.#comparison?.timeSeconds ?? this.#engine.state.timeSeconds;
   }
 
   get bodyCount(): number {
@@ -144,7 +170,10 @@ export class GravityPrototypeRuntime {
   }
 
   get isRunning(): boolean {
-    return !this.#disposed && this.#engine.status === "running";
+    return (
+      !this.#disposed &&
+      (this.#comparison?.isRunning ?? this.#engine.status === "running")
+    );
   }
 
   get isDisposed(): boolean {
@@ -154,6 +183,10 @@ export class GravityPrototypeRuntime {
   resume(): boolean {
     if (this.#disposed) {
       return false;
+    }
+
+    if (this.#comparison !== null) {
+      return this.#comparison.resume();
     }
 
     const started = this.#engine.start();
@@ -167,11 +200,23 @@ export class GravityPrototypeRuntime {
   }
 
   pause(): void {
+    if (this.#comparison !== null) {
+      this.#comparison.pause();
+      return;
+    }
+
     this.#engine.pause();
   }
 
   reset(): void {
     if (this.#disposed) {
+      return;
+    }
+
+    if (this.#comparison !== null) {
+      this.#comparison.reset();
+      this.#comparisonPrimaryReadView?.sync();
+      this.#comparisonReferenceReadView?.sync();
       return;
     }
 
@@ -184,6 +229,20 @@ export class GravityPrototypeRuntime {
   advanceFrame(realDeltaSeconds: number): boolean {
     if (this.#disposed || !this.isRunning) {
       return false;
+    }
+
+    if (this.#comparison !== null) {
+      const previousStatus = this.#comparison.status;
+      const result = this.#comparison.advanceFrame(realDeltaSeconds);
+      this.#comparisonPrimaryReadView?.sync();
+      this.#comparisonReferenceReadView?.sync();
+
+      return (
+        previousStatus !== this.#comparison.status ||
+        result.stopReason === "frame-gap" ||
+        result.stopReason === "substep-budget" ||
+        result.stopReason === "engine-stopped"
+      );
     }
 
     const previousStatus = this.#engine.status;
@@ -207,8 +266,13 @@ export class GravityPrototypeRuntime {
   }
 
   telemetry(): PrototypeTelemetry {
-    const diagnostics = this.#engine.diagnostics();
-    const newtonianValidity = this.#engine.newtonianValidity();
+    const comparison = this.#comparison;
+    const diagnostics = comparison
+      ? comparison.firstPostNewtonianDiagnostics()
+      : this.#engine.diagnostics();
+    const newtonianValidity = comparison
+      ? comparison.firstPostNewtonianValidity()
+      : this.#engine.newtonianValidity();
     const relativeEnergyDrift =
       this.#modelId !== "newtonian" || this.#initialTotalEnergyJ === 0
         ? null
@@ -216,7 +280,7 @@ export class GravityPrototypeRuntime {
             (diagnostics.totalEnergyJ - this.#initialTotalEnergyJ) /
               this.#initialTotalEnergyJ
           );
-    const stopEvent = this.#engine.stopEvent;
+    const stopEvent = comparison?.stopEvent ?? this.#engine.stopEvent;
 
     return {
       modelId: this.#modelId,
@@ -225,14 +289,15 @@ export class GravityPrototypeRuntime {
         this.#modelId === "first-post-newtonian"
           ? classifyFirstPostNewtonianDomain(newtonianValidity)
           : null,
-      timeSeconds: this.#engine.state.timeSeconds,
-      status: this.#engine.status,
+      timeSeconds: this.timeSeconds,
+      status: this.status,
       precisionProfile: this.#precisionProfile,
       timeStepSeconds: this.#engine.timeStepSeconds,
       recommendedTimeStepSeconds: this.#recommendedTimeStepSeconds,
       timeStepBudgetAssessment: this.#timeStepBudgetAssessment,
       newtonianValidity,
       rejectedNewtonianValidity:
+        comparison?.rejectedNewtonianValidity ??
         this.#engine.rejectedNewtonianValidity,
       totalEnergyJ: diagnostics.totalEnergyJ,
       relativeEnergyDrift,
@@ -259,8 +324,60 @@ export class GravityPrototypeRuntime {
         stopEvent?.kind === "numerical-error"
           ? (stopEvent.cause ?? null)
           : null,
-      schedulerMessage: this.#schedulerMessage,
+      schedulerMessage:
+        comparison?.schedulerMessage ?? this.#schedulerMessage,
     };
+  }
+
+  enableSynchronizedComparison(): boolean {
+    if (
+      this.#disposed ||
+      this.#comparison !== null ||
+      this.#modelId !== "first-post-newtonian" ||
+      this.#appliedScenario === null ||
+      this.#engine.status !== "paused" ||
+      this.#engine.state.timeSeconds !== 0
+    ) {
+      return false;
+    }
+
+    const comparison = new SynchronizedGravityComparisonSession({
+      appliedScenario: this.#appliedScenario,
+      schedulerConfig: this.#schedulerConfig,
+    });
+    this.#comparison = comparison;
+    this.#comparisonPrimaryReadView = new SimulationReadView({
+      bodyCount: comparison.bodyCount,
+      copyBodyIds: () => comparison.copyBodyIds(),
+      copyPositionsTo: (target) =>
+        comparison.copyFirstPostNewtonianPositionsTo(target),
+    });
+    this.#comparisonReferenceReadView = new SimulationReadView({
+      bodyCount: comparison.bodyCount,
+      copyBodyIds: () => comparison.copyBodyIds(),
+      copyPositionsTo: (target) =>
+        comparison.copyNewtonianPositionsTo(target),
+    });
+    return true;
+  }
+
+  disableSynchronizedComparison(): boolean {
+    const comparison = this.#comparison;
+
+    if (
+      comparison === null ||
+      comparison.isRunning ||
+      comparison.timeSeconds !== 0
+    ) {
+      return false;
+    }
+
+    comparison.dispose();
+    this.#comparison = null;
+    this.#comparisonPrimaryReadView = null;
+    this.#comparisonReferenceReadView = null;
+    this.#readView.sync();
+    return true;
   }
 
   dispose(): void {
@@ -268,6 +385,10 @@ export class GravityPrototypeRuntime {
       return;
     }
 
+    this.#comparison?.dispose();
+    this.#comparison = null;
+    this.#comparisonPrimaryReadView = null;
+    this.#comparisonReferenceReadView = null;
     this.#engine.pause();
     this.#scheduler.reset();
     this.#disposed = true;

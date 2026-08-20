@@ -169,6 +169,29 @@ export class GravityLabSession {
       this.sceneTransform.sceneUnitsPerMeter;
   }
 
+  writeNewtonianComparisonScenePosition(
+    bodyId: string,
+    target: MutablePosition3
+  ): boolean {
+    const positions = this.runtime.newtonianComparisonPositions;
+
+    if (positions === null) {
+      return false;
+    }
+
+    positions.writePositionMById(bodyId, target);
+    target.x =
+      (target.x - this.sceneTransform.originM.x) *
+      this.sceneTransform.sceneUnitsPerMeter;
+    target.y =
+      (target.y - this.sceneTransform.originM.y) *
+      this.sceneTransform.sceneUnitsPerMeter;
+    target.z =
+      (target.z - this.sceneTransform.originM.z) *
+      this.sceneTransform.sceneUnitsPerMeter;
+    return true;
+  }
+
   stop(): void {
     this.runtime.dispose();
   }
