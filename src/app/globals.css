@@ -112,3 +112,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .gravity-lab-scrollbar {
+    scrollbar-color: color-mix(in oklab, var(--muted-foreground) 42%, transparent)
+      transparent;
+    scrollbar-width: thin;
+  }
+
+  .gravity-lab-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .gravity-lab-scrollbar::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--muted-foreground) 38%, transparent);
+    background-clip: padding-box;
+  }
+}

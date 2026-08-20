@@ -44,9 +44,9 @@ export default function GravityLabPage() {
 
         <GravityLabPrototype />
 
-        <section className="mt-10 grid gap-4 text-sm leading-6 text-muted-foreground md:grid-cols-3">
-          <article className="rounded-xl border border-border/80 bg-card/50 p-5">
-            <h2 className="font-semibold text-foreground">
+        <section className="mt-12 grid gap-6 border-t border-border/45 pt-6 text-sm leading-6 text-muted-foreground md:grid-cols-3 md:gap-8">
+          <article className="border-l-2 border-primary/20 pl-4">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground/85">
               Modèle actuellement présenté
             </h2>
             <p className="mt-2">
@@ -54,8 +54,8 @@ export default function GravityLabPage() {
               intégration Velocity Verlet à pas fixe.
             </p>
           </article>
-          <article className="rounded-xl border border-border/80 bg-card/50 p-5">
-            <h2 className="font-semibold text-foreground">
+          <article className="border-l-2 border-border/55 pl-4">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground/85">
               Limites assumées
             </h2>
             <p className="mt-2">
@@ -64,8 +64,8 @@ export default function GravityLabPage() {
               relativistes seront des modules distincts.
             </p>
           </article>
-          <article className="rounded-xl border border-border/80 bg-card/50 p-5">
-            <h2 className="font-semibold text-foreground">
+          <article className="border-l-2 border-border/55 pl-4">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground/85">
               Arrêts scientifiques
             </h2>
             <p className="mt-2">

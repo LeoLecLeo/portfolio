@@ -75,8 +75,11 @@ export function GravityLabWorkspace({
     const mediaQuery = window.matchMedia(WIDE_WORKSPACE_QUERY);
     const synchronizeWithViewport = (matches: boolean) => {
       setIsWide(matches);
-      setLeftOpen(matches);
-      setRightOpen(matches);
+
+      if (!matches) {
+        setLeftOpen(false);
+        setRightOpen(false);
+      }
     };
     const handleViewportChange = (event: MediaQueryListEvent) =>
       synchronizeWithViewport(event.matches);
@@ -160,15 +163,13 @@ export type GravityWorkspaceInspectorProps = Readonly<{
   side: InspectorSide;
   eyebrow: string;
   title: string;
-  compactLabel: string;
-  children: ReactNode;
+  children: ReactNode | (() => ReactNode);
 }>;
 
 export function GravityWorkspaceInspector({
   side,
   eyebrow,
   title,
-  compactLabel,
   children,
 }: GravityWorkspaceInspectorProps) {
   const titleId = useId();
@@ -222,9 +223,24 @@ export function GravityWorkspaceInspector({
           aria-expanded="false"
           aria-controls={panelId}
           onClick={handleOpen}
-          className="max-w-[calc(50vw-1rem)] rounded-full border border-primary/60 bg-card/95 px-3 py-2 text-sm font-semibold text-foreground shadow-xl shadow-black/20 backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 min-[1888px]:max-w-none"
+          className="group w-[min(16rem,calc(50vw-1rem))] rounded-xl border border-border/70 bg-card/98 px-3.5 py-3 text-left shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_12px_36px_-20px_rgba(0,0,0,0.9)] transition-colors hover:border-primary/45 hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none min-[1888px]:w-[17rem]"
         >
-          {compactLabel}
+          <span className="flex min-w-0 items-center justify-between gap-3">
+            <span className="min-w-0">
+              <span className="block truncate text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-primary/80">
+                {eyebrow}
+              </span>
+              <span className="mt-0.5 block truncate text-sm font-semibold text-foreground">
+                {title}
+              </span>
+            </span>
+            <span
+              aria-hidden="true"
+              className="grid size-7 shrink-0 place-items-center rounded-md border border-border/55 bg-secondary/40 text-base text-muted-foreground transition-colors group-hover:border-primary/25 group-hover:text-primary motion-reduce:transition-none"
+            >
+              +
+            </span>
+          </span>
         </button>
       </div>
     );
@@ -235,11 +251,11 @@ export function GravityWorkspaceInspector({
       id={panelId}
       aria-labelledby={titleId}
       onKeyDown={handleKeyDown}
-      className={`fixed inset-x-2 bottom-2 z-50 flex h-[80svh] min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card/95 shadow-2xl shadow-black/30 backdrop-blur sm:inset-x-4 min-[1888px]:inset-y-4 min-[1888px]:h-auto min-[1888px]:w-[22.5rem] min-[1888px]:max-w-[23.75rem] ${placement}`}
+      className={`fixed inset-x-2 bottom-2 z-50 flex h-[80svh] min-w-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-card/98 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_24px_60px_-28px_rgba(0,0,0,0.9)] sm:inset-x-4 min-[1888px]:inset-y-4 min-[1888px]:h-auto min-[1888px]:w-[22.5rem] min-[1888px]:max-w-[23.75rem] ${placement}`}
     >
-      <header className="flex flex-none items-center justify-between gap-3 border-b border-border/80 bg-card px-4 py-3">
+      <header className="flex flex-none items-center justify-between gap-3 border-b border-border/60 bg-background/45 px-4 py-3.5">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-primary/80">
             {eyebrow}
           </p>
           <h3 id={titleId} className="truncate text-base font-semibold">
@@ -251,13 +267,13 @@ export function GravityWorkspaceInspector({
           type="button"
           aria-label={`Fermer ${title}`}
           onClick={handleClose}
-          className="shrink-0 rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          className="shrink-0 rounded-md border border-transparent bg-secondary/55 px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-border/80 hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none"
         >
           Fermer
         </button>
       </header>
-      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-3">
-        {children}
+      <div className="gravity-lab-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-3">
+        {typeof children === "function" ? children() : children}
       </div>
     </aside>
   );

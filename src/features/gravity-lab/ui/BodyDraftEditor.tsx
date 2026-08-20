@@ -1,6 +1,6 @@
 "use client";
 
-import type { Dispatch, ReactNode } from "react";
+import { memo, type Dispatch, type ReactNode } from "react";
 
 import {
   type DraftNumber,
@@ -60,7 +60,7 @@ function NumberEditor<Unit extends string>({
 
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="text-xs font-medium">
+      <label htmlFor={id} className="text-xs font-medium text-foreground/85">
         {label}
       </label>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_8rem]">
@@ -72,13 +72,13 @@ function NumberEditor<Unit extends string>({
           aria-invalid={hasErrors}
           aria-describedby={hasErrors ? errorId : undefined}
           onChange={(event) => onRawText(event.target.value)}
-          className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5 font-mono text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-[invalid=true]:border-destructive"
+          className="min-w-0 rounded-md border border-border/60 bg-background/55 px-2 py-1.5 font-mono text-xs shadow-inner shadow-black/5 transition-colors focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary aria-[invalid=true]:border-destructive motion-reduce:transition-none"
         />
         <select
           aria-label={`Unité — ${label}`}
           value={field.unit}
           onChange={(event) => onUnit(event.target.value as Unit)}
-          className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="min-w-0 rounded-md border border-border/60 bg-secondary/30 px-2 py-1.5 text-xs transition-colors focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary motion-reduce:transition-none"
         >
           {units.map((unit) => (
             <option key={unit} value={unit}>
@@ -112,9 +112,9 @@ function EditorSection({
   return (
     <details
       open={defaultOpen}
-      className="group min-w-0 overflow-hidden rounded-lg border border-border/80 bg-background/30"
+      className="group min-w-0 border-b border-border/50"
     >
-      <summary className="cursor-pointer list-none px-3 py-2.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset [&::-webkit-details-marker]:hidden">
+      <summary className="cursor-pointer list-none px-1 py-2.5 text-sm font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset motion-reduce:transition-none [&::-webkit-details-marker]:hidden">
         <span className="flex items-center justify-between gap-2">
           <span>{title}</span>
           <span
@@ -125,7 +125,7 @@ function EditorSection({
           </span>
         </span>
       </summary>
-      <div className="min-w-0 space-y-3 border-t border-border/70 p-3">
+      <div className="min-w-0 space-y-3 border-t border-border/35 px-1 py-3">
         {children}
       </div>
     </details>
@@ -139,7 +139,7 @@ export type BodyDraftEditorProps = Readonly<{
   dispatch: Dispatch<GravityLabAction>;
 }>;
 
-export function BodyDraftEditor({
+export const BodyDraftEditor = memo(function BodyDraftEditor({
   draft,
   validationReport,
   selectedBodyId,
@@ -196,11 +196,11 @@ export function BodyDraftEditor({
   return (
     <section
       aria-labelledby={`${prefix}-editor-title`}
-      className="mt-4 min-w-0 space-y-2 border-t border-border/80 pt-4"
+      className="mt-4 min-w-0 space-y-1 border-t border-border/55 pt-4"
     >
       <h4
         id={`${prefix}-editor-title`}
-        className="truncate text-sm font-semibold"
+        className="mb-2 truncate text-sm font-semibold tracking-tight text-primary/85"
       >
         Modifier {body.name.trim() || body.id}
       </h4>
@@ -210,7 +210,7 @@ export function BodyDraftEditor({
           <span className="text-xs font-medium">Identifiant technique</span>
           <output
             aria-label="Identifiant technique"
-            className="block break-all rounded-md border border-border bg-muted/40 px-2 py-1.5 font-mono text-xs"
+            className="block break-all rounded-md border border-border/45 bg-muted/25 px-2 py-1.5 font-mono text-xs text-foreground/80"
           >
             {body.id}
           </output>
@@ -235,7 +235,7 @@ export function BodyDraftEditor({
                 name: event.target.value,
               })
             }
-            className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-[invalid=true]:border-destructive"
+            className="w-full rounded-md border border-border/60 bg-background/55 px-2 py-1.5 text-sm shadow-inner shadow-black/5 transition-colors focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary aria-[invalid=true]:border-destructive motion-reduce:transition-none"
           />
           {nameError === null ? null : (
             <p id={`${prefix}-name-error`} className="text-xs text-destructive">
@@ -264,11 +264,11 @@ export function BodyDraftEditor({
                   color: event.target.value,
                 })
               }
-              className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5 font-mono text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-[invalid=true]:border-destructive"
+              className="min-w-0 rounded-md border border-border/60 bg-background/55 px-2 py-1.5 font-mono text-xs shadow-inner shadow-black/5 transition-colors focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary aria-[invalid=true]:border-destructive motion-reduce:transition-none"
             />
             <span
               aria-hidden="true"
-              className="rounded-md border border-border"
+              className="rounded-md border border-border/60 shadow-inner shadow-black/10"
               style={{
                 backgroundColor:
                   colorError === null ? body.color : "transparent",
@@ -310,7 +310,7 @@ export function BodyDraftEditor({
             changeDistanceUnit("physicalRadius", unit)
           }
         />
-        <fieldset className="min-w-0 space-y-2 border-t border-border/70 pt-3">
+        <fieldset className="min-w-0 space-y-2 border-t border-border/45 pt-3">
           <legend className="px-1 text-xs font-semibold">Mobilité</legend>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -384,4 +384,4 @@ export function BodyDraftEditor({
       </EditorSection>
     </section>
   );
-}
+});

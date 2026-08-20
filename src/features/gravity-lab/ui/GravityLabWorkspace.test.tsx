@@ -12,15 +12,20 @@ import {
 
 describe("gravity lab workspace", () => {
   it("starts with compact accessible triggers and keeps the center visible", () => {
+    let renderedInspectorContents = 0;
+    const renderInspectorContent = (label: string) =>
+      function InspectorTestContent() {
+        renderedInspectorContents += 1;
+        return <p>{label}</p>;
+      };
     const markup = renderToStaticMarkup(
       <GravityLabWorkspace>
         <GravityWorkspaceInspector
           side="left"
           eyebrow="Bibliothèque"
           title="Scénarios / presets"
-          compactLabel="Presets"
         >
-          <p>Catalogue</p>
+          {renderInspectorContent("Catalogue")}
         </GravityWorkspaceInspector>
         <GravityWorkspaceMain>
           <p>Scène centrale</p>
@@ -29,9 +34,8 @@ describe("gravity lab workspace", () => {
           side="right"
           eyebrow="Inspecteur"
           title="Corps et paramètres"
-          compactLabel="Corps"
         >
-          <p>Éditeur</p>
+          {renderInspectorContent("Éditeur")}
         </GravityWorkspaceInspector>
         <GravityWorkspaceDiagnostics>
           <p>Diagnostics</p>
@@ -44,12 +48,19 @@ describe("gravity lab workspace", () => {
     expect(markup).toContain('aria-label="Ouvrir Scénarios / presets"');
     expect(markup).toContain('aria-label="Ouvrir Corps et paramètres"');
     expect(markup.match(/aria-expanded="false"/g)).toHaveLength(2);
+    expect(markup).toContain("Bibliothèque");
+    expect(markup).toContain("Scénarios / presets");
+    expect(markup).toContain("Inspecteur");
+    expect(markup).toContain("Corps et paramètres");
     expect(markup).not.toContain("Catalogue");
     expect(markup).not.toContain("Éditeur");
+    expect(renderedInspectorContents).toBe(0);
     expect(markup.match(/class="fixed bottom-2/g)).toHaveLength(2);
     expect(markup).toContain("left-2 sm:left-4");
     expect(markup).toContain("right-2 sm:right-4");
     expect(markup).toContain("min-[1888px]:bottom-auto");
+    expect(markup).toContain("bg-card/98");
+    expect(markup).not.toContain("rounded-full");
     expect(markup).not.toContain("sticky");
     expect(markup).toContain(
       "min-[1888px]:ml-[calc(50%_-_50vw_+_1rem)]"

@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import type {
   GravityPreset,
   GravityPresetCategory,
@@ -53,14 +55,14 @@ export type GravityPresetCatalogProps = Readonly<{
   onLoad: (preset: GravityPreset) => void;
 }>;
 
-export function GravityPresetCatalog({
+export const GravityPresetCatalog = memo(function GravityPresetCatalog({
   presets,
   onLoad,
 }: GravityPresetCatalogProps) {
   return (
     <section aria-labelledby="gravity-preset-catalog-title">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/75">
           Presets scientifiques
         </p>
         <h3
@@ -75,20 +77,20 @@ export function GravityPresetCatalog({
         </p>
       </div>
 
-      <ul className="mt-3 grid min-w-0 grid-cols-1 gap-2">
+      <ul className="mt-3 grid min-w-0 grid-cols-1 gap-1.5">
         {presets.map((preset) => {
           const presentation = presentGravityPreset(preset);
 
           return (
             <li key={preset.id} className="min-w-0">
-              <article className="min-w-0 rounded-lg border border-border bg-secondary/25 p-2.5">
+              <article className="min-w-0 rounded-md border-l-2 border-transparent p-3 transition-colors hover:border-primary/35 hover:bg-secondary/20 motion-reduce:transition-none">
                 <h4 className="break-words text-sm font-semibold">
                   {preset.name}
                 </h4>
                 <p className="mt-1 break-words text-xs leading-snug text-muted-foreground">
                   {preset.shortDescription}
                 </p>
-                <dl className="mt-2 grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
+                <dl className="mt-2 grid grid-cols-1 gap-x-3 gap-y-1 border-y border-border/40 py-2 text-xs sm:grid-cols-2">
                   <div className="min-w-0">
                     <dt className="text-muted-foreground">Catégorie</dt>
                     <dd className="break-words font-medium">
@@ -116,11 +118,11 @@ export function GravityPresetCatalog({
                     </dd>
                   </div>
                 </dl>
-                <details className="mt-2 rounded-md border border-border/70 bg-background/35 text-xs">
-                  <summary className="cursor-pointer rounded-md px-2 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                <details className="mt-2 rounded-md border border-border/45 bg-background/20 text-xs">
+                  <summary className="cursor-pointer rounded-md px-2 py-2 font-medium transition-colors hover:bg-secondary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none">
                     Repères pédagogiques
                   </summary>
-                  <div className="space-y-2.5 border-t border-border/70 px-2 py-2.5">
+                  <div className="space-y-2.5 border-t border-border/45 px-2 py-2.5">
                     <div>
                       <h5 className="font-semibold">Objectif pédagogique</h5>
                       <p className="mt-0.5 break-words leading-relaxed text-muted-foreground">
@@ -172,7 +174,7 @@ export function GravityPresetCatalog({
                 <button
                   type="button"
                   onClick={() => onLoad(preset)}
-                  className="mt-2 w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                  className="mt-2 w-full rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm font-medium text-primary transition-colors hover:border-primary/50 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none"
                 >
                   Charger dans le brouillon
                 </button>
@@ -183,4 +185,4 @@ export function GravityPresetCatalog({
       </ul>
     </section>
   );
-}
+});

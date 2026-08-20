@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import type { GravityLabHelpItem } from "./gravityLabHelp";
 
 export type ContextualHelpProps = Readonly<{
@@ -6,14 +8,14 @@ export type ContextualHelpProps = Readonly<{
   items?: readonly GravityLabHelpItem[];
 }>;
 
-export function ContextualHelp({
+export const ContextualHelp = memo(function ContextualHelp({
   summary,
   description,
   items = [],
 }: ContextualHelpProps) {
   return (
-    <details className="group mt-3 min-w-0 overflow-hidden rounded-lg border border-border/70 bg-background/35 text-xs">
-      <summary className="cursor-pointer list-none rounded-lg px-3 py-2 font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
+    <details className="group mt-3 min-w-0 overflow-hidden rounded-md border border-border/45 bg-background/20 text-xs">
+      <summary className="cursor-pointer list-none rounded-md px-3 py-2 font-medium text-muted-foreground transition-colors hover:bg-secondary/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary motion-reduce:transition-none [&::-webkit-details-marker]:hidden">
         <span className="flex items-center justify-between gap-2">
           <span className="min-w-0 break-words">{summary}</span>
           <span
@@ -24,7 +26,7 @@ export function ContextualHelp({
           </span>
         </span>
       </summary>
-      <div className="border-t border-border/70 px-3 py-3 text-muted-foreground">
+      <div className="border-t border-border/45 px-3 py-3 text-muted-foreground">
         {description === undefined ? null : (
           <p className="break-words leading-relaxed">{description}</p>
         )}
@@ -45,4 +47,4 @@ export function ContextualHelp({
       </div>
     </details>
   );
-}
+});

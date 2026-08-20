@@ -726,7 +726,7 @@ export const GravityCanvas = memo(function GravityCanvas({
 
   return (
     <div className="min-w-0 space-y-3">
-      <div className="relative h-[65svh] min-h-72 max-h-[28rem] w-full overflow-hidden rounded-xl border border-border/80 bg-black/30 shadow-xl shadow-black/20 md:h-[70svh] md:max-h-[36rem]">
+      <div className="relative h-[65svh] min-h-72 max-h-[28rem] w-full overflow-hidden rounded-2xl border border-primary/20 bg-black/50 shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_28px_70px_-36px_rgba(0,0,0,0.95)] ring-1 ring-white/5 md:h-[70svh] md:max-h-[36rem]">
         <div
           role="img"
           aria-label={`Simulation gravitationnelle tridimensionnelle de ${session.bodies.length} corps célestes. Corps sélectionné : ${selectedBodyId}.`}
@@ -774,7 +774,7 @@ export const GravityCanvas = memo(function GravityCanvas({
       </div>
       <section
         aria-labelledby="gravity-view-controls-title"
-        className="min-w-0 overflow-hidden rounded-xl border border-border/80 bg-card/40 p-3"
+        className="min-w-0 overflow-hidden rounded-xl border border-border/55 bg-card/30 p-4 shadow-[0_1px_0_0_rgba(255,255,255,0.025)_inset]"
       >
         <div className="mb-3">
           <p
@@ -788,7 +788,7 @@ export const GravityCanvas = memo(function GravityCanvas({
           </p>
         </div>
         <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <fieldset className="min-w-0 rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
+        <fieldset className="min-w-0 rounded-lg border border-border/45 bg-background/25 p-3 text-sm">
           <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Caméra
           </legend>
@@ -803,7 +803,7 @@ export const GravityCanvas = memo(function GravityCanvas({
                 bodyId: selectedBodyId,
               }))
             }
-            className="rounded-lg border border-border bg-secondary px-3 py-2 text-xs font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-45"
+            className="rounded-md border border-border/60 bg-secondary/45 px-3 py-2 text-xs font-medium transition-colors hover:border-primary/30 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
           >
             Centrer sur le corps
           </button>
@@ -820,7 +820,7 @@ export const GravityCanvas = memo(function GravityCanvas({
                 current === null ? selectedBodyId : null
               )
             }
-            className="rounded-lg border border-border bg-secondary px-3 py-2 text-xs font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-45 aria-pressed:border-primary aria-pressed:bg-primary/10 aria-pressed:text-primary"
+            className="rounded-md border border-border/60 bg-secondary/45 px-3 py-2 text-xs font-medium transition-colors hover:border-primary/30 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-40 aria-pressed:border-primary/60 aria-pressed:bg-primary/12 aria-pressed:text-primary motion-reduce:transition-none"
           >
             Suivre le corps
           </button>
@@ -829,7 +829,7 @@ export const GravityCanvas = memo(function GravityCanvas({
             onClick={() =>
               setCameraFramingRevision((revision) => revision + 1)
             }
-            className="rounded-lg border border-border bg-secondary px-3 py-2 text-xs font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="rounded-md border border-border/60 bg-secondary/45 px-3 py-2 text-xs font-medium transition-colors hover:border-primary/30 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary motion-reduce:transition-none"
           >
             Cadrer le système
           </button>
@@ -838,13 +838,13 @@ export const GravityCanvas = memo(function GravityCanvas({
             onClick={() =>
               setCameraResetRevision((revision) => revision + 1)
             }
-            className="rounded-lg border border-border bg-secondary px-3 py-2 text-xs font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="rounded-md border border-border/60 bg-secondary/45 px-3 py-2 text-xs font-medium transition-colors hover:border-primary/30 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary motion-reduce:transition-none"
           >
             Réinitialiser la caméra
           </button>
           </div>
         </fieldset>
-        <fieldset className="min-w-0 rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
+        <fieldset className="min-w-0 rounded-lg border border-border/45 bg-background/25 p-3 text-sm">
           <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Affichage des astres
           </legend>
@@ -893,7 +893,7 @@ export const GravityCanvas = memo(function GravityCanvas({
           />
         </fieldset>
 
-        <fieldset className="min-w-0 rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
+        <fieldset className="min-w-0 rounded-lg border border-border/45 bg-background/25 p-3 text-sm">
           <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Trajectoires
           </legend>
@@ -906,7 +906,7 @@ export const GravityCanvas = memo(function GravityCanvas({
               )}
               aria-pressed={trajectoriesVisible}
               onClick={() => setTrajectoriesVisible((visible) => !visible)}
-              className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary aria-pressed:bg-primary/10 aria-pressed:text-primary"
+              className="rounded-md border border-border/60 bg-secondary/45 px-3 py-2 text-sm font-medium transition-colors hover:border-primary/30 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary/60 aria-pressed:bg-primary/12 aria-pressed:text-primary motion-reduce:transition-none"
             >
               {trajectoriesVisible ? "Masquer" : "Afficher"}
             </button>
@@ -915,7 +915,7 @@ export const GravityCanvas = memo(function GravityCanvas({
               onClick={() =>
                 setTrajectoryClearRevision((revision) => revision + 1)
               }
-              className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="rounded-md border border-border/60 bg-secondary/45 px-3 py-2 text-sm font-medium transition-colors hover:border-primary/30 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary motion-reduce:transition-none"
             >
               Effacer les trajectoires
             </button>
@@ -926,7 +926,7 @@ export const GravityCanvas = memo(function GravityCanvas({
           />
         </fieldset>
 
-        <fieldset className="min-w-0 rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
+        <fieldset className="min-w-0 rounded-lg border border-border/45 bg-background/25 p-3 text-sm">
           <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Grille gravitationnelle
           </legend>
@@ -938,7 +938,7 @@ export const GravityCanvas = memo(function GravityCanvas({
             )}
             aria-pressed={potentialGridVisible}
             onClick={() => setPotentialGridVisible((visible) => !visible)}
-            className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary aria-pressed:bg-primary/10 aria-pressed:text-primary"
+            className="w-full rounded-md border border-border/60 bg-secondary/45 px-3 py-2 text-sm font-medium transition-colors hover:border-primary/30 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary/60 aria-pressed:bg-primary/12 aria-pressed:text-primary motion-reduce:transition-none"
           >
             {potentialGridVisible ? "Masquer" : "Afficher"}
           </button>
@@ -948,7 +948,7 @@ export const GravityCanvas = memo(function GravityCanvas({
           />
         </fieldset>
 
-        <fieldset className="min-w-0 rounded-lg border border-border/80 bg-background/60 p-3 text-sm">
+        <fieldset className="min-w-0 rounded-lg border border-border/45 bg-background/25 p-3 text-sm">
           <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Champ gravitationnel
           </legend>
@@ -960,7 +960,7 @@ export const GravityCanvas = memo(function GravityCanvas({
             )}
             aria-pressed={gravityFieldVisible}
             onClick={() => setGravityFieldVisible((visible) => !visible)}
-            className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary aria-pressed:bg-primary/10 aria-pressed:text-primary"
+            className="w-full rounded-md border border-border/60 bg-secondary/45 px-3 py-2 text-sm font-medium transition-colors hover:border-primary/30 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-pressed:border-primary/60 aria-pressed:bg-primary/12 aria-pressed:text-primary motion-reduce:transition-none"
           >
             {gravityFieldVisible ? "Masquer" : "Afficher"}
           </button>

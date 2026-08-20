@@ -461,14 +461,14 @@ export function GravityLabPrototype({
       className="min-w-0 space-y-5"
       aria-labelledby="gravity-prototype-title"
     >
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex flex-col gap-4 border-b border-border/45 pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
             Laboratoire newtonien · N-corps 3D
           </p>
           <h2
             id="gravity-prototype-title"
-            className="mt-1 text-2xl font-semibold tracking-tight"
+            className="mt-1 text-2xl font-semibold tracking-[-0.02em]"
           >
             Session de simulation
           </h2>
@@ -481,8 +481,8 @@ export function GravityLabPrototype({
             items={SCENARIO_STATE_HELP}
           />
         </div>
-        <div className="flex flex-wrap gap-2 text-xs">
-          <span className="rounded-full border border-border bg-card px-3 py-1.5 font-medium">
+        <div className="flex flex-wrap gap-2 text-xs sm:justify-end">
+          <span className="rounded-full border border-border/60 bg-card/45 px-3 py-1.5 font-medium text-muted-foreground">
             Scénario simulé · {session.bodies.length} corps
           </span>
           <span
@@ -491,8 +491,8 @@ export function GravityLabPrototype({
             aria-atomic="true"
             className={
               hasUnappliedChanges
-                ? "rounded-full border border-amber-400/50 bg-amber-400/10 px-3 py-1.5 font-medium text-amber-700 dark:text-amber-300"
-                : "rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 font-medium text-emerald-700 dark:text-emerald-300"
+                ? "rounded-full border border-amber-400/35 bg-amber-400/8 px-3 py-1.5 font-medium text-amber-700 dark:text-amber-300"
+                : "rounded-full border border-emerald-500/30 bg-emerald-500/8 px-3 py-1.5 font-medium text-emerald-700 dark:text-emerald-300"
             }
           >
             {hasUnappliedChanges
@@ -504,22 +504,26 @@ export function GravityLabPrototype({
 
       <section
         aria-labelledby="gravity-simulation-controls-title"
-        className="min-w-0 overflow-hidden rounded-xl border border-border/80 bg-card/70 p-4 shadow-sm"
+        className="min-w-0 overflow-hidden rounded-xl border border-border/55 bg-card/45 p-4 shadow-[0_1px_0_0_rgba(255,255,255,0.035)_inset]"
       >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <p
               id="gravity-simulation-controls-title"
-              className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+              className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80"
             >
               Simulation
             </p>
-          <p
+            <p
             role="status"
             aria-live="polite"
             aria-atomic="true"
-              className="mt-1 text-sm text-muted-foreground"
-          >
+              className="mt-1 flex items-center gap-2 text-sm text-muted-foreground"
+            >
+              <span
+                className={`size-2 rounded-full ${mainControlState.mode === "Lecture" ? "bg-emerald-400" : "bg-muted-foreground/55"}`}
+                aria-hidden="true"
+              />
             État courant :{" "}
             <strong className="text-foreground">
               {mainControlState.mode}
@@ -528,7 +532,7 @@ export function GravityLabPrototype({
             telemetry.status === "paused"
               ? null
               : ` · ${statusLabel(telemetry.status)}`}
-          </p>
+            </p>
             <p
               id="apply-availability-message"
               className={
@@ -552,7 +556,7 @@ export function GravityLabPrototype({
                 invokeGravityLabMainControl("resume", mainControlHandlers)
               }
               disabled={mainControlState.resumeDisabled}
-              className="min-w-0 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transition-none"
+              className="min-w-0 rounded-md bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground shadow-[0_8px_22px_-12px_color-mix(in_oklab,var(--primary)_65%,transparent)] transition-[background-color,opacity,transform] hover:bg-primary/90 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-35 disabled:shadow-none motion-reduce:transition-none"
             >
               <span aria-hidden="true">▶ </span>
               Lecture
@@ -564,7 +568,7 @@ export function GravityLabPrototype({
                 invokeGravityLabMainControl("pause", mainControlHandlers)
               }
               disabled={mainControlState.pauseDisabled}
-              className="min-w-0 rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transition-none"
+              className="min-w-0 rounded-md border border-border/65 bg-secondary/55 px-3.5 py-2 text-sm font-medium transition-colors hover:border-primary/30 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-35 motion-reduce:transition-none"
             >
               <span aria-hidden="true">■ </span>
               Stop
@@ -576,7 +580,7 @@ export function GravityLabPrototype({
                 invokeGravityLabMainControl("apply", mainControlHandlers)
               }
               disabled={mainControlState.applyDisabled}
-              className="col-span-2 min-w-0 break-words rounded-lg border border-primary bg-background px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45 sm:whitespace-nowrap motion-reduce:transition-none"
+              className="col-span-2 min-w-0 break-words rounded-md border border-primary/55 bg-primary/5 px-3 py-2 text-sm font-semibold text-primary transition-colors hover:border-primary/80 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:border-border/45 disabled:bg-transparent disabled:text-muted-foreground disabled:opacity-50 sm:whitespace-nowrap motion-reduce:transition-none"
             >
               Appliquer et réinitialiser
             </button>
@@ -584,7 +588,7 @@ export function GravityLabPrototype({
               type="button"
               aria-label="Réinitialiser l’état physique du scénario appliqué"
               onClick={reset}
-              className="col-span-2 min-w-0 rounded-lg border border-border bg-transparent px-3 py-2 text-sm font-medium transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:col-span-1 motion-reduce:transition-none"
+              className="col-span-2 min-w-0 rounded-md border border-transparent bg-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-border/60 hover:bg-secondary/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:col-span-1 motion-reduce:transition-none"
             >
               Reset physique
             </button>
@@ -618,19 +622,22 @@ export function GravityLabPrototype({
           side="left"
           eyebrow="Bibliothèque"
           title="Scénarios / presets"
-          compactLabel="Presets"
         >
-          <GravityPresetCatalog
-            presets={GRAVITY_PRESETS}
-            onLoad={loadPresetIntoDraft}
-          />
-          {presetLoadFailure === null ? null : (
-            <p
-              role="alert"
-              className="mt-3 rounded-lg border border-destructive/60 bg-destructive/10 p-3 text-xs text-destructive"
-            >
-              {presetLoadFailure}
-            </p>
+          {() => (
+            <>
+              <GravityPresetCatalog
+                presets={GRAVITY_PRESETS}
+                onLoad={loadPresetIntoDraft}
+              />
+              {presetLoadFailure === null ? null : (
+                <p
+                  role="alert"
+                  className="mt-3 rounded-lg border border-destructive/60 bg-destructive/10 p-3 text-xs text-destructive"
+                >
+                  {presetLoadFailure}
+                </p>
+              )}
+            </>
           )}
         </GravityWorkspaceInspector>
 
@@ -650,9 +657,10 @@ export function GravityLabPrototype({
           side="right"
           eyebrow="Inspecteur"
           title="Corps et paramètres"
-          compactLabel="Corps"
         >
-            <div className="grid min-w-0 grid-cols-2 gap-2 rounded-lg border border-border/70 bg-background/35 p-3 text-xs">
+          {() => (
+            <>
+            <div className="grid min-w-0 grid-cols-2 gap-3 border-b border-border/55 pb-3 text-xs">
               <div className="min-w-0">
                 <span className="block text-muted-foreground">
                   Scénario actif
@@ -687,7 +695,7 @@ export function GravityLabPrototype({
           </div>
           <ul
             aria-label="Corps du brouillon"
-            className="mt-3 max-h-48 space-y-2 overflow-y-auto"
+                    className="gravity-lab-scrollbar mt-3 max-h-48 space-y-1.5 overflow-y-auto pr-1"
           >
             {labState.draft.bodies.map((body) => {
               const selected =
@@ -717,8 +725,8 @@ export function GravityLabPrototype({
                     }
                     className={
                       selected
-                        ? "truncate rounded-lg border border-primary bg-primary/10 px-3 py-2 text-left text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                        : "truncate rounded-lg border border-border bg-secondary/50 px-3 py-2 text-left text-sm hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                        ? "truncate rounded-md border-l-2 border-primary bg-primary/10 px-3 py-2 text-left text-sm font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                        : "truncate rounded-md border-l-2 border-transparent bg-secondary/25 px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary/55 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none"
                     }
                   >
                     {label}
@@ -728,7 +736,7 @@ export function GravityLabPrototype({
                     aria-label={`Supprimer ${label}`}
                     disabled={labState.draft.bodies.length === 1}
                     onClick={() => removeBody(body.id)}
-                    className="rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-md border border-transparent px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-35 motion-reduce:transition-none"
                   >
                     ×
                   </button>
@@ -743,7 +751,7 @@ export function GravityLabPrototype({
               disabled={
                 labState.draft.bodies.length >= MAX_NEWTONIAN_BODIES
               }
-              className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45"
+              className="rounded-md border border-border/60 bg-secondary/45 px-3 py-2 text-sm font-medium transition-colors hover:border-primary/30 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
             >
               Ajouter un corps
             </button>
@@ -751,7 +759,7 @@ export function GravityLabPrototype({
               type="button"
               onClick={cancelDraft}
               disabled={!hasUnappliedChanges}
-              className="rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45"
+              className="rounded-md border border-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-border/60 hover:bg-secondary/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
             >
               Annuler les modifications
             </button>
@@ -800,14 +808,16 @@ export function GravityLabPrototype({
           selectedBodyId={labState.selectedDraftBodyId}
           dispatch={updateDraft}
         />
+            </>
+          )}
         </GravityWorkspaceInspector>
 
         <GravityWorkspaceDiagnostics>
-          <details className="group min-w-0 overflow-hidden rounded-xl border border-border/80 bg-card/70 shadow-lg shadow-black/5">
-            <summary className="cursor-pointer list-none rounded-xl p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
+          <details className="group min-w-0 overflow-hidden rounded-xl border border-border/55 bg-card/35 shadow-[0_1px_0_0_rgba(255,255,255,0.03)_inset]">
+            <summary className="cursor-pointer list-none rounded-xl p-4 transition-colors hover:bg-secondary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary motion-reduce:transition-none sm:px-5 [&::-webkit-details-marker]:hidden">
               <span className="flex items-center justify-between gap-3">
                 <span>
-                  <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">
                     Diagnostics scientifiques
                   </span>
                   <span className="mt-1 block text-sm text-muted-foreground">
@@ -828,14 +838,14 @@ export function GravityLabPrototype({
                 </span>
               </span>
             </summary>
-            <div className="space-y-4 border-t border-border/80 p-4">
+            <div className="space-y-5 border-t border-border/50 p-4 sm:p-5">
         <ContextualHelp
           summary="Comprendre les diagnostics"
           items={SCIENTIFIC_DIAGNOSTIC_HELP}
         />
-        <div className="grid min-w-0 gap-3 md:grid-cols-2">
-          <section className="min-w-0 rounded-lg border border-border/70 bg-background/35 p-3">
-            <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        <div className="grid min-w-0 gap-x-8 gap-y-6 md:grid-cols-2">
+          <section className="min-w-0 border-l-2 border-primary/25 py-0.5 pl-4">
+            <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/75">
               État de la simulation
             </h4>
             <dl className="mt-3 space-y-3 text-sm">
@@ -847,7 +857,7 @@ export function GravityLabPrototype({
               </div>
               <div>
                 <dt className="text-muted-foreground">Temps simulé</dt>
-                <dd className="mt-0.5 break-all font-mono text-xs">
+                <dd className="mt-0.5 break-all font-mono text-[0.8125rem] tabular-nums text-foreground/90">
                   {formatSimulationTime(telemetry.timeSeconds)}
                 </dd>
               </div>
@@ -860,14 +870,14 @@ export function GravityLabPrototype({
             </dl>
           </section>
 
-          <section className="min-w-0 rounded-lg border border-border/70 bg-background/35 p-3">
-            <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <section className="min-w-0 border-l-2 border-chart-2/25 py-0.5 pl-4">
+            <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-chart-2/85">
               Conservation
             </h4>
             <dl className="mt-3 space-y-3 text-sm">
               <div>
                 <dt className="text-muted-foreground">Énergie totale</dt>
-                <dd className="mt-0.5 break-all font-mono text-xs">
+                <dd className="mt-0.5 break-all font-mono text-[0.8125rem] tabular-nums text-foreground/90">
                   {formatScientific(telemetry.totalEnergyJ)} J
                 </dd>
               </div>
@@ -875,7 +885,7 @@ export function GravityLabPrototype({
                 <dt className="text-muted-foreground">
                   Dérive énergétique relative
                 </dt>
-                <dd className="mt-0.5 break-all font-mono text-xs">
+                <dd className="mt-0.5 break-all font-mono text-[0.8125rem] tabular-nums text-foreground/90">
                   {telemetry.relativeEnergyDrift === null
                     ? "indéfinie (E₀ = 0)"
                     : formatScientific(telemetry.relativeEnergyDrift, 3)}
@@ -885,7 +895,7 @@ export function GravityLabPrototype({
                 <dt className="text-muted-foreground">
                   Norme du moment cinétique
                 </dt>
-                <dd className="mt-0.5 break-all font-mono text-xs">
+                <dd className="mt-0.5 break-all font-mono text-[0.8125rem] tabular-nums text-foreground/90">
                   {formatScientific(
                     telemetry.angularMomentumNormKgM2ps
                   )}{" "}
@@ -895,20 +905,20 @@ export function GravityLabPrototype({
             </dl>
           </section>
 
-          <section className="min-w-0 rounded-lg border border-border/70 bg-background/35 p-3">
-            <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <section className="min-w-0 border-l-2 border-chart-3/25 py-0.5 pl-4">
+            <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-chart-3/85">
               Intégration
             </h4>
             <dl className="mt-3 space-y-3 text-sm">
               <div>
                 <dt className="text-muted-foreground">Pas physique fixe</dt>
-                <dd className="mt-0.5 break-all font-mono text-xs">
+                <dd className="mt-0.5 break-all font-mono text-[0.8125rem] tabular-nums text-foreground/90">
                   {formatScientific(telemetry.timeStepSeconds, 6)} s
                 </dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Pas recommandé</dt>
-                <dd className="mt-0.5 break-all font-mono text-xs">
+                <dd className="mt-0.5 break-all font-mono text-[0.8125rem] tabular-nums text-foreground/90">
                   {telemetry.recommendedTimeStepSeconds === null
                     ? telemetry.precisionProfile === null
                       ? "non disponible — configuration directe"
@@ -935,8 +945,8 @@ export function GravityLabPrototype({
             </dl>
           </section>
 
-          <section className="min-w-0 rounded-lg border border-border/70 bg-background/35 p-3">
-            <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <section className="min-w-0 border-l-2 border-primary/20 py-0.5 pl-4">
+            <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/75">
               Validité du modèle
             </h4>
             {telemetry.rejectedNewtonianValidity !== null ? (
@@ -950,7 +960,7 @@ export function GravityLabPrototype({
                 <dt className="text-muted-foreground">
                   β maximal · {responsibilityLabel(validity.beta.responsible)}
                 </dt>
-                <dd className="mt-0.5 break-all font-mono text-xs">
+                <dd className="mt-0.5 break-all font-mono text-[0.8125rem] tabular-nums text-foreground/90">
                   {formatScientific(validity.beta.value, 6)}
                   {" · "}
                   {velocityFrameLabel(validity.beta.responsible.frame)}
@@ -968,7 +978,7 @@ export function GravityLabPrototype({
                         validity.chiPair.responsible
                       )}`}
                 </dt>
-                <dd className="mt-0.5 break-all font-mono text-xs">
+                <dd className="mt-0.5 break-all font-mono text-[0.8125rem] tabular-nums text-foreground/90">
                   {validity.chiPair === null
                     ? "sans paire"
                     : formatScientific(validity.chiPair.value, 6)}
@@ -983,7 +993,7 @@ export function GravityLabPrototype({
                         validity.chiSelf.responsible
                       )}`}
                 </dt>
-                <dd className="mt-0.5 break-all font-mono text-xs">
+                <dd className="mt-0.5 break-all font-mono text-[0.8125rem] tabular-nums text-foreground/90">
                   {validity.chiSelf === null
                     ? unknownSelfCompactness ?? "sans valeur connue"
                     : `${formatScientific(validity.chiSelf.value, 6)}${
@@ -997,7 +1007,7 @@ export function GravityLabPrototype({
                 <dt className="text-muted-foreground">
                   ψ local · {responsibilityLabel(validity.psi.responsible)}
                 </dt>
-                <dd className="mt-0.5 break-all font-mono text-xs">
+                <dd className="mt-0.5 break-all font-mono text-[0.8125rem] tabular-nums text-foreground/90">
                   {formatScientific(validity.psi.value, 6)}
                 </dd>
               </div>
