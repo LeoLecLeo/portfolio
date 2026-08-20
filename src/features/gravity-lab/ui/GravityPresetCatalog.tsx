@@ -28,6 +28,8 @@ const PHYSICAL_DOMAIN_LABELS: Readonly<
   Record<GravityPresetPhysicalDomain, string>
 > = Object.freeze({
   "newtonian-n-body": "Gravitation newtonienne N-corps",
+  "first-post-newtonian-weak-field":
+    "Relativité 1PN · champ faible",
 });
 
 export type GravityPresetPresentation = Readonly<{

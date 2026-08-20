@@ -61,6 +61,12 @@ describe("preset gravity-field density", () => {
         vectorCount: 3_375,
         vertexCount: 33_750,
       },
+      {
+        id: "sun-mercury-1pn",
+        counts: { x: 15, y: 15, z: 15 },
+        vectorCount: 3_375,
+        vertexCount: 33_750,
+      },
     ]);
 
     for (const result of results) {

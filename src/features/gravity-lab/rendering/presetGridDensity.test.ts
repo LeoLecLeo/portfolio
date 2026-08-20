@@ -103,6 +103,19 @@ describe("preset gravity-grid density", () => {
             "z": 15,
           },
         },
+        {
+          "geometry": {
+            "lineCount": 945,
+            "segmentCount": 30240,
+            "vertexCount": 60480,
+          },
+          "id": "sun-mercury-1pn",
+          "lineCounts": {
+            "x": 24,
+            "y": 15,
+            "z": 15,
+          },
+        },
       ]
     `);
   });

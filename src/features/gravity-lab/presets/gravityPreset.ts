@@ -15,7 +15,9 @@ export type GravityPresetEducationalLevel =
   | "intermediate"
   | "advanced";
 
-export type GravityPresetPhysicalDomain = "newtonian-n-body";
+export type GravityPresetPhysicalDomain =
+  | "newtonian-n-body"
+  | "first-post-newtonian-weak-field";
 
 export type GravityPresetPedagogy = Readonly<{
   learningObjective: string;

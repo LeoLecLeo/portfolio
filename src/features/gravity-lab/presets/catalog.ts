@@ -1,6 +1,7 @@
 import { CIRCULAR_TWO_BODY_PRESET } from "./circularTwoBody";
 import { HYPERBOLIC_FLYBY_PRESET } from "./hyperbolicFlyby";
 import { INCLINED_BINARY_PRESET } from "./inclinedBinary";
+import { SUN_MERCURY_1PN_PRESET } from "./sunMercury1pn";
 import {
   isValidPresetCadencePreference,
   type GravityPreset,
@@ -40,6 +41,7 @@ export const GRAVITY_PRESETS = createGravityPresetCatalog([
   CIRCULAR_TWO_BODY_PRESET,
   STAR_PLANET_PRESET,
   HYPERBOLIC_FLYBY_PRESET,
+  SUN_MERCURY_1PN_PRESET,
 ]);
 
 const PRESET_BY_ID = new Map(

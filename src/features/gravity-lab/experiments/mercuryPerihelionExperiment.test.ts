@@ -2,13 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import {
   MERCURY_ANALYTIC_1PN_ADVANCE_RADIANS_PER_ORBIT,
+  MERCURY_VALIDATED_INTERACTIVE_TIME_STEP_SECONDS,
   createMercuryValidationInitialState,
   runMercuryPerihelionComparison,
 } from "./mercuryPerihelionExperiment";
 
 describe("isolated Sun-Mercury 1PN validation", () => {
   it("separates relativistic perihelion advance from the Newtonian RK4 control", () => {
-    const comparison = runMercuryPerihelionComparison(3_600, 12);
+    const comparison = runMercuryPerihelionComparison(
+      MERCURY_VALIDATED_INTERACTIVE_TIME_STEP_SECONDS,
+      12
+    );
 
     expect(
       Math.abs(comparison.newtonian.measurement.radiansPerOrbit)
@@ -34,7 +38,11 @@ describe("isolated Sun-Mercury 1PN validation", () => {
   });
 
   it("converges across dt, dt/2, and dt/4 without changing the physical reference", () => {
-    const comparisons = [7_200, 3_600, 1_800].map((timeStepSeconds) =>
+    const comparisons = [
+      MERCURY_VALIDATED_INTERACTIVE_TIME_STEP_SECONDS * 2,
+      MERCURY_VALIDATED_INTERACTIVE_TIME_STEP_SECONDS,
+      MERCURY_VALIDATED_INTERACTIVE_TIME_STEP_SECONDS / 2,
+    ].map((timeStepSeconds) =>
       runMercuryPerihelionComparison(timeStepSeconds, 12)
     );
     const measuredDifferentialAdvances = [

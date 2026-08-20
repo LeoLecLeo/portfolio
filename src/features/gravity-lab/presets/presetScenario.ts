@@ -12,6 +12,7 @@ import { compileScenarioDraft } from "../core/scenarioCompiler";
 import type { CelestialBodyDefinition } from "../core/types";
 import { vector3, type Vector3 } from "../core/vector3";
 import type { PrecisionProfile } from "../physics/timeStepRecommendation";
+import type { GravityModelId } from "../physics/gravityModel";
 
 type BarycentricBodyMetadata = Readonly<{
   id: string;
@@ -123,7 +124,8 @@ export function compilePresetScenario(
   bodies: readonly CelestialBodyDefinition[],
   colors: readonly string[],
   precisionProfile: PrecisionProfile,
-  maximumTimeStepSeconds: number
+  maximumTimeStepSeconds: number,
+  modelId: GravityModelId = "newtonian"
 ): AppliedScenario {
   if (colors.length !== bodies.length) {
     throw new RangeError(
@@ -132,7 +134,7 @@ export function compilePresetScenario(
   }
 
   const draft: ScenarioDraft = {
-    modelId: "newtonian",
+    modelId,
     bodies: bodies.map((body, bodyIndex) =>
       bodyToSiDraft(body, colors[bodyIndex])
     ),

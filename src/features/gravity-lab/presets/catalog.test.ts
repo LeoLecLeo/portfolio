@@ -21,6 +21,10 @@ import {
   STANDARD_ORBITAL_PRESET_PREFERRED_CADENCE,
 } from "./presetSchedulerPolicies";
 import { STAR_PLANET_PRESET } from "./starPlanet";
+import {
+  SUN_MERCURY_1PN_PRESET,
+  SUN_MERCURY_1PN_PRESET_ID,
+} from "./sunMercury1pn";
 
 describe("gravity preset catalog", () => {
   it("is immutable and contains no duplicate identifier", () => {
@@ -40,6 +44,9 @@ describe("gravity preset catalog", () => {
   it("finds a preset by stable identifier and returns null for an unknown one", () => {
     expect(findGravityPresetById(INCLINED_BINARY_PRESET_ID)).toBe(
       INCLINED_BINARY_PRESET
+    );
+    expect(findGravityPresetById(SUN_MERCURY_1PN_PRESET_ID)).toBe(
+      SUN_MERCURY_1PN_PRESET
     );
     expect(findGravityPresetById("unknown-preset")).toBeNull();
   });
@@ -67,10 +74,22 @@ describe("gravity preset catalog", () => {
       ).toBe(first.physics.bodies.length);
       expect(isAppliedScenario(first)).toBe(true);
       expect(isAppliedScenario(second)).toBe(true);
-      expect(first.physics.modelId).toBe("newtonian");
-      expect(second.physics.modelId).toBe("newtonian");
+      expect(first.physics.modelId).toBe(second.physics.modelId);
       expect(Object.isFrozen(first)).toBe(true);
       expect(Object.isFrozen(second)).toBe(true);
+    }
+  });
+
+  it("keeps every pre-existing preset Newtonian", () => {
+    for (const preset of [
+      INCLINED_BINARY_PRESET,
+      CIRCULAR_TWO_BODY_PRESET,
+      STAR_PLANET_PRESET,
+      HYPERBOLIC_FLYBY_PRESET,
+    ]) {
+      expect(preset.createScenario().physics.modelId).toBe(
+        "newtonian"
+      );
     }
   });
 
@@ -137,6 +156,9 @@ describe("gravity preset catalog", () => {
     expect(
       HYPERBOLIC_FLYBY_PRESET.preferredSimulatedSecondsPerRealSecond
     ).toBe(HYPERBOLIC_FLYBY_PREFERRED_CADENCE);
+    expect(
+      SUN_MERCURY_1PN_PRESET.preferredSimulatedSecondsPerRealSecond
+    ).toBeNull();
   });
 
   it("rejects a forged catalogue preset without a valid cadence preference", () => {
