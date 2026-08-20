@@ -27,5 +27,6 @@ describe("GravityLabPrototype SSR controls", () => {
     ).not.toContain("disabled");
     expect(markup).toContain("État courant :");
     expect(markup).toContain(">Pause</strong>");
+    expect(markup).toMatch(/Newtonien[^<]*Velocity Verlet/);
   });
 });

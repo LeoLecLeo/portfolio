@@ -132,6 +132,7 @@ export function compilePresetScenario(
   }
 
   const draft: ScenarioDraft = {
+    modelId: "newtonian",
     bodies: bodies.map((body, bodyIndex) =>
       bodyToSiDraft(body, colors[bodyIndex])
     ),

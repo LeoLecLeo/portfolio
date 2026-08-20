@@ -67,6 +67,8 @@ describe("gravity preset catalog", () => {
       ).toBe(first.physics.bodies.length);
       expect(isAppliedScenario(first)).toBe(true);
       expect(isAppliedScenario(second)).toBe(true);
+      expect(first.physics.modelId).toBe("newtonian");
+      expect(second.physics.modelId).toBe("newtonian");
       expect(Object.isFrozen(first)).toBe(true);
       expect(Object.isFrozen(second)).toBe(true);
     }

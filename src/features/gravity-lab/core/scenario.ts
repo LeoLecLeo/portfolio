@@ -467,6 +467,7 @@ export type BodyDraft = Readonly<{
 }>;
 
 export type ScenarioDraft = Readonly<{
+  modelId: GravityModelId;
   bodies: readonly BodyDraft[];
   precisionProfile: PrecisionProfile;
   maximumTimeStep: DraftNumber<TimeUnit> | null;
@@ -911,6 +912,7 @@ export function appliedScenarioToDraft(
   }
 
   return {
+    modelId: scenario.physics.modelId,
     bodies: scenario.physics.bodies.map((body, bodyIndex) => ({
       id: body.id,
       name: body.name,

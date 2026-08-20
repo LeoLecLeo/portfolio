@@ -59,12 +59,12 @@ export const SCIENTIFIC_DIAGNOSTIC_HELP = Object.freeze([
   Object.freeze({
     term: "Énergie totale",
     description:
-      "Somme des énergies cinétiques et potentielles newtoniennes. Avec un corps fixe, une contrainte externe limite son interprétation comme grandeur conservée du système affiché.",
+      "Somme des énergies cinétiques et potentielles newtoniennes. Elle n’est pas utilisée comme invariant de conservation en 1PN, dont l’invariant dédié n’est pas encore spécifié.",
   }),
   Object.freeze({
     term: "Dérive énergétique",
     description:
-      "Écart relatif entre l’énergie courante et l’énergie initiale. Elle sert surtout à surveiller l’erreur numérique accumulée.",
+      "Écart relatif entre l’énergie newtonienne courante et initiale. Elle surveille le chemin Newtonien et reste volontairement indisponible en 1PN.",
   }),
   Object.freeze({
     term: "Moment cinétique",
@@ -74,7 +74,7 @@ export const SCIENTIFIC_DIAGNOSTIC_HELP = Object.freeze([
   Object.freeze({
     term: "Pas physique",
     description:
-      "Durée simulée avancée par chaque sous-pas de l’intégrateur Velocity Verlet.",
+      "Durée simulée avancée par chaque sous-pas de l’intégrateur actif : Velocity Verlet en Newtonien ou RK4 fixe en 1PN.",
   }),
   Object.freeze({
     term: "Pas recommandé",

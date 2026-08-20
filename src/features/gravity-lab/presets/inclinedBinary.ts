@@ -198,6 +198,7 @@ export function createInclinedBinaryDraft(
   const config = createInclinedBinaryConfig(minimumStepsPerPeriod);
 
   return {
+    modelId: "newtonian",
     bodies: config.bodies.map(bodyDefinitionToDraft),
     precisionProfile: INCLINED_BINARY_PRECISION_PROFILE,
     maximumTimeStep: createDraftNumberFromSi(

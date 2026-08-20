@@ -83,6 +83,7 @@ function dynamicDraft(
   overrides: Partial<ScenarioDraft> = {}
 ): ScenarioDraft {
   return {
+    modelId: "newtonian",
     bodies: [body("left", distance("0")), body("right", distance("1e9"))],
     precisionProfile: "balanced",
     maximumTimeStep: null,
@@ -254,6 +255,7 @@ describe("scenario draft compilation", () => {
       physicalRadius: distance("1", "jupiter-radius"),
     });
     const draft: ScenarioDraft = {
+      modelId: "newtonian",
       bodies: [first, second],
       precisionProfile: "balanced",
       maximumTimeStep: time("1", "hour"),
@@ -375,6 +377,7 @@ describe("scenario draft compilation", () => {
 
   it("round-trips any valid applied scenario through an explicit unit policy", () => {
     const initial = compileScenarioDraft({
+      modelId: "newtonian",
       bodies: [
         body("earth", distance("0"), {
           name: "Earth",
@@ -526,6 +529,7 @@ describe("scenario draft compilation", () => {
       TIME_DRAFT_UNIT_CONVERTER
     );
     const withMaximum = compileScenarioDraft({
+      modelId: "newtonian",
       bodies: [body("isolated", distance("0"))],
       precisionProfile: "precise",
       maximumTimeStep: maximum,
@@ -542,6 +546,7 @@ describe("scenario draft compilation", () => {
     }
 
     const withoutMaximum = compileScenarioDraft({
+      modelId: "newtonian",
       bodies: [body("isolated", distance("0"))],
       precisionProfile: "precise",
       maximumTimeStep: null,
@@ -562,6 +567,7 @@ describe("scenario draft compilation", () => {
       body("fixed-right", distance("1e9"), { fixed: true }),
     ];
     const withMaximum = compileScenarioDraft({
+      modelId: "newtonian",
       bodies: fixedBodies,
       precisionProfile: "fast",
       maximumTimeStep: time("2", "hour"),
@@ -585,6 +591,7 @@ describe("scenario draft compilation", () => {
     }
 
     const withoutMaximum = compileScenarioDraft({
+      modelId: "newtonian",
       bodies: fixedBodies,
       precisionProfile: "fast",
       maximumTimeStep: null,

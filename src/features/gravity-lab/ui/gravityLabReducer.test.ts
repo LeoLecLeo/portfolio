@@ -34,6 +34,40 @@ function addBody(state: GravityLabState): GravityLabState {
 }
 
 describe("gravity-lab draft reducer", () => {
+  it("starts Newtonian and keeps a model change confined to the draft", () => {
+    const initial = initialState();
+    const activeSession = initial.activeSession;
+    const appliedScenario = initial.appliedScenario;
+
+    expect(initial.draft.modelId).toBe("newtonian");
+    expect(initial.sessionTelemetry).toMatchObject({
+      modelId: "newtonian",
+      integratorId: "velocity-verlet",
+    });
+
+    const changed = gravityLabReducer(initial, {
+      type: "set-gravity-model",
+      modelId: "first-post-newtonian",
+    });
+
+    expect(changed.draft.modelId).toBe("first-post-newtonian");
+    expect(changed.activeSession).toBe(activeSession);
+    expect(changed.appliedScenario).toBe(appliedScenario);
+    expect(changed.sessionTelemetry).toBe(initial.sessionTelemetry);
+    expect(
+      hasUnappliedScenarioChanges(
+        changed.draft,
+        changed.appliedScenario
+      )
+    ).toBe(true);
+
+    const cancelled = gravityLabReducer(changed, {
+      type: "cancel-draft",
+    });
+    expect(cancelled.draft.modelId).toBe("newtonian");
+    expect(cancelled.activeSession).toBe(activeSession);
+  });
+
   it("distinguishes a synchronized draft from unapplied changes", () => {
     const initial = initialState();
 

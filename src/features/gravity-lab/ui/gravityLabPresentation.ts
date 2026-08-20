@@ -3,6 +3,10 @@ import type {
   ValidationDiagnosticCode,
   ValidationSubject,
 } from "../core/validation";
+import type {
+  GravityIntegratorId,
+  GravityModelId,
+} from "../physics/gravityModel";
 
 const FRENCH_DIAGNOSTIC_MESSAGES = {
   "parse.required": "Une valeur est obligatoire.",
@@ -15,6 +19,8 @@ const FRENCH_DIAGNOSTIC_MESSAGES = {
     "La conversion numérique ne produit pas une valeur finie.",
   "parse.unit-conversion-underflow":
     "La conversion de cette valeur non nulle produit exactement zéro par sous-flux numérique.",
+  "config.gravity-model":
+    "Le modèle gravitationnel sélectionné n’est pas pris en charge.",
   "config.body-count": "Le scénario doit contenir entre 1 et 16 corps.",
   "body.id-required": "Chaque corps doit posséder un identifiant technique.",
   "body.id-duplicate":
@@ -29,6 +35,8 @@ const FRENCH_DIAGNOSTIC_MESSAGES = {
     "La valeur absolue de chaque composante de position ne doit pas dépasser 1e18 m.",
   "body.fixed-velocity":
     "Un corps fixe doit avoir une vitesse initiale exactement nulle.",
+  "body.first-post-newtonian-fixed":
+    "Le modèle 1PN exige que tous les corps soient mobiles.",
   "config.time-step":
     "Le pas de temps doit être fini et strictement positif.",
   "config.encounter-threshold":
@@ -112,6 +120,18 @@ export function diagnosticMessageFr(
     : `Un diagnostic non reconnu a été produit (code : ${diagnostic.code}).`;
 
   return `${message}${subjectDescription(diagnostic.subject)}`;
+}
+
+export function gravityModelLabel(modelId: GravityModelId): string {
+  return modelId === "newtonian" ? "Newtonien" : "Relativité 1PN";
+}
+
+export function gravityIntegratorLabel(
+  integratorId: GravityIntegratorId
+): string {
+  return integratorId === "velocity-verlet"
+    ? "Velocity Verlet"
+    : "RK4 fixe";
 }
 
 export function bodyListLabel(

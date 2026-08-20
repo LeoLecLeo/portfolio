@@ -129,12 +129,127 @@ describe("gravity-lab draft application", () => {
       Object.isFrozen(applied.appliedScenario.presentation.bodies[0])
     ).toBe(true);
     expect(previousSession.runtime.isDisposed).toBe(true);
+    expect(applied.sessionTelemetry).toMatchObject({
+      modelId: "newtonian",
+      integratorId: "velocity-verlet",
+    });
     expect(
       hasUnappliedScenarioChanges(
         applied.draft,
         applied.appliedScenario
       )
     ).toBe(false);
+  });
+
+  it("applies a 1PN draft through a fresh paused RK4 session", () => {
+    const { host, state: initial } = setup();
+    const relativisticDraft = gravityLabReducer(initial, {
+      type: "set-gravity-model",
+      modelId: "first-post-newtonian",
+    });
+
+    expect(relativisticDraft.activeSession).toBe(initial.activeSession);
+    expect(relativisticDraft.sessionTelemetry.modelId).toBe("newtonian");
+
+    const result = applyGravityLabDraft(relativisticDraft, host);
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error("Expected the valid 1PN draft to be applied.");
+    }
+
+    const applied = gravityLabReducer(
+      relativisticDraft,
+      result.action
+    );
+    expect(applied.draft.modelId).toBe("first-post-newtonian");
+    expect(applied.appliedScenario.physics.modelId).toBe(
+      "first-post-newtonian"
+    );
+    expect(applied.activeSession.specification).toEqual({
+      modelId: "first-post-newtonian",
+      integratorId: "fixed-rk4",
+      timeStepSeconds:
+        applied.appliedScenario.numericalPolicy.timeStepSeconds,
+    });
+    expect(applied.sessionTelemetry).toMatchObject({
+      modelId: "first-post-newtonian",
+      integratorId: "fixed-rk4",
+      firstPostNewtonianDomain: "weak-correction",
+      status: "paused",
+      timeSeconds: 0,
+      relativeEnergyDrift: null,
+    });
+    expect(initial.activeSession.runtime.isDisposed).toBe(true);
+  });
+
+  it("refuses a 1PN draft outside the documented domain without replacing the session", () => {
+    const { host, state: initial } = setup();
+    let invalid = gravityLabReducer(initial, {
+      type: "set-gravity-model",
+      modelId: "first-post-newtonian",
+    });
+    invalid = gravityLabReducer(invalid, {
+      type: "edit-number-raw",
+      bodyId: invalid.selectedDraftBodyId,
+      field: "velocity-x",
+      rawText: "1e8",
+    });
+    const before = host.snapshot;
+
+    const result = applyGravityLabDraft(invalid, host);
+
+    expect(result.ok).toBe(false);
+    expect(result.report?.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "domain.beta.limit" }),
+      ])
+    );
+    expect(host.snapshot).toBe(before);
+    expect(initial.activeSession.runtime.isDisposed).toBe(false);
+    expect(invalid.activeSession).toBe(initial.activeSession);
+    expect(invalid.appliedScenario).toBe(initial.appliedScenario);
+  });
+
+  it("refuses fixed bodies in a 1PN draft before session replacement", () => {
+    const { host, state: initial } = setup();
+    const bodyId = initial.selectedDraftBodyId;
+    let invalid = gravityLabReducer(initial, {
+      type: "set-gravity-model",
+      modelId: "first-post-newtonian",
+    });
+
+    for (const field of [
+      "velocity-x",
+      "velocity-y",
+      "velocity-z",
+    ] as const) {
+      invalid = gravityLabReducer(invalid, {
+        type: "edit-number-raw",
+        bodyId,
+        field,
+        rawText: "0",
+      });
+    }
+    invalid = gravityLabReducer(invalid, {
+      type: "set-body-fixed",
+      bodyId,
+      fixed: true,
+    });
+    const before = host.snapshot;
+
+    const result = applyGravityLabDraft(invalid, host);
+
+    expect(result.ok).toBe(false);
+    expect(result.report?.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "body.first-post-newtonian-fixed",
+          path: "/bodies/0/fixed",
+        }),
+      ])
+    );
+    expect(host.snapshot).toBe(before);
+    expect(initial.activeSession.runtime.isDisposed).toBe(false);
   });
 
   it("publishes the replacement as one coherent reducer transition", () => {

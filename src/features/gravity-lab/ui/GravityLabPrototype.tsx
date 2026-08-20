@@ -34,6 +34,7 @@ import {
 } from "./gravityLabReducer";
 import { MAX_NEWTONIAN_BODIES } from "../core/types";
 import { BodyDraftEditor } from "./BodyDraftEditor";
+import { GravityModelSelector } from "./GravityModelSelector";
 import { ContextualHelp } from "./ContextualHelp";
 import {
   applyGravityLabDraft,
@@ -42,6 +43,8 @@ import {
 import {
   bodyListLabel,
   diagnosticMessageFr,
+  gravityIntegratorLabel,
+  gravityModelLabel,
 } from "./gravityLabPresentation";
 import {
   SCENARIO_STATE_HELP,
@@ -148,7 +151,10 @@ function responsibilityLabel(
     : `${responsible.firstBodyId} / ${responsible.secondBodyId}`;
 }
 
-function statusLabel(status: PrototypeTelemetry["status"]): string {
+function statusLabel(
+  status: PrototypeTelemetry["status"],
+  modelId: PrototypeTelemetry["modelId"] = "newtonian"
+): string {
   switch (status) {
     case "running":
       return "En cours";
@@ -159,7 +165,9 @@ function statusLabel(status: PrototypeTelemetry["status"]): string {
     case "unresolved-encounter":
       return "Rencontre non résolue";
     case "newtonian-domain-violation":
-      return "Domaine newtonien dépassé";
+      return modelId === "newtonian"
+        ? "Domaine newtonien dépassé"
+        : "Domaine d’utilisation 1PN dépassé";
     case "error":
       return "Erreur numérique";
   }
@@ -464,7 +472,7 @@ export function GravityLabPrototype({
       <header className="flex flex-col gap-4 border-b border-border/45 pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Laboratoire newtonien · N-corps 3D
+            Laboratoire gravitationnel · N-corps 3D
           </p>
           <h2
             id="gravity-prototype-title"
@@ -484,6 +492,10 @@ export function GravityLabPrototype({
         <div className="flex flex-wrap gap-2 text-xs sm:justify-end">
           <span className="rounded-full border border-border/60 bg-card/45 px-3 py-1.5 font-medium text-muted-foreground">
             Scénario simulé · {session.bodies.length} corps
+          </span>
+          <span className="rounded-full border border-primary/25 bg-primary/5 px-3 py-1.5 font-medium text-primary/90">
+            {gravityModelLabel(telemetry.modelId)} ·{" "}
+            {gravityIntegratorLabel(telemetry.integratorId)}
           </span>
           <span
             id="draft-state-message"
@@ -531,7 +543,7 @@ export function GravityLabPrototype({
             {telemetry.status === "running" ||
             telemetry.status === "paused"
               ? null
-              : ` · ${statusLabel(telemetry.status)}`}
+              : ` · ${statusLabel(telemetry.status, telemetry.modelId)}`}
             </p>
             <p
               id="apply-availability-message"
@@ -668,6 +680,10 @@ export function GravityLabPrototype({
                 <strong className="mt-0.5 block truncate text-foreground">
                   {session.bodies.length} corps simulés
                 </strong>
+                <span className="mt-0.5 block text-[0.6875rem] text-primary/80">
+                  {gravityModelLabel(telemetry.modelId)} ·{" "}
+                  {gravityIntegratorLabel(telemetry.integratorId)}
+                </span>
               </div>
               <div className="min-w-0 text-right">
                 <span className="block text-muted-foreground">
@@ -683,6 +699,14 @@ export function GravityLabPrototype({
                   {hasUnappliedChanges ? "Non appliqué" : "Synchronisé"}
                 </strong>
               </div>
+            </div>
+            <div className="mt-3">
+              <GravityModelSelector
+                modelId={labState.draft.modelId}
+                onChange={(modelId) =>
+                  updateDraft({ type: "set-gravity-model", modelId })
+                }
+              />
             </div>
             <div className="mt-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -821,7 +845,7 @@ export function GravityLabPrototype({
                     Diagnostics scientifiques
                   </span>
                   <span className="mt-1 block text-sm text-muted-foreground">
-                    {statusLabel(telemetry.status)} ·{" "}
+                    {statusLabel(telemetry.status, telemetry.modelId)} ·{" "}
                     {validityLevelLabel(validity.overallLevel)}
                   </span>
                   {notice === null || notice === undefined ? null : (
@@ -852,7 +876,7 @@ export function GravityLabPrototype({
               <div className="flex items-start justify-between gap-4">
                 <dt className="text-muted-foreground">État</dt>
                 <dd className="text-right font-medium">
-                  {statusLabel(telemetry.status)}
+                  {statusLabel(telemetry.status, telemetry.modelId)}
                 </dd>
               </div>
               <div>
@@ -867,6 +891,18 @@ export function GravityLabPrototype({
                   {profileLabel(telemetry.precisionProfile)}
                 </dd>
               </div>
+              <div className="flex items-start justify-between gap-4">
+                <dt className="text-muted-foreground">Modèle</dt>
+                <dd className="text-right font-medium">
+                  {gravityModelLabel(telemetry.modelId)}
+                </dd>
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <dt className="text-muted-foreground">Intégrateur</dt>
+                <dd className="text-right font-medium">
+                  {gravityIntegratorLabel(telemetry.integratorId)}
+                </dd>
+              </div>
             </dl>
           </section>
 
@@ -878,7 +914,9 @@ export function GravityLabPrototype({
               <div>
                 <dt className="text-muted-foreground">Énergie totale</dt>
                 <dd className="mt-0.5 break-all font-mono text-[0.8125rem] tabular-nums text-foreground/90">
-                  {formatScientific(telemetry.totalEnergyJ)} J
+                  {telemetry.modelId === "first-post-newtonian"
+                    ? "non suivie — invariant 1PN non spécifié"
+                    : `${formatScientific(telemetry.totalEnergyJ)} J`}
                 </dd>
               </div>
               <div>
@@ -886,9 +924,11 @@ export function GravityLabPrototype({
                   Dérive énergétique relative
                 </dt>
                 <dd className="mt-0.5 break-all font-mono text-[0.8125rem] tabular-nums text-foreground/90">
-                  {telemetry.relativeEnergyDrift === null
-                    ? "indéfinie (E₀ = 0)"
-                    : formatScientific(telemetry.relativeEnergyDrift, 3)}
+                  {telemetry.modelId === "first-post-newtonian"
+                    ? "non utilisée avec le modèle 1PN"
+                    : telemetry.relativeEnergyDrift === null
+                      ? "indéfinie (E₀ = 0)"
+                      : formatScientific(telemetry.relativeEnergyDrift, 3)}
                 </dd>
               </div>
               <div>

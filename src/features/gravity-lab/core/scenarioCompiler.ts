@@ -26,6 +26,7 @@ import {
   type ScenarioValidationReport,
 } from "./scenario";
 import type { NewtonianValidityReport } from "../physics/newtonianValidity";
+import { isGravityModelId } from "../physics/gravityModel";
 import {
   PRECISION_PROFILE_TARGETS,
   assessTimeStepBudget,
@@ -462,10 +463,40 @@ export function compileScenarioDraft(
           parsingErrorPaths
         );
   const analyzedDraft: ScenarioDraft = {
+    modelId: draft.modelId,
     bodies: analyzedBodies,
     precisionProfile: draft.precisionProfile,
     maximumTimeStep: maximumTimeStep?.field ?? null,
   };
+
+  if (!isGravityModelId(draft.modelId)) {
+    diagnostics.push({
+      code: "config.gravity-model",
+      severity: "error",
+      category: "elementary",
+      path: "/modelId",
+      subject: scenarioSubject(),
+      message: "The selected gravity model is not supported.",
+    });
+  }
+
+  if (draft.modelId === "first-post-newtonian") {
+    for (let bodyIndex = 0; bodyIndex < bodies.length; bodyIndex += 1) {
+      if (!bodies[bodyIndex].fixed) {
+        continue;
+      }
+
+      diagnostics.push({
+        code: "body.first-post-newtonian-fixed",
+        severity: "error",
+        category: "elementary",
+        path: `/bodies/${bodyIndex}/fixed`,
+        subject: bodySubject(bodies[bodyIndex].id, bodyIndex),
+        message:
+          "Validated 1PN sessions require every body to remain dynamically mobile.",
+      });
+    }
+  }
 
   if (!isPrecisionProfile(draft.precisionProfile)) {
     diagnostics.push({
@@ -702,7 +733,7 @@ export function compileScenarioDraft(
   const scenario: AppliedScenario = deepFreeze({
     kind: "gravity-lab-applied-scenario-v1",
     physics: {
-      modelId: "newtonian",
+      modelId: draft.modelId,
       bodies: bodies.map((body) => ({
         ...body,
         initialPositionM: vector3(

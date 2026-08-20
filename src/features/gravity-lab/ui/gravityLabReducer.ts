@@ -23,6 +23,7 @@ import type {
   GravityLabHostSnapshot,
   GravityLabSession,
 } from "../runtime/GravityLabSession";
+import type { GravityModelId } from "../physics/gravityModel";
 
 export const EDITOR_DRAFT_UNIT_POLICY: ScenarioDraftUnitPolicy =
   Object.freeze({
@@ -101,6 +102,10 @@ export type GravityLabAction =
       fixed: boolean;
     }>
   | Readonly<{
+      type: "set-gravity-model";
+      modelId: GravityModelId;
+    }>
+  | Readonly<{
       type: "edit-number-raw";
       bodyId: string;
       field: DraftNumericField;
@@ -157,6 +162,7 @@ export function hasUnappliedScenarioChanges(
   appliedScenario: AppliedScenario
 ): boolean {
   if (
+    draft.modelId !== appliedScenario.physics.modelId ||
     draft.precisionProfile !==
       appliedScenario.numericalPolicy.precisionProfile ||
     draft.bodies.length !== appliedScenario.physics.bodies.length
@@ -596,6 +602,19 @@ export function gravityLabReducer(
             draftPreferredSimulatedSecondsPerRealSecond: null,
           };
     }
+
+    case "set-gravity-model":
+      if (state.draft.modelId === action.modelId) {
+        return state;
+      }
+
+      return {
+        ...state,
+        draft: {
+          ...state.draft,
+          modelId: action.modelId,
+        },
+      };
 
     case "edit-number-raw": {
       const updated = updateBody(state, action.bodyId, (body) =>
