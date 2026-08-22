@@ -1,10 +1,42 @@
 # Handoff — Laboratoire gravitationnel
 
-Dernière mise à jour : 23 juillet 2026.
+Dernier état validé : 22 août 2026, clôture de la phase 3.
 
-Ce document décrit l’état réel du dépôt après les phases 1A et 1B. Il distingue
-les éléments déjà implémentés des orientations validées et des propositions qui
-doivent encore être approuvées.
+Ce document décrit l’état réel du dépôt après la phase 3. Les sections
+détaillant les phases 1 et 2 sont conservées comme historique ; la synthèse
+ci-dessous est la référence pour reprendre le projet.
+
+## 0. État actuel après la phase 3
+
+La V1 newtonienne est un laboratoire public N-corps 3D complet : brouillon et
+scénario appliqué sont séparés, les corps sont éditables de 1 à 16, les presets
+sont chargés transactionnellement et la scène propose OrbitControls, cadrage,
+suivi, trajectoires bornées, rayons visuels, grille de potentiel et vecteurs du
+champ. Le Canvas conserve `frameloop="demand"` et la télémétrie React reste
+publiée à 5 Hz.
+
+La phase 3 ajoute une expérience relativiste scientifiquement bornée :
+
+- le Newtonien de production reste inchangé sur Velocity Verlet à pas fixe ;
+- l’évaluateur EIH N-corps complet fournit les corrections conservatives 1PN
+  en coordonnées harmoniques, en SI et à l’ordre `1/c²` ;
+- les sessions `first-post-newtonian` utilisent RK4 fixe sur l’état complet
+  positions/vitesses ;
+- la comparaison synchronisée fait évoluer Newtonien/RK4 et 1PN/RK4 depuis
+  les mêmes conditions initiales, avec le même pas et le même temps simulé ;
+- le preset public Soleil–Mercure reprend les conditions barycentriques validées
+  en phase 3C et utilise `dt = 3 600 s` ;
+- la précession publique réutilise la détection/interpolation de 3C, attend
+  cinq périhélies par branche et publie principalement `1PN − Newtonien` ;
+- la mesure validée vaut environ `42,982 arcsec/siècle`, pour une référence
+  analytique d’environ `42,9824 arcsec/siècle` ;
+- la référence Mercure disparaît si ses conditions physiques validées changent.
+
+Le mode 1PN reste une approximation de champ faible et de vitesses non
+relativistes, pas la relativité générale complète. Les corps fixes et les états
+hors du domaine produit sont refusés. Les invariants conservatifs 1PN dans la
+convention du moteur sont explicitement reportés : l’interface ne substitue
+donc ni énergie ni moment cinétique newtoniens comme pseudo-invariants 1PN.
 
 ## 1. Objectif général
 
@@ -32,19 +64,20 @@ La route actuelle est :
 /projects/laboratoire-gravitationnel
 ```
 
-Elle présente pour le moment un prototype technique : le système binaire
-incliné de la phase 1.
+Elle présente le laboratoire complet ; le binaire incliné reste le scénario
+initial et plusieurs autres presets, dont Soleil–Mercure 1PN, sont disponibles.
 
-La relativité reste un objectif produit concret, mais sous la forme
-d’expériences dédiées et scientifiquement délimitées. Le projet ne doit jamais
-prétendre résoudre en temps réel un problème N-corps complet en relativité
-générale.
+La première expérience relativiste est maintenant publique sous la forme du
+modèle EIH 1PN et de la précession de Mercure. Elle reste scientifiquement
+délimitée et ne prétend jamais résoudre en temps réel les équations complètes
+d’Einstein.
 
 ## 2. Décisions scientifiques importantes
 
 ### Décisions déjà implémentées
 
-- Le moteur est newtonien, générique, tridimensionnel et limité à 16 corps.
+- Le moteur Newtonien est générique, tridimensionnel et limité à 16 corps ;
+  le chemin EIH 1PN respecte la même limite produit.
 - Les conditions initiales contiennent réellement `x`, `y`, `z`, `vx`, `vy`
   et `vz`.
 - Les calculs internes utilisent les unités SI et des tableaux typés
@@ -54,7 +87,8 @@ générale.
 - La gravitation est calculée paire par paire en `O(N²)`, sans corps central
   privilégié ni branche spéciale pour deux corps.
 - La loi en `1/r²` est utilisée sans adoucissement gravitationnel.
-- L’intégrateur est Velocity Verlet à pas fixe.
+- L’intégrateur Newtonien de production est Velocity Verlet à pas fixe ;
+  le chemin 1PN et les deux branches comparatives utilisent RK4 fixe.
 - Un corps fixe reste immobile, doit avoir une vitesse initiale nulle, mais
   continue d’attirer les autres corps.
 - Une configuration contient entre 1 et 16 corps, avec identifiants uniques,
@@ -305,23 +339,22 @@ Branche :
 feature/gravity-lab
 ```
 
-État vérifié avant la création de ce document :
+État de référence avant les corrections de clôture non commitées :
 
-- `HEAD` : `69061461a858319f47d74804a6649e5d01e0a223` ;
+- `HEAD` : `8c2142f` (`feat: add synchronized newtonian 1pn comparison`) ;
 - `HEAD` identique à `origin/feature/gravity-lab` ;
-- deux commits devant `main`, aucun derrière ;
-- espace de travail propre ;
-- phases 1A et 1B déjà commitées et poussées.
+- les phases 1, 2 et 3E.1–3E.3 sont commitées ;
+- la mesure publique 3E.4 et les corrections de clôture restent volontairement
+  non commitées dans l’espace de travail.
 
-Ce fichier `HANDOFF.md` n’appartient pas à ces deux commits et Codex ne crée
-aucun commit dans cette intervention. Il faudra donc le versionner et le
-pousser explicitement pour le retrouver après un clone sur l’autre ordinateur.
+Les actualisations de clôture de ce fichier ne sont pas commitées par Codex.
+Il faudra donc versionner puis pousser explicitement l’ensemble de la phase
+3E.4 et de sa clôture pour le retrouver après un nouveau clone.
 
 ## 8. Tests et commandes de validation
 
-Le dépôt contient actuellement neuf fichiers de test et 48 cas Vitest. La
-dernière validation complète des phases 1A/1B a réussi les 48 tests, le lint et
-le build.
+La validation de clôture contient 59 fichiers de test et 440 cas Vitest. La
+suite complète, le lint, le build Next.js et `git diff --check` réussissent.
 
 Commandes définies dans `package.json` :
 
@@ -362,7 +395,12 @@ Versions verrouillées principales au moment du handoff :
 Aucun script séparé de typecheck, test DOM, test E2E ou benchmark n’existe
 encore.
 
-## 9. Limites connues
+## 9. Limites connues du snapshot historique 1A/1B
+
+Cette section est conservée pour expliquer les choix ayant conduit aux phases
+suivantes. Les limitations d’interface indiquées ci-dessous ont été levées par
+les phases 2 et 3 ; les limites scientifiques toujours actives figurent dans la
+synthèse de clôture en section 0 et dans `PHASE_3_PLAN.md`.
 
 ### Produit et interface
 
@@ -410,7 +448,7 @@ d’une transformation de scène générique avant l’éditeur public.
 - Le moteur reste sur le thread principal. Aucun Web Worker ne doit être ajouté
   avant un profilage démontrant son utilité.
 
-## 10. Fonctionnalités volontairement reportées
+## 10. Fonctionnalités volontairement reportées dans le snapshot historique
 
 - éditeur complet de corps et cycle brouillon → validation → application ;
 - unités utilisateur et conversions vers le SI canonique ;
@@ -428,7 +466,10 @@ d’une transformation de scène générique avant l’éditeur public.
 - relativité, correction 1PN, Schwarzschild et géodésiques ;
 - liaison définitive depuis la carte du projet du portfolio.
 
-## 11. Feuille de route restante
+## 11. Feuille de route historique des phases 2 et 3
+
+Les phases décrites ci-dessous sont maintenant terminées. Elles restent dans le
+handoff pour conserver la justification des responsabilités et du découpage.
 
 Le plan détaillé et la source de vérité documentaire de la phase 2 sont
 consignés dans [`PHASE_2_PLAN.md`](./PHASE_2_PLAN.md).
@@ -527,7 +568,7 @@ Cette expérience doit rester distincte du moteur N-corps libre. Les expérience
 Schwarzschild, déviation de la lumière, sphère de photons et horizon ne seront
 conçues qu’au moment de leur réalisation effective.
 
-## 12. Prochaine étape recommandée
+## 12. Prochaine étape recommandée au snapshot historique
 
 Commencer uniquement la phase 2A, sans toucher encore au Canvas ni construire
 l’éditeur complet.

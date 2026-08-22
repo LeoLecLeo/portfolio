@@ -55,6 +55,9 @@ export const VISUALIZATION_HELP = Object.freeze({
     "Les flèches donnent la direction du champ gravitationnel newtonien combiné. Leur taille et leur couleur représentent une intensité relative comprimée, pas une valeur absolue à mesurer sur la scène.",
 });
 
+export const MERCURY_PRECESSION_HELP =
+  "Newton et 1PN partent des mêmes conditions initiales et utilisent tous deux RK4. Le résidu Newtonien est soustrait de la mesure 1PN afin d’isoler autant que possible l’effet relativiste.";
+
 export const SCIENTIFIC_DIAGNOSTIC_HELP = Object.freeze([
   Object.freeze({
     term: "Énergie totale",
@@ -69,7 +72,7 @@ export const SCIENTIFIC_DIAGNOSTIC_HELP = Object.freeze([
   Object.freeze({
     term: "Moment cinétique",
     description:
-      "Norme du moment cinétique total. Sa conservation s’interprète pour un système isolé ; un corps fixe impose une contrainte externe.",
+      "En Newtonien, sa norme peut surveiller un système isolé ; un corps fixe impose une contrainte externe. En 1PN, elle n’est pas affichée comme invariant : les invariants conservatifs 1PN n’ont pas encore été spécifiés dans la convention harmonique du moteur.",
   }),
   Object.freeze({
     term: "Pas physique",

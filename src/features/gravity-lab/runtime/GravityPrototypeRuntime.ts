@@ -12,6 +12,11 @@ import {
 import { magnitudeVector3 } from "../core/vector3";
 import type { NewtonianValidityReport } from "../physics/newtonianValidity";
 import {
+  isValidatedSunMercuryScenario,
+  PublicMercuryPrecessionTracker,
+  type PublicMercuryPrecessionMeasurement,
+} from "../experiments/publicMercuryPrecessionMeasurement";
+import {
   classifyFirstPostNewtonianDomain,
   productionIntegratorForModel,
   type FirstPostNewtonianDomain,
@@ -33,6 +38,10 @@ import { SimulationReadView } from "./SimulationReadView";
 import { SynchronizedGravityComparisonSession } from "./SynchronizedGravityComparison";
 
 export const TELEMETRY_INTERVAL_SECONDS = 0.2;
+const UNAVAILABLE_MERCURY_PRECESSION_MEASUREMENT = Object.freeze({
+  kind: "unavailable" as const,
+  reason: "scenario-not-validated" as const,
+});
 
 function createGenericSchedulerConfig(
   timeStepSeconds: number
@@ -92,6 +101,7 @@ export class GravityPrototypeRuntime {
   #comparison: SynchronizedGravityComparisonSession | null = null;
   #comparisonPrimaryReadView: SimulationReadView | null = null;
   #comparisonReferenceReadView: SimulationReadView | null = null;
+  #comparisonMeasurementTracker: PublicMercuryPrecessionTracker | null = null;
   #schedulerMessage: string | null = null;
   #disposed = false;
 
@@ -215,6 +225,7 @@ export class GravityPrototypeRuntime {
 
     if (this.#comparison !== null) {
       this.#comparison.reset();
+      this.#comparisonMeasurementTracker?.reset();
       this.#comparisonPrimaryReadView?.sync();
       this.#comparisonReferenceReadView?.sync();
       return;
@@ -341,11 +352,22 @@ export class GravityPrototypeRuntime {
       return false;
     }
 
+    const measurementTracker = isValidatedSunMercuryScenario(
+      this.#appliedScenario
+    )
+      ? new PublicMercuryPrecessionTracker(this.#appliedScenario)
+      : null;
     const comparison = new SynchronizedGravityComparisonSession({
       appliedScenario: this.#appliedScenario,
       schedulerConfig: this.#schedulerConfig,
+      onSynchronizedStep:
+        measurementTracker === null
+          ? undefined
+          : (...step) =>
+              measurementTracker.observeSynchronizedStep(...step),
     });
     this.#comparison = comparison;
+    this.#comparisonMeasurementTracker = measurementTracker;
     this.#comparisonPrimaryReadView = new SimulationReadView({
       bodyCount: comparison.bodyCount,
       copyBodyIds: () => comparison.copyBodyIds(),
@@ -359,6 +381,17 @@ export class GravityPrototypeRuntime {
         comparison.copyNewtonianPositionsTo(target),
     });
     return true;
+  }
+
+  comparisonPrecessionMeasurement(): PublicMercuryPrecessionMeasurement | null {
+    if (this.#comparison === null) {
+      return null;
+    }
+
+    return (
+      this.#comparisonMeasurementTracker?.snapshot() ??
+      UNAVAILABLE_MERCURY_PRECESSION_MEASUREMENT
+    );
   }
 
   disableSynchronizedComparison(): boolean {
@@ -376,6 +409,7 @@ export class GravityPrototypeRuntime {
     this.#comparison = null;
     this.#comparisonPrimaryReadView = null;
     this.#comparisonReferenceReadView = null;
+    this.#comparisonMeasurementTracker = null;
     this.#readView.sync();
     return true;
   }
@@ -389,6 +423,7 @@ export class GravityPrototypeRuntime {
     this.#comparison = null;
     this.#comparisonPrimaryReadView = null;
     this.#comparisonReferenceReadView = null;
+    this.#comparisonMeasurementTracker = null;
     this.#engine.pause();
     this.#scheduler.reset();
     this.#disposed = true;

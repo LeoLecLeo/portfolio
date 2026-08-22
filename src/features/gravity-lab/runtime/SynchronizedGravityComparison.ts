@@ -33,6 +33,15 @@ export type SynchronizedComparisonSnapshot = Readonly<{
   firstPostNewtonian: ComparisonBranchSnapshot;
 }>;
 
+export type SynchronizedGravityStepObserver = (
+  startTimeSeconds: number,
+  timeStepSeconds: number,
+  newtonianPositionsM: Float64Array,
+  newtonianVelocitiesMps: Float64Array,
+  firstPostNewtonianPositionsM: Float64Array,
+  firstPostNewtonianVelocitiesMps: Float64Array
+) => void;
+
 function snapshotBranch(
   engine: Rk4SimulationEngine
 ): ComparisonBranchSnapshot {
@@ -55,9 +64,13 @@ function snapshotBranch(
 export class SynchronizedGravityComparisonEngine {
   readonly #newtonian: Rk4SimulationEngine;
   readonly #firstPostNewtonian: Rk4SimulationEngine;
+  readonly #stepObserver: SynchronizedGravityStepObserver | null;
   #status: SimulationStatus = "paused";
 
-  constructor(appliedScenario: AppliedScenario) {
+  constructor(
+    appliedScenario: AppliedScenario,
+    stepObserver: SynchronizedGravityStepObserver | null = null
+  ) {
     if (!isAppliedScenario(appliedScenario)) {
       throw new TypeError(
         "A synchronized comparison requires a valid applied scenario."
@@ -70,6 +83,7 @@ export class SynchronizedGravityComparisonEngine {
       config,
       "first-post-newtonian"
     );
+    this.#stepObserver = stepObserver;
   }
 
   get status(): SimulationStatus {
@@ -193,6 +207,15 @@ export class SynchronizedGravityComparisonEngine {
       );
     }
 
+    this.#stepObserver?.(
+      this.#firstPostNewtonian.state.timeSeconds - this.timeStepSeconds,
+      this.timeStepSeconds,
+      this.#newtonian.state.positionsM,
+      this.#newtonian.state.velocitiesMps,
+      this.#firstPostNewtonian.state.positionsM,
+      this.#firstPostNewtonian.state.velocitiesMps
+    );
+
     return true;
   }
 
@@ -208,6 +231,7 @@ export class SynchronizedGravityComparisonEngine {
 export type SynchronizedGravityComparisonRequest = Readonly<{
   appliedScenario: AppliedScenario;
   schedulerConfig: FixedStepSchedulerConfig;
+  onSynchronizedStep?: SynchronizedGravityStepObserver;
 }>;
 
 export class SynchronizedGravityComparisonSession {
@@ -218,7 +242,8 @@ export class SynchronizedGravityComparisonSession {
 
   constructor(request: SynchronizedGravityComparisonRequest) {
     this.#engine = new SynchronizedGravityComparisonEngine(
-      request.appliedScenario
+      request.appliedScenario,
+      request.onSynchronizedStep ?? null
     );
     this.#scheduler = new FixedStepScheduler(
       this.#engine,

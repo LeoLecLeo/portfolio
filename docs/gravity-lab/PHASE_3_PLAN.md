@@ -392,9 +392,9 @@ de diagnostic.
 
 ### 5.3 Invariants conservatifs
 
-L'énergie newtonienne seule n'est pas conservée par EIH 1PN. Les tests 1PN
-doivent implémenter, depuis la même convention de coordonnées, les expressions
-conservées à 1PN pour :
+L'énergie newtonienne seule n'est pas conservée par EIH 1PN. Une future phase
+scientifique dédiée devra d'abord spécifier, depuis la même convention de
+coordonnées, les expressions conservées à 1PN pour :
 
 - énergie totale `E_N + E_1PN/c²` ;
 - quantité de mouvement 1PN ;
@@ -553,8 +553,10 @@ de production.
 
 ### 3C — RK4 fixe et validation scientifique headless
 
-Responsabilités : RK4 phase-space, candidat transactionnel, diagnostics
-conservatifs 1PN, détecteur de périhélie, harness Newtonien/1PN au même pas.
+Responsabilités : RK4 phase-space, candidat transactionnel, report explicite
+des invariants conservatifs 1PN non encore spécifiés, détecteur de périhélie et
+harness Newtonien/1PN au même pas. Aucun diagnostic newtonien n’est utilisé
+comme pseudo-invariant 1PN.
 
 Validation : ordre quatre mesuré, dernier état valide préservé, précession
 Soleil–Mercure convergente et compatible avec la formule analytique, binaire
@@ -603,3 +605,39 @@ régression du laboratoire newtonien et audit final sans problème bloquant.
   convergence en `dt`.
 - Aucun seuil existant n'est modifié par cette phase.
 - Aucun module Schwarzschild, 2PN/2.5PN, spin ou rayonnement n'est créé.
+
+## 10. Résultats de clôture de la phase 3
+
+La chaîne EIH 1PN → RK4 → session → comparaison synchronisée → mesure
+interpolée du périhélie est validée. Pour Soleil–Mercure, avec `dt = 3 600 s`
+et douze périhélies :
+
+- le contrôle Newtonien RK4 vaut `-2,1629e-10 rad/orbite` ;
+- la différence `1PN − Newtonien` vaut `5,01874322e-7 rad/orbite` ;
+- la référence analytique vaut `5,01880466e-7 rad/orbite` ;
+- la mesure correspond à `42,981894 arcsec/siècle`, contre
+  `42,982421 arcsec/siècle` analytiques ;
+- l’erreur relative mesurée est `1,224e-5`.
+
+L’étude `dt`, `dt/2`, `dt/4` confirme la convergence du résultat et la
+diminution du résidu Newtonien. Aucun seuil scientifique n’a été assoupli.
+
+Le benchmark de clôture a été exécuté sous Node.js 24.15.0 sur un AMD Ryzen
+5 3600. Il mesure le chemin de pas complet EIH 1PN + RK4, gardes et commit,
+avec la médiane de cinq passages après 200 pas d’échauffement :
+
+| Corps | Coût par pas | Pas par seconde | Surcoût vs Velocity Verlet |
+| ---: | ---: | ---: | ---: |
+| 2 | `2,44 µs` | `410 183` | `×4,0` |
+| 4 | `11,33 µs` | `88 242` | `×7,4` |
+| 8 | `89,29 µs` | `11 199` | `×16,5` |
+| 16 | `709,36 µs` | `1 410` | `×35,8` |
+
+La croissance `O(N³)` attendue est visible, mais la limite produit de 16 corps
+reste raisonnable et est conservée. Les buffers RK4, EIH et de garde restent
+préalloués sur le chemin nominal ; comparaison et mesure n’effectuent aucun
+travail lorsqu’elles sont inactives ou non applicables.
+
+La phase 3 est terminée après neutralisation, dans l’interface 1PN, de
+l’énergie, de sa dérive et du moment cinétique newtoniens comme invariants de
+conservation. Les invariants conservatifs 1PN restent explicitement reportés.

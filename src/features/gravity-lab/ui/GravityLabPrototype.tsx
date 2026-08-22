@@ -66,6 +66,7 @@ import {
   invokeGravityLabMainControl,
 } from "./gravityLabMainControls";
 import { createGravityLabHostLifecycle } from "./gravityLabLifecycle";
+import { MercuryPrecessionDiagnostics } from "./MercuryPrecessionDiagnostics";
 
 const SECONDS_PER_DAY = 86_400;
 const subscribeToHydration = () => () => {};
@@ -459,6 +460,8 @@ export function GravityLabPrototype({
     telemetry.schedulerMessage;
   const validity =
     telemetry.rejectedNewtonianValidity ?? telemetry.newtonianValidity;
+  const precessionMeasurement =
+    session.runtime.comparisonPrecessionMeasurement();
   const unknownSelfCompactness =
     validity.unknownSelfCompactnessBodyIds.length === 0
       ? null
@@ -936,10 +939,16 @@ export function GravityLabPrototype({
                   Norme du moment cinétique
                 </dt>
                 <dd className="mt-0.5 break-all font-mono text-[0.8125rem] tabular-nums text-foreground/90">
-                  {formatScientific(
-                    telemetry.angularMomentumNormKgM2ps
-                  )}{" "}
-                  kg·m²·s⁻¹
+                  {telemetry.modelId === "first-post-newtonian" ? (
+                    "Non suivi — invariant 1PN non spécifié"
+                  ) : (
+                    <>
+                      {formatScientific(
+                        telemetry.angularMomentumNormKgM2ps
+                      )}{" "}
+                      kg·m²·s⁻¹
+                    </>
+                  )}
                 </dd>
               </div>
             </dl>
@@ -984,6 +993,12 @@ export function GravityLabPrototype({
               ) : null}
             </dl>
           </section>
+
+          {precessionMeasurement === null ? null : (
+            <MercuryPrecessionDiagnostics
+              measurement={precessionMeasurement}
+            />
+          )}
 
           <section className="min-w-0 border-l-2 border-primary/20 py-0.5 pl-4">
             <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/75">

@@ -39,6 +39,7 @@ describe("public synchronized comparison runtime boundary", () => {
 
     expect(runtime.comparisonActive).toBe(false);
     expect(runtime.newtonianComparisonPositions).toBeNull();
+    expect(runtime.comparisonPrecessionMeasurement()).toBeNull();
     expect(runtime.telemetry()).toMatchObject({
       modelId: "first-post-newtonian",
       integratorId: "fixed-rk4",
@@ -52,6 +53,11 @@ describe("public synchronized comparison runtime boundary", () => {
     const bodyId = "mercury";
 
     expect(runtime.enableSynchronizedComparison()).toBe(true);
+    expect(runtime.comparisonPrecessionMeasurement()).toMatchObject({
+      kind: "collecting",
+      firstPostNewtonianEventCount: 0,
+      newtonianEventCount: 0,
+    });
     const primaryInitial = readPosition(runtime, "primary", bodyId);
     const referenceInitial = readPosition(runtime, "reference", bodyId);
     expect(primaryInitial).toEqual(referenceInitial);
@@ -104,8 +110,35 @@ describe("public synchronized comparison runtime boundary", () => {
     expect(runtime.disableSynchronizedComparison()).toBe(true);
     expect(runtime.comparisonActive).toBe(false);
     expect(runtime.newtonianComparisonPositions).toBeNull();
+    expect(runtime.comparisonPrecessionMeasurement()).toBeNull();
     expect(runtime.advanceFrame(1 / 60)).toBe(false);
     expect(runtime.telemetry().timeSeconds).toBe(0);
+  });
+
+  it("clears every detected periapsis on the shared physical reset", () => {
+    const runtime = mercuryRuntime();
+    expect(runtime.enableSynchronizedComparison()).toBe(true);
+    expect(runtime.resume()).toBe(true);
+
+    let frameCount = 0;
+    while (
+      runtime.comparisonPrecessionMeasurement()?.kind !== "ready" &&
+      frameCount < 1_000
+    ) {
+      runtime.advanceFrame(0.25);
+      frameCount += 1;
+    }
+
+    expect(runtime.comparisonPrecessionMeasurement()?.kind).toBe(
+      "ready"
+    );
+    runtime.pause();
+    runtime.reset();
+    expect(runtime.comparisonPrecessionMeasurement()).toMatchObject({
+      kind: "collecting",
+      firstPostNewtonianEventCount: 0,
+      newtonianEventCount: 0,
+    });
   });
 
   it("never enables the RK4 comparison for an ordinary Newtonian session", () => {
