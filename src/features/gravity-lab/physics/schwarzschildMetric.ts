@@ -4,6 +4,7 @@ import {
 } from "../core/units";
 
 export const SCHWARZSCHILD_HORIZON_RADIUS_RATIO = 1;
+export const SCHWARZSCHILD_PHOTON_SPHERE_RADIUS_RATIO = 1.5;
 export const SCHWARZSCHILD_MINIMUM_TIMELIKE_CIRCULAR_RADIUS_RATIO = 1.5;
 export const SCHWARZSCHILD_ISCO_RADIUS_RATIO = 3;
 
@@ -199,6 +200,24 @@ export function schwarzschildProperRadialDistanceFromHorizonM(
 
 export function schwarzschildIscoRadiusM(centralMassKg: number): number {
   return SCHWARZSCHILD_ISCO_RADIUS_RATIO * schwarzschildRadiusM(centralMassKg);
+}
+
+export function schwarzschildPhotonSphereRadiusM(
+  centralMassKg: number
+): number {
+  return (
+    SCHWARZSCHILD_PHOTON_SPHERE_RADIUS_RATIO *
+    schwarzschildRadiusM(centralMassKg)
+  );
+}
+
+/** b_c=3sqrt(3)GM/c²=(3sqrt(3)/2)r_s for rays arriving from infinity. */
+export function schwarzschildCriticalNullImpactParameterM(
+  centralMassKg: number
+): number {
+  return (
+    (3 * Math.sqrt(3) * schwarzschildRadiusM(centralMassKg)) / 2
+  );
 }
 
 /** Exact Schwarzschild-coordinate angular frequency sqrt(GM/r³). */
