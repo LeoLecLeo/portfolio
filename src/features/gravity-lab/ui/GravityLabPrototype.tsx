@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import { GravityCanvas } from "../rendering/GravityCanvas";
+import { SchwarzschildCanvas } from "../rendering/relativity/SchwarzschildCanvas";
 import {
   TELEMETRY_INTERVAL_SECONDS,
   type PrototypeTelemetry,
@@ -666,6 +667,7 @@ export function GravityLabPrototype({
             renderRevision={renderRevision}
             trajectoryResetRevision={trajectoryResetRevision}
           />
+          <SchwarzschildCanvas />
         </GravityWorkspaceMain>
 
         <GravityWorkspaceInspector
