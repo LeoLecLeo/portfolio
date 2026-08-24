@@ -84,9 +84,13 @@ function SchwarzschildOrbitControls() {
 
 function SchwarzschildScene({
   flammVisible,
+  massiveOrbitVisible,
+  lightRaysVisible,
   experiment,
 }: Readonly<{
   flammVisible: boolean;
+  massiveOrbitVisible: boolean;
+  lightRaysVisible: boolean;
   experiment: SchwarzschildVisualizationExperiment;
 }>) {
   const radii = useMemo(
@@ -244,31 +248,49 @@ function SchwarzschildScene({
         <meshBasicMaterial color="#f472b6" transparent opacity={0.9} />
       </mesh>
 
-      <primitive
-        object={resources.trajectoryResource.line}
-        raycast={() => null}
-      />
-      {resources.lightTrajectoryResources.map((resource) => (
+      {massiveOrbitVisible ? (
         <primitive
-          key={resource.id}
-          object={resource.line}
+          object={resources.trajectoryResource.line}
           raycast={() => null}
         />
-      ))}
+      ) : null}
+      {lightRaysVisible
+        ? resources.lightTrajectoryResources.map((resource) => (
+            <primitive
+              key={resource.id}
+              object={resource.line}
+              raycast={() => null}
+            />
+          ))
+        : null}
     </>
   );
 }
 
 export function SchwarzschildCanvas({
   initialSceneVisible = true,
-}: Readonly<{ initialSceneVisible?: boolean }>) {
+  initialFlammVisible = true,
+  initialMassiveOrbitVisible = true,
+  initialLightRaysVisible = true,
+}: Readonly<{
+  initialSceneVisible?: boolean;
+  initialFlammVisible?: boolean;
+  initialMassiveOrbitVisible?: boolean;
+  initialLightRaysVisible?: boolean;
+}>) {
   const [experiment, setExperiment] =
     useState<SchwarzschildVisualizationExperiment | null>(() =>
       initialSceneVisible
         ? createSchwarzschildVisualizationExperiment()
         : null
     );
-  const [flammVisible, setFlammVisible] = useState(true);
+  const [flammVisible, setFlammVisible] = useState(initialFlammVisible);
+  const [massiveOrbitVisible, setMassiveOrbitVisible] = useState(
+    initialMassiveOrbitVisible
+  );
+  const [lightRaysVisible, setLightRaysVisible] = useState(
+    initialLightRaysVisible
+  );
   const sceneVisible = experiment !== null;
   const characteristicRadii = useMemo(
     () =>
@@ -290,7 +312,7 @@ export function SchwarzschildCanvas({
       <div className="flex flex-col gap-3 border-b border-cyan-400/15 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300/80">
-            Géométrie relativiste dédiée
+            Module expérimental indépendant
           </p>
           <h3
             id="schwarzschild-scene-title"
@@ -300,10 +322,11 @@ export function SchwarzschildCanvas({
           </h3>
           <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-300">
             Masse sphérique non rotative · coordonnées extérieures r &gt; rₛ ·
-            particule test sans réaction sur la source.
+            particules et lumière tests sans réaction sur la source. Cette
+            expérience ne modifie pas la session N-corps Newtonienne ou 1PN.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           <button
             type="button"
             aria-expanded={sceneVisible}
@@ -319,20 +342,44 @@ export function SchwarzschildCanvas({
           >
             {sceneVisible ? "Masquer la scène" : "Afficher la scène"}
           </button>
-          <button
-            type="button"
-            aria-pressed={flammVisible}
-            disabled={!sceneVisible}
-            onClick={() => setFlammVisible((visible) => !visible)}
-            className="rounded-md border border-slate-600 bg-slate-900/80 px-3 py-2 text-xs font-medium text-slate-200 transition-colors hover:border-cyan-300/40 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-40 aria-pressed:border-cyan-300/55 aria-pressed:text-cyan-100 motion-reduce:transition-none"
-          >
-            Diagramme de Flamm : {flammVisible ? "affiché" : "masqué"}
-          </button>
         </div>
       </div>
 
       {experiment !== null && characteristicRadii !== null ? (
         <div id="schwarzschild-scene-content">
+          <fieldset className="border-b border-cyan-400/15 bg-slate-950/80 p-4">
+            <legend className="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
+              Couches de la scène
+            </legend>
+            <div className="grid gap-2 min-[420px]:grid-cols-3">
+              <button
+                type="button"
+                aria-pressed={flammVisible}
+                onClick={() => setFlammVisible((visible) => !visible)}
+                className="min-w-0 rounded-md border border-slate-600 bg-slate-900/80 px-3 py-2 text-xs font-medium text-slate-200 transition-colors hover:border-cyan-300/40 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 aria-pressed:border-cyan-300/55 aria-pressed:bg-cyan-300/10 aria-pressed:text-cyan-100 motion-reduce:transition-none"
+              >
+                Flamm · {flammVisible ? "affiché" : "masqué"}
+              </button>
+              <button
+                type="button"
+                aria-pressed={massiveOrbitVisible}
+                onClick={() =>
+                  setMassiveOrbitVisible((visible) => !visible)
+                }
+                className="min-w-0 rounded-md border border-slate-600 bg-slate-900/80 px-3 py-2 text-xs font-medium text-slate-200 transition-colors hover:border-slate-300/50 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200 aria-pressed:border-slate-300/60 aria-pressed:bg-slate-300/10 aria-pressed:text-white motion-reduce:transition-none"
+              >
+                Orbite massive · {massiveOrbitVisible ? "affichée" : "masquée"}
+              </button>
+              <button
+                type="button"
+                aria-pressed={lightRaysVisible}
+                onClick={() => setLightRaysVisible((visible) => !visible)}
+                className="min-w-0 rounded-md border border-slate-600 bg-slate-900/80 px-3 py-2 text-xs font-medium text-slate-200 transition-colors hover:border-amber-300/45 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 aria-pressed:border-amber-300/55 aria-pressed:bg-amber-300/10 aria-pressed:text-amber-100 motion-reduce:transition-none"
+              >
+                Rayons lumineux · {lightRaysVisible ? "affichés" : "masqués"}
+              </button>
+            </div>
+          </fieldset>
           <div
             role="img"
             aria-label="Scène de Schwarzschild montrant l’horizon, la coupe équatoriale de la sphère de photons, l’ISCO, une géodésique massive stable, trois géodésiques lumineuses et un diagramme d’encastrement de Flamm optionnel."
@@ -366,56 +413,94 @@ export function SchwarzschildCanvas({
             >
               <SchwarzschildScene
                 flammVisible={flammVisible}
+                massiveOrbitVisible={massiveOrbitVisible}
+                lightRaysVisible={lightRaysVisible}
                 experiment={experiment}
               />
             </Canvas>
           </div>
 
-          <div className="grid gap-3 border-t border-cyan-400/15 bg-slate-950/75 p-4 text-xs text-slate-300 md:grid-cols-[1.2fr_1fr]">
-            <div className="space-y-2">
-              <p>
-                <strong className="text-slate-100">
-                  Diagramme de Flamm
-                </strong>{" "}
-                — représentation de la géométrie spatiale équatoriale à temps
-                constant. Ce n’est ni la forme complète de l’espace-temps, ni
-                un puits de potentiel.
-              </p>
-              <p className="text-amber-200">
-                Déformation verticale amplifiée ×{amplification.toFixed(2)}
-                pour la lisibilité — géométrie physique et géodésique
-                inchangées.
-              </p>
-              <p>
-                La ligne blanche est une géodésique massive circulaire stable à
-                5 rₛ, calculée par le moteur headless RK4 validé puis projetée
-                sur la tranche affichée.
-              </p>
-              <p>
-                Les trois lignes colorées sont des géodésiques nulles issues du
-                moteur 4C : un rayon éloigné est diffusé, un rayon proche de
-                b_c contourne fortement l’objet, et un rayon sous le seuil est
-                capturé puis arrêté avant l’horizon. Elles ne constituent pas
-                une image complète de lentille gravitationnelle.
-              </p>
-              <div
-                aria-label="Légende des géodésiques lumineuses"
-                className="flex flex-wrap gap-x-4 gap-y-1"
-              >
-                <span className="text-cyan-300">— Lumière diffusée · 1,1 b_c</span>
-                <span className="text-amber-300">— Proche du seuil · 1,001 b_c</span>
-                <span className="text-rose-300">— Lumière capturée · 0,999 b_c</span>
-              </div>
-              <p className="text-slate-400">
-                b_c est un paramètre d’impact critique, pas un rayon
-                concentrique. La sphère de photons à 1,5 rₛ est l’orbite
-                lumineuse circulaire instable de Schwarzschild.
-              </p>
+          <div className="space-y-4 border-t border-cyan-400/15 bg-slate-950/75 p-4 text-xs text-slate-300">
+            <div
+              aria-label="Légende de la scène Schwarzschild"
+              className="grid gap-2 min-[440px]:grid-cols-2 lg:grid-cols-3"
+            >
+              <span className="flex items-center gap-2">
+                <span aria-hidden="true" className="h-0.5 w-5 bg-white" />
+                Orbite massive stable · 5 rₛ
+              </span>
+              <span className="flex items-center gap-2 text-cyan-200">
+                <span aria-hidden="true" className="h-0.5 w-5 bg-cyan-300" />
+                Lumière diffusée · 1,1 b_c
+              </span>
+              <span className="flex items-center gap-2 text-amber-200">
+                <span aria-hidden="true" className="h-0.5 w-5 bg-amber-300" />
+                Proche du seuil · 1,001 b_c
+              </span>
+              <span className="flex items-center gap-2 text-rose-200">
+                <span aria-hidden="true" className="h-0.5 w-5 bg-rose-300" />
+                Lumière capturée · 0,999 b_c
+              </span>
+              <span className="flex items-center gap-2 text-amber-200">
+                <span aria-hidden="true" className="size-2 rounded-full border border-amber-300" />
+                Sphère de photons · 1,5 rₛ
+              </span>
+              <span className="flex items-center gap-2 text-pink-200">
+                <span aria-hidden="true" className="size-2 rounded-full border border-pink-300" />
+                ISCO · 3 rₛ
+              </span>
             </div>
-            <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 font-mono tabular-nums">
+
+            <details className="group rounded-lg border border-cyan-400/15 bg-slate-900/45">
+              <summary className="cursor-pointer list-none px-3 py-2.5 font-semibold text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-300 [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center justify-between gap-3">
+                  Comprendre la scène
+                  <span
+                    aria-hidden="true"
+                    className="text-cyan-300 transition-transform group-open:rotate-45 motion-reduce:transition-none"
+                  >
+                    +
+                  </span>
+                </span>
+              </summary>
+              <div className="grid gap-3 border-t border-cyan-400/15 p-3 leading-relaxed sm:grid-cols-2">
+                <p>
+                  <strong className="text-slate-100">Diagramme de Flamm.</strong>{" "}
+                  Géométrie spatiale équatoriale à temps constant, et non forme
+                  complète de l’espace-temps ni puits de potentiel. Sa hauteur
+                  est amplifiée ×{amplification.toFixed(2)} uniquement pour le
+                  rendu.
+                </p>
+                <p>
+                  <strong className="text-slate-100">Horizon.</strong> Surface à
+                  r = rₛ. Les coordonnées extérieures s’arrêtent avant elle :
+                  aucun franchissement n’est simulé.
+                </p>
+                <p>
+                  <strong className="text-amber-200">Sphère de photons.</strong>{" "}
+                  À 1,5 rₛ, les orbites lumineuses circulaires sont instables ;
+                  elle explique la forte déviation près du seuil critique.
+                </p>
+                <p>
+                  <strong className="text-pink-200">ISCO.</strong> À 3 rₛ, c’est
+                  la limite intérieure de stabilité des orbites circulaires
+                  massives dans Schwarzschild.
+                </p>
+                <p className="sm:col-span-2">
+                  <strong className="text-slate-100">Rayons lumineux.</strong>{" "}
+                  Au-dessus du paramètre critique b_c, ils repartent après une
+                  déviation plus ou moins forte ; sous ce seuil, ils sont
+                  capturés. b_c est un paramètre d’impact, pas un rayon
+                  concentrique. Ces lignes physiques ne constituent pas une
+                  image réaliste de lentille gravitationnelle.
+                </p>
+              </div>
+            </details>
+
+            <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 border-t border-cyan-400/10 pt-3 font-mono tabular-nums sm:max-w-md">
               <dt className="text-slate-400">Horizon</dt>
               <dd>{characteristicRadii.horizonSceneRadius.toFixed(1)} rₛ</dd>
-              <dt className="text-amber-300">Sphère de photons · coupe</dt>
+              <dt className="text-amber-300">Sphère de photons</dt>
               <dd>{characteristicRadii.photonSphereSceneRadius.toFixed(1)} rₛ</dd>
               <dt className="text-pink-300">ISCO</dt>
               <dd>{characteristicRadii.iscoSceneRadius.toFixed(1)} rₛ</dd>
