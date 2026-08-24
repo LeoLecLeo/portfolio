@@ -250,6 +250,36 @@ export function projectSchwarzschildPointToFlammScene(
   return Object.freeze({ x, y, z });
 }
 
+export function projectSchwarzschildTrajectoryToScene(
+  trajectory: readonly SchwarzschildCoordinatePoint[],
+  schwarzschildRadiusMValue: number,
+  policy: SchwarzschildRenderPolicy = DEFAULT_SCHWARZSCHILD_RENDER_POLICY,
+  verticalOffsetScene = 0
+): Float32Array {
+  if (trajectory.length < 2) {
+    throw new RangeError(
+      "A rendered Schwarzschild trajectory requires at least two points."
+    );
+  }
+
+  const positions = new Float32Array(trajectory.length * 3);
+
+  for (const [index, point] of trajectory.entries()) {
+    const projected = projectSchwarzschildPointToFlammScene(
+      point,
+      schwarzschildRadiusMValue,
+      policy,
+      verticalOffsetScene
+    );
+    const offset = index * 3;
+    positions[offset] = projected.x;
+    positions[offset + 1] = projected.y;
+    positions[offset + 2] = projected.z;
+  }
+
+  return positions;
+}
+
 export function createFlammEmbeddingMeshData(
   schwarzschildRadiusMValue: number,
   policy: SchwarzschildRenderPolicy = DEFAULT_SCHWARZSCHILD_RENDER_POLICY

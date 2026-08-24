@@ -22,12 +22,36 @@ import {
   flammEmbeddingHeightM,
   mapFlammHeightToScene,
   projectSchwarzschildCharacteristicRadii,
-  projectSchwarzschildPointToFlammScene,
+  projectSchwarzschildTrajectoryToScene,
 } from "./schwarzschildRenderPolicy";
 
 const SCHWARZSCHILD_CAMERA_POSITION = [11, 7, 12] as const;
 const SCHWARZSCHILD_CAMERA_TARGET = [0, -2.4, 0] as const;
 const GEODESIC_VISUAL_LIFT_SCENE = 0.08;
+
+const LIGHT_TRAJECTORY_STYLE = Object.freeze({
+  scattered: Object.freeze({ color: "#22d3ee", opacity: 0.9 }),
+  "near-critical": Object.freeze({ color: "#fbbf24", opacity: 0.96 }),
+  captured: Object.freeze({ color: "#fb7185", opacity: 0.94 }),
+});
+
+function createTrajectoryLine(
+  positions: Float32Array,
+  color: string,
+  opacity: number
+) {
+  const geometry = new BufferGeometry();
+  geometry.setAttribute("position", new BufferAttribute(positions, 3));
+  const material = new LineBasicMaterial({
+    color,
+    transparent: true,
+    opacity,
+  });
+  const line = new Line(geometry, material);
+  line.frustumCulled = false;
+
+  return { geometry, line, material };
+}
 
 function SchwarzschildOrbitControls() {
   const camera = useThree((state) => state.camera);
@@ -84,46 +108,42 @@ function SchwarzschildScene({
     surfaceGeometry.setIndex(new BufferAttribute(flammMesh.indices, 1));
     surfaceGeometry.computeVertexNormals();
 
-    const trajectoryPositions = new Float32Array(
-      experiment.trajectory.length * 3
-    );
     const verticalTranslation =
       -flammMesh.maximumRenderedEmbeddingHeightScene;
-
-    for (const [index, point] of experiment.trajectory.entries()) {
-      const projected = projectSchwarzschildPointToFlammScene(
-        point,
+    const trajectoryResource = createTrajectoryLine(
+      projectSchwarzschildTrajectoryToScene(
+        experiment.trajectory,
         experiment.schwarzschildRadiusM,
         DEFAULT_SCHWARZSCHILD_RENDER_POLICY,
         verticalTranslation + GEODESIC_VISUAL_LIFT_SCENE
-      );
-      const offset = index * 3;
-      trajectoryPositions[offset] = projected.x;
-      trajectoryPositions[offset + 1] = projected.y;
-      trajectoryPositions[offset + 2] = projected.z;
-    }
+      ),
+      "#f8fafc",
+      0.95
+    );
+    const lightTrajectoryResources = experiment.lightTrajectories.map(
+      (trajectory) => {
+        const style = LIGHT_TRAJECTORY_STYLE[trajectory.id];
 
-    const trajectoryGeometry = new BufferGeometry();
-    trajectoryGeometry.setAttribute(
-      "position",
-      new BufferAttribute(trajectoryPositions, 3)
+        return {
+          id: trajectory.id,
+          ...createTrajectoryLine(
+            projectSchwarzschildTrajectoryToScene(
+              trajectory.trajectory,
+              experiment.schwarzschildRadiusM,
+              DEFAULT_SCHWARZSCHILD_RENDER_POLICY,
+              verticalTranslation + GEODESIC_VISUAL_LIFT_SCENE * 1.75
+            ),
+            style.color,
+            style.opacity
+          ),
+        };
+      }
     );
-    const trajectoryMaterial = new LineBasicMaterial({
-      color: "#f8fafc",
-      transparent: true,
-      opacity: 0.95,
-    });
-    const trajectoryLine = new Line(
-      trajectoryGeometry,
-      trajectoryMaterial
-    );
-    trajectoryLine.frustumCulled = false;
 
     return {
       surfaceGeometry,
-      trajectoryGeometry,
-      trajectoryLine,
-      trajectoryMaterial,
+      trajectoryResource,
+      lightTrajectoryResources,
     };
   }, [experiment, flammMesh]);
   const verticalTranslation =
@@ -140,8 +160,13 @@ function SchwarzschildScene({
   useEffect(
     () => () => {
       resources.surfaceGeometry.dispose();
-      resources.trajectoryGeometry.dispose();
-      resources.trajectoryMaterial.dispose();
+      resources.trajectoryResource.geometry.dispose();
+      resources.trajectoryResource.material.dispose();
+
+      for (const resource of resources.lightTrajectoryResources) {
+        resource.geometry.dispose();
+        resource.material.dispose();
+      }
     },
     [resources]
   );
@@ -219,21 +244,39 @@ function SchwarzschildScene({
         <meshBasicMaterial color="#f472b6" transparent opacity={0.9} />
       </mesh>
 
-      <primitive object={resources.trajectoryLine} raycast={() => null} />
+      <primitive
+        object={resources.trajectoryResource.line}
+        raycast={() => null}
+      />
+      {resources.lightTrajectoryResources.map((resource) => (
+        <primitive
+          key={resource.id}
+          object={resource.line}
+          raycast={() => null}
+        />
+      ))}
     </>
   );
 }
 
-export function SchwarzschildCanvas() {
-  const [sceneVisible, setSceneVisible] = useState(true);
+export function SchwarzschildCanvas({
+  initialSceneVisible = true,
+}: Readonly<{ initialSceneVisible?: boolean }>) {
+  const [experiment, setExperiment] =
+    useState<SchwarzschildVisualizationExperiment | null>(() =>
+      initialSceneVisible
+        ? createSchwarzschildVisualizationExperiment()
+        : null
+    );
   const [flammVisible, setFlammVisible] = useState(true);
-  const experiment = useMemo(
-    () => createSchwarzschildVisualizationExperiment(),
-    []
-  );
+  const sceneVisible = experiment !== null;
   const characteristicRadii = useMemo(
     () =>
-      projectSchwarzschildCharacteristicRadii(experiment.centralMassKg),
+      experiment === null
+        ? null
+        : projectSchwarzschildCharacteristicRadii(
+            experiment.centralMassKg
+          ),
     [experiment]
   );
   const amplification =
@@ -265,7 +308,13 @@ export function SchwarzschildCanvas() {
             type="button"
             aria-expanded={sceneVisible}
             aria-controls="schwarzschild-scene-content"
-            onClick={() => setSceneVisible((visible) => !visible)}
+            onClick={() =>
+              setExperiment((current) =>
+                current === null
+                  ? createSchwarzschildVisualizationExperiment()
+                  : null
+              )
+            }
             className="rounded-md border border-cyan-300/35 bg-cyan-300/8 px-3 py-2 text-xs font-semibold text-cyan-100 transition-colors hover:bg-cyan-300/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 motion-reduce:transition-none"
           >
             {sceneVisible ? "Masquer la scène" : "Afficher la scène"}
@@ -282,11 +331,11 @@ export function SchwarzschildCanvas() {
         </div>
       </div>
 
-      {sceneVisible ? (
+      {experiment !== null && characteristicRadii !== null ? (
         <div id="schwarzschild-scene-content">
           <div
             role="img"
-            aria-label="Scène de Schwarzschild montrant l’horizon, la coupe équatoriale de la sphère de photons, l’ISCO, une géodésique massive stable et un diagramme d’encastrement de Flamm optionnel."
+            aria-label="Scène de Schwarzschild montrant l’horizon, la coupe équatoriale de la sphère de photons, l’ISCO, une géodésique massive stable, trois géodésiques lumineuses et un diagramme d’encastrement de Flamm optionnel."
             className="h-[28rem] min-h-80 w-full"
           >
             <Canvas
@@ -341,6 +390,26 @@ export function SchwarzschildCanvas() {
                 La ligne blanche est une géodésique massive circulaire stable à
                 5 rₛ, calculée par le moteur headless RK4 validé puis projetée
                 sur la tranche affichée.
+              </p>
+              <p>
+                Les trois lignes colorées sont des géodésiques nulles issues du
+                moteur 4C : un rayon éloigné est diffusé, un rayon proche de
+                b_c contourne fortement l’objet, et un rayon sous le seuil est
+                capturé puis arrêté avant l’horizon. Elles ne constituent pas
+                une image complète de lentille gravitationnelle.
+              </p>
+              <div
+                aria-label="Légende des géodésiques lumineuses"
+                className="flex flex-wrap gap-x-4 gap-y-1"
+              >
+                <span className="text-cyan-300">— Lumière diffusée · 1,1 b_c</span>
+                <span className="text-amber-300">— Proche du seuil · 1,001 b_c</span>
+                <span className="text-rose-300">— Lumière capturée · 0,999 b_c</span>
+              </div>
+              <p className="text-slate-400">
+                b_c est un paramètre d’impact critique, pas un rayon
+                concentrique. La sphère de photons à 1,5 rₛ est l’orbite
+                lumineuse circulaire instable de Schwarzschild.
               </p>
             </div>
             <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 font-mono tabular-nums">

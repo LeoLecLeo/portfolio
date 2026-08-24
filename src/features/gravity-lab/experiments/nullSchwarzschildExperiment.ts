@@ -42,6 +42,25 @@ export type NullScatteringClassification =
   | "captured"
   | "max-steps";
 
+export const NULL_SCHWARZSCHILD_REFERENCE_AFFINE_STEP = 0.01;
+export const NULL_SCHWARZSCHILD_REFERENCE_RAYS = Object.freeze([
+  Object.freeze({
+    id: "scattered",
+    impactParameterCriticalFactor: 1.1,
+    expectedClassification: "scattered" as const,
+  }),
+  Object.freeze({
+    id: "near-critical",
+    impactParameterCriticalFactor: 1.001,
+    expectedClassification: "scattered" as const,
+  }),
+  Object.freeze({
+    id: "captured",
+    impactParameterCriticalFactor: 0.999,
+    expectedClassification: "captured" as const,
+  }),
+] as const);
+
 export type NullScatteringExperimentOptions = Readonly<{
   centralMassKg: number;
   initialRadiusM: number;

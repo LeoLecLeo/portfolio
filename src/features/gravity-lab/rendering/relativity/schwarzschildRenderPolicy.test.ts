@@ -14,6 +14,7 @@ import {
   mapFlammHeightToScene,
   projectSchwarzschildCharacteristicRadii,
   projectSchwarzschildPointToFlammScene,
+  projectSchwarzschildTrajectoryToScene,
 } from "./schwarzschildRenderPolicy";
 
 describe("Schwarzschild render policy", () => {
@@ -126,6 +127,33 @@ describe("Schwarzschild render policy", () => {
     )).toBe(true);
     expect(experiment.trajectory).toEqual(physicalBefore);
     expect(createSchwarzschildVisualizationExperiment()).toEqual(experiment);
+  });
+
+  it("maps all three light trajectories finitely without mutating physical data", () => {
+    const experiment = createSchwarzschildVisualizationExperiment();
+    const physicalBefore = experiment.lightTrajectories.map((ray) =>
+      ray.trajectory.map((point) => ({ ...point }))
+    );
+
+    const mapped = experiment.lightTrajectories.map((ray) =>
+      projectSchwarzschildTrajectoryToScene(
+        ray.trajectory,
+        experiment.schwarzschildRadiusM
+      )
+    );
+
+    expect(mapped).toHaveLength(3);
+    expect(
+      mapped.every(
+        (positions, index) =>
+          positions.length ===
+            experiment.lightTrajectories[index].trajectory.length * 3 &&
+          Array.from(positions).every(Number.isFinite)
+      )
+    ).toBe(true);
+    expect(
+      experiment.lightTrajectories.map((ray) => ray.trajectory)
+    ).toEqual(physicalBefore);
   });
 
   it("rejects non-finite or out-of-domain embedding inputs", () => {
