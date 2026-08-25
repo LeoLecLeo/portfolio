@@ -2,9 +2,15 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { GRAVITY_PRESETS } from "../presets/catalog";
+import { CIRCULAR_TWO_BODY_PRESET_ID } from "../presets/circularTwoBody";
+import { HYPERBOLIC_FLYBY_PRESET_ID } from "../presets/hyperbolicFlyby";
+import { INCLINED_BINARY_PRESET_ID } from "../presets/inclinedBinary";
+import { STAR_PLANET_PRESET_ID } from "../presets/starPlanet";
+import { SUN_MERCURY_1PN_PRESET_ID } from "../presets/sunMercury1pn";
 import {
   GravityPresetCatalog,
   presentGravityPreset,
+  presentGravityPresetShowcase,
 } from "./GravityPresetCatalog";
 
 describe("GravityPresetCatalog", () => {
@@ -62,6 +68,37 @@ describe("GravityPresetCatalog", () => {
     expect(markup.match(/Repères pédagogiques/g)).toHaveLength(
       GRAVITY_PRESETS.length
     );
+  });
+
+  it("places three complementary showcase presets before the other scenarios", () => {
+    const markup = renderToStaticMarkup(
+      <GravityPresetCatalog presets={GRAVITY_PRESETS} onLoad={vi.fn()} />
+    );
+    const showcasedPresetIds = [
+      INCLINED_BINARY_PRESET_ID,
+      HYPERBOLIC_FLYBY_PRESET_ID,
+      SUN_MERCURY_1PN_PRESET_ID,
+    ];
+    const otherScenariosIndex = markup.indexOf("Autres scénarios");
+
+    expect(markup.match(/Expérience vitrine/g)).toHaveLength(3);
+    expect(otherScenariosIndex).toBeGreaterThan(0);
+
+    for (const presetId of showcasedPresetIds) {
+      const preset = GRAVITY_PRESETS.find(({ id }) => id === presetId);
+      const showcase = presentGravityPresetShowcase(presetId);
+
+      expect(preset).toBeDefined();
+      expect(showcase).not.toBeNull();
+      expect(markup.indexOf(preset?.name ?? "")).toBeLessThan(
+        otherScenariosIndex
+      );
+      expect(markup).toContain(showcase?.whatYouWillSee);
+      expect(markup).toContain(showcase?.timingHint);
+    }
+
+    expect(presentGravityPresetShowcase(CIRCULAR_TWO_BODY_PRESET_ID)).toBeNull();
+    expect(presentGravityPresetShowcase(STAR_PLANET_PRESET_ID)).toBeNull();
   });
 
   it("consults metadata without loading a scenario or invoking state changes", () => {

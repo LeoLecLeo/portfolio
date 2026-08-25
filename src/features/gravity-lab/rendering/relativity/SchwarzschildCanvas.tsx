@@ -35,6 +35,13 @@ const LIGHT_TRAJECTORY_STYLE = Object.freeze({
   captured: Object.freeze({ color: "#fb7185", opacity: 0.94 }),
 });
 
+const SCHWARZSCHILD_SHOWCASE_PRESENTATION = Object.freeze({
+  whatYouWillSee:
+    "Le diagramme de Flamm, l’horizon, la sphère de photons, l’ISCO et trois rayons lumineux diffusé, proche du seuil et capturé.",
+  timingHint:
+    "Lecture immédiate : les géodésiques validées sont précalculées et ne demandent aucune attente orbitale.",
+});
+
 function createTrajectoryLine(
   positions: Float32Array,
   color: string,
@@ -311,9 +318,14 @@ export function SchwarzschildCanvas({
     >
       <div className="flex flex-col gap-3 border-b border-cyan-400/15 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300/80">
-            Module expérimental indépendant
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300/80">
+              Module expérimental indépendant
+            </p>
+            <span className="rounded-full border border-cyan-300/35 bg-cyan-300/10 px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-cyan-100">
+              Expérience vitrine · Schwarzschild
+            </span>
+          </div>
           <h3
             id="schwarzschild-scene-title"
             className="mt-1 text-lg font-semibold text-slate-100"
@@ -324,6 +336,13 @@ export function SchwarzschildCanvas({
             Masse sphérique non rotative · coordonnées extérieures r &gt; rₛ ·
             particules et lumière tests sans réaction sur la source. Cette
             expérience ne modifie pas la session N-corps Newtonienne ou 1PN.
+          </p>
+          <p className="mt-2 max-w-3xl text-xs leading-relaxed text-cyan-100/90">
+            <strong>À voir immédiatement :</strong>{" "}
+            {SCHWARZSCHILD_SHOWCASE_PRESENTATION.whatYouWillSee}{" "}
+            <span className="text-slate-400">
+              {SCHWARZSCHILD_SHOWCASE_PRESENTATION.timingHint}
+            </span>
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">

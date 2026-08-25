@@ -33,6 +33,16 @@ describe("SchwarzschildCanvas lifecycle presentation", () => {
     expect(markup).toContain("aucun franchissement n’est simulé");
   });
 
+  it("identifies Schwarzschild as an immediate showcase without making it a preset", () => {
+    const markup = renderToStaticMarkup(<SchwarzschildCanvas />);
+
+    expect(markup).toContain("Expérience vitrine · Schwarzschild");
+    expect(markup).toContain("À voir immédiatement");
+    expect(markup).toContain("ne demandent aucune attente orbitale");
+    expect(markup).toContain("Module expérimental indépendant");
+    expect(markup).not.toContain("Charger dans le brouillon");
+  });
+
   it("exposes independent accessible controls for the three visual layers", () => {
     const visibleMarkup = renderToStaticMarkup(<SchwarzschildCanvas />);
     const hiddenMarkup = renderToStaticMarkup(
