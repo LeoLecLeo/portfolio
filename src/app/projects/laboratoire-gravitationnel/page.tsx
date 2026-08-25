@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { GravityLabOnboarding } from "@/features/gravity-lab/ui/GravityLabOnboarding";
 import { GravityLabPrototype } from "@/features/gravity-lab/ui/GravityLabPrototype";
 
 export const metadata: Metadata = {
   title: "Laboratoire gravitationnel | Léo Lecuyer",
   description:
-    "Prototype tridimensionnel d’un laboratoire newtonien N-corps, avec intégration Velocity Verlet et diagnostics scientifiques.",
+    "Laboratoire gravitationnel 3D réunissant simulation N-corps Newtonienne, corrections relativistes 1PN et expérience Schwarzschild.",
 };
 
 export default function GravityLabPage() {
@@ -33,25 +34,26 @@ export default function GravityLabPage() {
             Laboratoire gravitationnel
           </p>
           <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">
-            Un noyau scientifique 3D, rendu en temps réel
+            De Newton à Schwarzschild, un laboratoire 3D
           </h1>
           <p className="mt-5 text-base leading-7 text-muted-foreground sm:text-lg">
-            Explorez des scénarios newtoniens N-corps, modifiez leurs
-            conditions initiales et observez leur évolution dans une scène 3D
-            interactive accompagnée de diagnostics scientifiques.
+            Explorez des systèmes N-corps Newtoniens ou 1PN, modifiez leurs
+            conditions initiales et observez des géodésiques de Schwarzschild
+            dans des expériences 3D distinctes et scientifiquement délimitées.
           </p>
         </header>
 
+        <GravityLabOnboarding />
         <GravityLabPrototype />
 
         <section className="mt-12 grid gap-6 border-t border-border/45 pt-6 text-sm leading-6 text-muted-foreground md:grid-cols-3 md:gap-8">
           <article className="border-l-2 border-primary/20 pl-4">
             <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground/85">
-              Modèle actuellement présenté
+              Trois cadres scientifiques
             </h2>
             <p className="mt-2">
-              Gravitation newtonienne N-corps en trois dimensions et
-              intégration Velocity Verlet à pas fixe.
+              Newtonien N-corps avec Velocity Verlet, corrections EIH 1PN avec
+              RK4, et module Schwarzschild indépendant pour les géodésiques.
             </p>
           </article>
           <article className="border-l-2 border-border/55 pl-4">
@@ -59,9 +61,9 @@ export default function GravityLabPage() {
               Limites assumées
             </h2>
             <p className="mt-2">
-              Le laboratoire public accepte de 1 à 16 corps et reste dans un
-              domaine newtonien explicitement contrôlé. Les expériences
-              relativistes seront des modules distincts.
+              Les scénarios N-corps acceptent de 1 à 16 corps. Le 1PN reste
+              limité au champ faible et aux vitesses non relativistes ; le
+              module Schwarzschild utilise uniquement la carte extérieure.
             </p>
           </article>
           <article className="border-l-2 border-border/55 pl-4">
