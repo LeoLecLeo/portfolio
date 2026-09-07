@@ -314,7 +314,7 @@ export function SchwarzschildCanvas({
   return (
     <section
       aria-labelledby="schwarzschild-scene-title"
-      className="min-w-0 overflow-hidden rounded-2xl border border-cyan-400/20 bg-slate-950/65 shadow-[0_24px_70px_-42px_rgba(34,211,238,0.55)]"
+      className="mt-5 min-w-0 overflow-hidden rounded-2xl border border-cyan-400/20 bg-slate-950 shadow-[0_1px_0_0_rgba(255,255,255,0.035)_inset]"
     >
       <div className="flex flex-col gap-3 border-b border-cyan-400/15 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
@@ -333,9 +333,10 @@ export function SchwarzschildCanvas({
             Extérieur de Schwarzschild
           </h3>
           <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-300">
-            Masse sphérique non rotative · coordonnées extérieures r &gt; rₛ ·
-            particules et lumière tests sans réaction sur la source. Cette
-            expérience ne modifie pas la session N-corps Newtonienne ou 1PN.
+            Solution exacte spécialisée pour l’extérieur r &gt; rₛ d’une masse
+            sphérique fixe, non rotative et non chargée · particules et lumière
+            tests sans réaction sur la source. Cette expérience ne modifie pas
+            la session N-corps newtonienne ou 1PN.
           </p>
           <p className="mt-2 max-w-3xl text-xs leading-relaxed text-cyan-100/90">
             <strong>À voir immédiatement :</strong>{" "}
@@ -442,30 +443,30 @@ export function SchwarzschildCanvas({
           <div className="space-y-4 border-t border-cyan-400/15 bg-slate-950/75 p-4 text-xs text-slate-300">
             <div
               aria-label="Légende de la scène Schwarzschild"
-              className="grid gap-2 min-[440px]:grid-cols-2 lg:grid-cols-3"
+              className="grid gap-x-4 gap-y-2 leading-relaxed min-[440px]:grid-cols-2 lg:grid-cols-3"
             >
               <span className="flex items-center gap-2">
-                <span aria-hidden="true" className="h-0.5 w-5 bg-white" />
+                <span aria-hidden="true" className="h-0.5 w-5 shrink-0 bg-white" />
                 Orbite massive stable · 5 rₛ
               </span>
               <span className="flex items-center gap-2 text-cyan-200">
-                <span aria-hidden="true" className="h-0.5 w-5 bg-cyan-300" />
+                <span aria-hidden="true" className="h-0.5 w-5 shrink-0 bg-cyan-300" />
                 Lumière diffusée · 1,1 b_c
               </span>
               <span className="flex items-center gap-2 text-amber-200">
-                <span aria-hidden="true" className="h-0.5 w-5 bg-amber-300" />
+                <span aria-hidden="true" className="h-0.5 w-5 shrink-0 bg-amber-300" />
                 Proche du seuil · 1,001 b_c
               </span>
               <span className="flex items-center gap-2 text-rose-200">
-                <span aria-hidden="true" className="h-0.5 w-5 bg-rose-300" />
+                <span aria-hidden="true" className="h-0.5 w-5 shrink-0 bg-rose-300" />
                 Lumière capturée · 0,999 b_c
               </span>
               <span className="flex items-center gap-2 text-amber-200">
-                <span aria-hidden="true" className="size-2 rounded-full border border-amber-300" />
+                <span aria-hidden="true" className="mx-1.5 size-2 shrink-0 rounded-full border border-amber-300" />
                 Sphère de photons · 1,5 rₛ
               </span>
               <span className="flex items-center gap-2 text-pink-200">
-                <span aria-hidden="true" className="size-2 rounded-full border border-pink-300" />
+                <span aria-hidden="true" className="mx-1.5 size-2 shrink-0 rounded-full border border-pink-300" />
                 ISCO · 3 rₛ
               </span>
             </div>
@@ -488,7 +489,9 @@ export function SchwarzschildCanvas({
                   Géométrie spatiale équatoriale à temps constant, et non forme
                   complète de l’espace-temps ni puits de potentiel. Sa hauteur
                   est amplifiée ×{amplification.toFixed(2)} uniquement pour le
-                  rendu.
+                  rendu. Les trajectoires y sont projetées pour la lecture :
+                  elles ne sont pas des géodésiques de cette surface
+                  d’encastrement.
                 </p>
                 <p>
                   <strong className="text-slate-100">Horizon.</strong> Surface à

@@ -32,7 +32,7 @@ const PHYSICAL_DOMAIN_LABELS: Readonly<
 > = Object.freeze({
   "newtonian-n-body": "Gravitation newtonienne N-corps",
   "first-post-newtonian-weak-field":
-    "Relativité 1PN · champ faible",
+    "EIH 1PN · champ faible · vitesses non relativistes",
 });
 
 export type GravityPresetPresentation = Readonly<{
@@ -66,7 +66,7 @@ const SHOWCASE_BY_PRESET_ID: Readonly<
   [SUN_MERCURY_1PN_PRESET_ID]: Object.freeze({
     capability: "Relativité 1PN",
     whatYouWillSee:
-      "La comparaison synchronisée isole l’avance relativiste du périhélie de Mercure par rapport à Newton.",
+      "La comparaison EIH 1PN ↔ Newton isole l’avance relativiste du périhélie de Mercure, validée à environ 42,98″ par siècle.",
     timingHint:
       "Une orbite prend environ 22 s ; la mesure stabilisée demande au moins cinq périhélies, soit environ 110 s.",
   }),
@@ -109,10 +109,14 @@ function GravityPresetCard({
   return (
     <li className="min-w-0">
       <article className="min-w-0 rounded-md border-l-2 border-transparent p-3 transition-colors hover:border-primary/35 hover:bg-secondary/20 motion-reduce:transition-none">
+        <h5 className="break-words text-sm font-semibold">{preset.name}</h5>
+        <p className="mt-1 break-words text-xs leading-relaxed text-muted-foreground">
+          {preset.shortDescription}
+        </p>
         {showcase !== null ? (
-          <div className="mb-2 rounded-md border border-primary/25 bg-primary/6 p-2.5 text-xs">
+          <div className="mt-3 border-l-2 border-primary/30 pl-3 text-xs">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="rounded-full border border-primary/35 bg-primary/10 px-2 py-0.5 font-semibold uppercase tracking-[0.1em] text-primary">
+              <span className="rounded-md bg-primary/10 px-2 py-0.5 font-semibold text-primary">
                 Expérience vitrine
               </span>
               <span className="font-medium text-foreground/80">
@@ -128,10 +132,6 @@ function GravityPresetCard({
             </p>
           </div>
         ) : null}
-        <h5 className="break-words text-sm font-semibold">{preset.name}</h5>
-        <p className="mt-1 break-words text-xs leading-snug text-muted-foreground">
-          {preset.shortDescription}
-        </p>
         <dl className="mt-2 grid grid-cols-1 gap-x-3 gap-y-1 border-y border-border/40 py-2 text-xs sm:grid-cols-2">
           <div className="min-w-0">
             <dt className="text-muted-foreground">Catégorie</dt>

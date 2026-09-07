@@ -95,10 +95,27 @@ describe("GravityPresetCatalog", () => {
       );
       expect(markup).toContain(showcase?.whatYouWillSee);
       expect(markup).toContain(showcase?.timingHint);
+      expect(markup.indexOf(preset?.name ?? "")).toBeLessThan(
+        markup.indexOf(showcase?.whatYouWillSee ?? "")
+      );
     }
 
     expect(presentGravityPresetShowcase(CIRCULAR_TWO_BODY_PRESET_ID)).toBeNull();
     expect(presentGravityPresetShowcase(STAR_PLANET_PRESET_ID)).toBeNull();
+  });
+
+  it("presents the 1PN showcase with its scientific scope and validated reference", () => {
+    const mercury = GRAVITY_PRESETS.find(
+      ({ id }) => id === SUN_MERCURY_1PN_PRESET_ID
+    );
+    const showcase = presentGravityPresetShowcase(SUN_MERCURY_1PN_PRESET_ID);
+
+    expect(mercury).toBeDefined();
+    expect(presentGravityPreset(mercury!).physicalDomain).toContain(
+      "vitesses non relativistes"
+    );
+    expect(showcase?.whatYouWillSee).toContain("EIH 1PN ↔ Newton");
+    expect(showcase?.whatYouWillSee).toContain("42,98″ par siècle");
   });
 
   it("consults metadata without loading a scenario or invoking state changes", () => {
