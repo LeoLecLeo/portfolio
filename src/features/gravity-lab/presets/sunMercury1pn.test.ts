@@ -72,13 +72,16 @@ describe("Sun-Mercury public 1PN preset", () => {
       "Newton seul"
     );
     expect(SUN_MERCURY_1PN_PRESET.pedagogy.keyParameters.join(" ")).toContain(
-      "43 secondes d’arc par siècle"
+      "42,98 secondes d’arc par siècle"
     );
     expect(SUN_MERCURY_1PN_PRESET.pedagogy.expectedResult).toContain(
       "première correction"
     );
     expect(SUN_MERCURY_1PN_PRESET.pedagogy.limitationOrWarning).toContain(
       "pas la relativité générale complète"
+    );
+    expect(SUN_MERCURY_1PN_PRESET.pedagogy.limitationOrWarning).toContain(
+      "vitesses non relativistes"
     );
   });
 

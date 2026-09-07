@@ -30,12 +30,12 @@ const SCIENTIFIC_FAMILIES = Object.freeze([
   Object.freeze({
     name: "Relativité 1PN",
     description:
-      "Premières corrections relativistes N-corps en champ faible, intégrées avec RK4. Ce n’est pas la relativité générale complète.",
+      "Première approximation post-newtonienne : équations EIH N-corps en champ faible et à vitesses non relativistes, intégrées avec RK4. Ce n’est pas la relativité générale complète.",
   }),
   Object.freeze({
     name: "Schwarzschild",
     description:
-      "Module séparé autour d’une masse sphérique fixe : géodésiques massives et lumineuses, horizon, sphère de photons et ISCO.",
+      "Solution exacte spécialisée à l’extérieur d’une masse sphérique fixe, non rotative et non chargée : particules test, lumière, horizon, sphère de photons et ISCO.",
   }),
 ] as const);
 
@@ -103,6 +103,10 @@ export function GravityLabOnboarding() {
       <div className="p-4 sm:p-5">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
           Trois familles scientifiques
+        </p>
+        <p className="mt-1 max-w-3xl text-xs leading-relaxed text-muted-foreground">
+          Newtonien et 1PN font évoluer des systèmes N-corps ; Schwarzschild est
+          une expérience géométrique spécialisée et indépendante.
         </p>
         <ul className="mt-3 grid gap-2 md:grid-cols-3">
           {SCIENTIFIC_FAMILIES.map((family) => (

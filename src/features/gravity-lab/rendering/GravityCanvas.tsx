@@ -1096,7 +1096,7 @@ export const GravityCanvas = memo(function GravityCanvas({
 
         <fieldset className="min-w-0 rounded-lg border border-border/45 bg-background/25 p-3 text-sm">
           <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Grille gravitationnelle
+            Grille d’influence newtonienne
           </legend>
           <button
             type="button"
@@ -1111,7 +1111,7 @@ export const GravityCanvas = memo(function GravityCanvas({
             {potentialGridVisible ? "Masquer" : "Afficher"}
           </button>
           <ContextualHelp
-            summary="Comprendre la grille"
+            summary="Comprendre cette grille qualitative"
             description={VISUALIZATION_HELP.potentialGrid}
           />
         </fieldset>

@@ -67,7 +67,7 @@ export const GravityModelSelector = memo(function GravityModelSelector({
       </div>
       <ContextualHelp
         summary="À propos du modèle 1PN"
-        description="1PN ajoute les premières corrections relativistes à Newton et constitue une approximation de la relativité générale, pas la relativité générale complète. Ce modèle s’applique en champ faible et pour des vitesses non relativistes."
+        description="Le modèle EIH 1PN est la première approximation post-newtonienne N-corps de la relativité générale. Intégré ici avec RK4, il s’applique en champ faible et à des vitesses non relativistes ; ce n’est pas la relativité générale complète."
       />
     </fieldset>
   );

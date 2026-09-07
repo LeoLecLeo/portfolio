@@ -65,29 +65,29 @@ const FRENCH_DIAGNOSTIC_MESSAGES = {
   "domain.point-radius-unknown":
     "La compacité propre ne peut pas être évaluée pour un corps de rayon nul.",
   "domain.beta.caution":
-    "La vitesse atteint le niveau de prudence du domaine newtonien.",
+    "La vitesse atteint le niveau de prudence pour l’hypothèse de vitesses non relativistes.",
   "domain.beta.strong":
-    "La vitesse atteint le niveau d’avertissement fort du domaine newtonien.",
+    "La vitesse atteint le niveau d’avertissement fort pour l’hypothèse de vitesses non relativistes.",
   "domain.beta.limit":
-    "La vitesse dépasse la limite admise du domaine newtonien.",
+    "La vitesse dépasse la limite non relativiste admise par le laboratoire.",
   "domain.chi-pair.caution":
     "La compacité de paire atteint le niveau de prudence.",
   "domain.chi-pair.strong":
     "La compacité de paire atteint le niveau d’avertissement fort.",
   "domain.chi-pair.limit":
-    "La compacité de paire dépasse la limite newtonienne admise.",
+    "La compacité de paire dépasse la limite de faible champ admise.",
   "domain.chi-self.caution":
     "La compacité propre atteint le niveau de prudence.",
   "domain.chi-self.strong":
     "La compacité propre atteint le niveau d’avertissement fort.",
   "domain.chi-self.limit":
-    "La compacité propre dépasse la limite newtonienne admise.",
+    "La compacité propre dépasse la limite de faible champ admise.",
   "domain.psi.caution":
     "Le potentiel gravitationnel local atteint le niveau de prudence.",
   "domain.psi.strong":
     "Le potentiel gravitationnel local atteint le niveau d’avertissement fort.",
   "domain.psi.limit":
-    "Le potentiel gravitationnel local dépasse la limite newtonienne admise.",
+    "Le potentiel gravitationnel local dépasse la limite de faible champ admise.",
 } satisfies Record<ValidationDiagnosticCode, string>;
 
 type PresentableDiagnostic = Readonly<{
@@ -149,7 +149,7 @@ export type GravityVisualizationToggle =
 
 const VISUALIZATION_TOGGLE_LABELS = Object.freeze({
   trajectories: "les trajectoires",
-  "potential-grid": "la grille gravitationnelle",
+  "potential-grid": "la grille d’influence newtonienne",
   "gravity-field": "le champ gravitationnel",
 } satisfies Record<GravityVisualizationToggle, string>);
 

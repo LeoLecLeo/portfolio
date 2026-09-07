@@ -50,13 +50,13 @@ export const VISUALIZATION_HELP = Object.freeze({
   trajectories:
     "Les lignes mémorisent un historique borné de positions déjà simulées. Elles n’anticipent pas le mouvement futur et n’interviennent jamais dans le calcul physique.",
   potentialGrid:
-    "La grille est une visualisation pédagogique, amplifiée et régularisée, de l’influence gravitationnelle newtonienne. Elle ne représente pas littéralement la courbure relativiste de l’espace-temps et n’agit pas sur la simulation.",
+    "La grille d’influence newtonienne est une visualisation qualitative, amplifiée et régularisée, du champ produit par les corps. Elle ne mesure pas une grandeur physique et ne représente aucune courbure réelle de l’espace-temps ; elle n’agit pas sur la simulation.",
   gravityField:
     "Les flèches donnent la direction du champ gravitationnel newtonien combiné. Leur taille et leur couleur représentent une intensité relative comprimée, pas une valeur absolue à mesurer sur la scène.",
 });
 
 export const MERCURY_PRECESSION_HELP =
-  "Newton et 1PN partent des mêmes conditions initiales et utilisent tous deux RK4. Le résidu Newtonien est soustrait de la mesure 1PN afin d’isoler autant que possible l’effet relativiste.";
+  "Newton et EIH 1PN partent des mêmes conditions initiales et utilisent tous deux RK4. Le résidu newtonien est soustrait de la mesure 1PN afin d’isoler la correction relativiste sans introduire de biais d’intégrateur.";
 
 export const SCIENTIFIC_DIAGNOSTIC_HELP = Object.freeze([
   Object.freeze({
@@ -107,6 +107,6 @@ export const SCIENTIFIC_DIAGNOSTIC_HELP = Object.freeze([
   Object.freeze({
     term: "Domaine recommandé",
     description:
-      "Synthèse de β, χ paire, χ propre et ψ selon les seuils pédagogiques du laboratoire. Elle indique la pertinence attendue du modèle newtonien, sans constituer une preuve universelle de précision.",
+      "Synthèse de β, χ paire, χ propre et ψ selon les seuils pédagogiques du laboratoire. Elle situe le scénario vis-à-vis des hypothèses de faible champ et de vitesses non relativistes utilisées pour Newtonien et 1PN, sans prouver leur précision.",
   }),
 ] satisfies readonly GravityLabHelpItem[]);

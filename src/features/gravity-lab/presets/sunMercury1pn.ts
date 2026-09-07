@@ -76,7 +76,7 @@ export const SUN_MERCURY_1PN_PRESET = defineGravityPreset({
     keyParameters: [
       "Soleil et Mercure seuls, référentiel barycentrique",
       "Pas RK4 fixe : 3 600 s",
-      "Référence relativiste : environ 43 secondes d’arc par siècle",
+      "Référence relativiste validée : environ 42,98 secondes d’arc par siècle",
     ],
     interestingParametersToModify: [
       "Basculer le modèle vers Newtonien avant application",
@@ -85,7 +85,7 @@ export const SUN_MERCURY_1PN_PRESET = defineGravityPreset({
     expectedResult:
       "Le modèle 1PN reproduit la première correction de précession prédite par la relativité générale.",
     limitationOrWarning:
-      "1PN est une approximation conservative en champ faible et à faible vitesse, pas la relativité générale complète ; les autres planètes sont absentes.",
+      "EIH 1PN est une approximation conservative en champ faible et à vitesses non relativistes, pas la relativité générale complète ; les autres planètes sont absentes.",
   },
   preferredSimulatedSecondsPerRealSecond: null,
   createScenario: createSunMercury1pnAppliedScenario,

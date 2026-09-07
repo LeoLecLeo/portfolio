@@ -20,8 +20,10 @@ describe("SchwarzschildCanvas lifecycle presentation", () => {
 
     expect(markup).toContain("Module expérimental indépendant");
     expect(markup).toContain(
-      "ne modifie pas la session N-corps Newtonienne ou 1PN"
+      "ne modifie pas la session N-corps newtonienne ou 1PN"
     );
+    expect(markup).toContain("Solution exacte spécialisée");
+    expect(markup).toContain("non rotative et non chargée");
     expect(markup).toContain("Lumière diffusée");
     expect(markup).toContain("Proche du seuil");
     expect(markup).toContain("Lumière capturée");
@@ -31,6 +33,7 @@ describe("SchwarzschildCanvas lifecycle presentation", () => {
     expect(markup).toContain("image réaliste de lentille gravitationnelle");
     expect(markup).toContain("Comprendre la scène");
     expect(markup).toContain("aucun franchissement n’est simulé");
+    expect(markup).toContain("ne sont pas des géodésiques de cette surface");
   });
 
   it("identifies Schwarzschild as an immediate showcase without making it a preset", () => {

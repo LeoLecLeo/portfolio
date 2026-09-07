@@ -42,7 +42,10 @@ describe("gravity-lab contextual help", () => {
       "n’interviennent jamais dans le calcul physique"
     );
     expect(VISUALIZATION_HELP.potentialGrid).toContain(
-      "ne représente pas littéralement la courbure relativiste"
+      "visualisation qualitative"
+    );
+    expect(VISUALIZATION_HELP.potentialGrid).toContain(
+      "ne représente aucune courbure réelle de l’espace-temps"
     );
     expect(VISUALIZATION_HELP.gravityField).toContain(
       "direction du champ gravitationnel"
@@ -63,5 +66,15 @@ describe("gravity-lab contextual help", () => {
     expect(descriptions.every((description) => description.length <= 280)).toBe(
       true
     );
+  });
+
+  it("describes the shared weak-field diagnostics without implying that 1PN removes their limits", () => {
+    const domainHelp = SCIENTIFIC_DIAGNOSTIC_HELP.find(
+      ({ term }) => term === "Domaine recommandé"
+    );
+
+    expect(domainHelp?.description).toContain("faible champ");
+    expect(domainHelp?.description).toContain("vitesses non relativistes");
+    expect(domainHelp?.description).toContain("Newtonien et 1PN");
   });
 });

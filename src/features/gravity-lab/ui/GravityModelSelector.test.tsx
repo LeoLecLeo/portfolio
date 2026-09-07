@@ -18,8 +18,9 @@ describe("GravityModelSelector", () => {
     );
     expect(markup).toContain("Velocity Verlet");
     expect(markup).toContain("RK4 fixe");
-    expect(markup).toContain("approximation de la relativité générale");
-    expect(markup).toContain("pas la relativité générale complète");
+    expect(markup).toContain("première approximation post-newtonienne N-corps");
+    expect(markup).toContain("EIH 1PN");
+    expect(markup).toContain("ce n’est pas la relativité générale complète");
   });
 
   it("exposes the selected 1PN draft value without changing either option", () => {

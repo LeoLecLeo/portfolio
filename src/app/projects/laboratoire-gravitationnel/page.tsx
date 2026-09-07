@@ -7,7 +7,7 @@ import { GravityLabPrototype } from "@/features/gravity-lab/ui/GravityLabPrototy
 export const metadata: Metadata = {
   title: "Laboratoire gravitationnel | Léo Lecuyer",
   description:
-    "Laboratoire gravitationnel 3D réunissant simulation N-corps Newtonienne, corrections relativistes 1PN et expérience Schwarzschild.",
+    "Laboratoire gravitationnel 3D réunissant gravitation newtonienne N-corps, approximation EIH 1PN et expérience extérieure de Schwarzschild.",
 };
 
 export default function GravityLabPage() {
@@ -52,8 +52,9 @@ export default function GravityLabPage() {
               Trois cadres scientifiques
             </h2>
             <p className="mt-2">
-              Newtonien N-corps avec Velocity Verlet, corrections EIH 1PN avec
-              RK4, et module Schwarzschild indépendant pour les géodésiques.
+              Gravitation newtonienne N-corps avec Velocity Verlet, première
+              approximation post-newtonienne EIH avec RK4, et solution
+              extérieure de Schwarzschild dans un module indépendant.
             </p>
           </article>
           <article className="border-l-2 border-border/55 pl-4">

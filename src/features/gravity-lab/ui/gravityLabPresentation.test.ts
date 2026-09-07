@@ -28,6 +28,11 @@ describe("gravity-lab UI presentation", () => {
     ).toBe(
       "Un corps fixe doit avoir une vitesse initiale exactement nulle."
     );
+    expect(
+      diagnosticMessageFr({ code: "domain.beta.limit" })
+    ).toBe(
+      "La vitesse dépasse la limite non relativiste admise par le laboratoire."
+    );
   });
 
   it("adds the responsible body to a global diagnostic", () => {
@@ -59,7 +64,7 @@ describe("gravity-lab UI presentation", () => {
     );
     expect(
       visualizationToggleLabel("potential-grid", true)
-    ).toBe("Masquer la grille gravitationnelle");
+    ).toBe("Masquer la grille d’influence newtonienne");
     expect(
       visualizationToggleLabel("gravity-field", false)
     ).toBe("Afficher le champ gravitationnel");

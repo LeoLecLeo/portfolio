@@ -23,8 +23,12 @@ describe("GravityLabOnboarding", () => {
     expect(markup).toContain("Newtonien");
     expect(markup).toContain("Relativité 1PN");
     expect(markup).toContain("Schwarzschild");
+    expect(markup).toContain("équations EIH N-corps");
+    expect(markup).toContain("vitesses non relativistes");
     expect(markup).toContain("Ce n’est pas la relativité générale complète");
-    expect(markup).toContain("masse sphérique fixe");
+    expect(markup).toContain("Solution exacte spécialisée");
+    expect(markup).toContain("non rotative et non chargée");
+    expect(markup).toContain("expérience géométrique spécialisée et indépendante");
   });
 
   it("recommends the ready-to-run binary without introducing an intrusive dialog", () => {
