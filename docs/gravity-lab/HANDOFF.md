@@ -9,8 +9,10 @@ extension initialement envisagée a été réalisée.
 ## 1. Produit et état des phases
 
 Route publique : `/projects/laboratoire-gravitationnel`, accessible depuis la
-carte Gravity Lab du portfolio. Le système binaire incliné newtonien est déjà
-appliqué ; « Lecture » permet de démarrer immédiatement.
+carte Gravity Lab du portfolio. Le système binaire incliné newtonien démarre
+automatiquement dès que le Canvas est prêt ; il est immédiatement observable
+et manipulable. Pour essayer un autre scénario : « Stop » → choisir un preset
+→ « Appliquer et réinitialiser » → « Lecture ».
 
 | Phase | État présent dans le dépôt |
 | --- | --- |

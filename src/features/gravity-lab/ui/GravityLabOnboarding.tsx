@@ -1,5 +1,10 @@
 const GETTING_STARTED_STEPS = Object.freeze([
   Object.freeze({
+    title: "Mettre en pause",
+    description:
+      "Cliquez sur « Stop » avant de changer de scénario, sans effacer la simulation actuelle.",
+  }),
+  Object.freeze({
     title: "Choisir une expérience",
     description:
       "Ouvrez « Scénarios / presets » avec le lanceur dédié. Le preset choisi charge uniquement le brouillon.",
@@ -12,12 +17,7 @@ const GETTING_STARTED_STEPS = Object.freeze([
   Object.freeze({
     title: "Lancer la simulation",
     description:
-      "« Lecture » démarre ou reprend l’évolution. « Stop » la met en pause sans effacer son état physique.",
-  }),
-  Object.freeze({
-    title: "Explorer",
-    description:
-      "Manipulez la caméra et les visualisations, puis ouvrez « Corps et paramètres » pour modifier le scénario.",
+      "Cliquez sur « Lecture » pour démarrer le scénario appliqué.",
   }),
 ] as const);
 
@@ -54,12 +54,11 @@ export function GravityLabOnboarding() {
             id="gravity-lab-getting-started-title"
             className="mt-1 text-xl font-semibold tracking-tight"
           >
-            Une expérience en quatre gestes
+            Changer d’expérience en quatre gestes
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Choisissez un cadre scientifique, appliquez ses conditions initiales,
-            lancez le temps puis explorez la scène sans perdre l’accès aux
-            réglages avancés.
+            Pour essayer un autre scénario, suivez ces quatre étapes.
+            Les réglages avancés restent disponibles dans « Corps et paramètres ».
           </p>
         </div>
 
@@ -69,9 +68,10 @@ export function GravityLabOnboarding() {
         >
           <p className="font-semibold text-primary">Démarrage immédiat</p>
           <p className="mt-1 leading-relaxed text-muted-foreground">
-            Le système binaire incliné Newtonien est déjà appliqué. Cliquez
-            directement sur <strong className="text-foreground">Lecture</strong>{" "}
-            pour observer son orbite 3D.
+            Le système binaire incliné Newtonien{" "}
+            <strong className="text-foreground">démarre automatiquement</strong>{" "}
+            dès que la scène est prête. Observez son orbite 3D et manipulez
+            immédiatement la caméra et les visualisations.
           </p>
         </aside>
       </div>
