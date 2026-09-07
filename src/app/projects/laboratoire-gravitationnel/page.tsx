@@ -4,10 +4,19 @@ import Link from "next/link";
 import { GravityLabOnboarding } from "@/features/gravity-lab/ui/GravityLabOnboarding";
 import { GravityLabPrototype } from "@/features/gravity-lab/ui/GravityLabPrototype";
 
+const title = "Gravity Lab — simulateur gravitationnel interactif | Léo Lecuyer";
+const description =
+  "Explorez la gravitation N-corps, les corrections relativistes EIH 1PN et les géodésiques de Schwarzschild dans un laboratoire 3D interactif.";
+
 export const metadata: Metadata = {
-  title: "Laboratoire gravitationnel | Léo Lecuyer",
-  description:
-    "Laboratoire gravitationnel 3D réunissant gravitation newtonienne N-corps, approximation EIH 1PN et expérience extérieure de Schwarzschild.",
+  title,
+  description,
+  openGraph: {
+    title,
+    description,
+    type: "website",
+    locale: "fr_FR",
+  },
 };
 
 export default function GravityLabPage() {
@@ -34,12 +43,13 @@ export default function GravityLabPage() {
             Laboratoire gravitationnel
           </p>
           <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">
-            De Newton à Schwarzschild, un laboratoire 3D
+            Gravity Lab — de Newton à Schwarzschild
           </h1>
           <p className="mt-5 text-base leading-7 text-muted-foreground sm:text-lg">
-            Explorez des systèmes N-corps Newtoniens ou 1PN, modifiez leurs
-            conditions initiales et observez des géodésiques de Schwarzschild
-            dans des expériences 3D distinctes et scientifiquement délimitées.
+            Comment rendre la gravitation observable sans sacrifier la rigueur
+            du calcul ? Ce laboratoire associe un moteur N-corps éditable,
+            les premières corrections relativistes EIH 1PN et une expérience
+            Schwarzschild distincte pour les particules test et la lumière.
           </p>
         </header>
 
@@ -49,32 +59,37 @@ export default function GravityLabPage() {
         <section className="mt-12 grid gap-6 border-t border-border/45 pt-6 text-sm leading-6 text-muted-foreground md:grid-cols-3 md:gap-8">
           <article className="border-l-2 border-primary/20 pl-4">
             <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground/85">
-              Trois cadres scientifiques
+              Un résultat mesuré
             </h2>
             <p className="mt-2">
-              Gravitation newtonienne N-corps avec Velocity Verlet, première
-              approximation post-newtonienne EIH avec RK4, et solution
-              extérieure de Schwarzschild dans un module indépendant.
+              La précession relativiste Soleil–Mercure est retrouvée à environ
+              42,98″/siècle. Newtonien et 1PN utilisent tous deux RK4 pour cette
+              comparaison : mêmes conditions initiales, même pas, contrôle
+              newtonien et étude de convergence.
             </p>
           </article>
           <article className="border-l-2 border-border/55 pl-4">
             <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground/85">
-              Limites assumées
+              Du calcul à l’image
             </h2>
             <p className="mt-2">
-              Les scénarios N-corps acceptent de 1 à 16 corps. Le 1PN reste
-              limité au champ faible et aux vitesses non relativistes ; le
-              module Schwarzschild utilise uniquement la carte extérieure.
+              Physique pure, intégrateurs, validation, sessions et rendu sont
+              séparés. Le noyau N-corps calcule en Float64 et en SI ; Vitest
+              vérifie les références analytiques et le déterminisme des cas
+              testés. Next.js, React et TypeScript portent l’interface,
+              Three.js et React Three Fiber les scènes interactives.
             </p>
           </article>
           <article className="border-l-2 border-border/55 pl-4">
             <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground/85">
-              Arrêts scientifiques
+              Modèles délimités
             </h2>
             <p className="mt-2">
-              Une collision, une rencontre non résolue ou un budget de pas
-              dépassé interrompt explicitement la simulation au lieu de
-              masquer le problème.
+              Le Newtonien simule 1–16 corps avec Velocity Verlet. EIH 1PN
+              reste limité au champ faible et aux vitesses non relativistes.
+              Schwarzschild décrit exactement une géométrie extérieure
+              spécialisée, dont les géodésiques sont intégrées numériquement.
+              Collisions et rencontres non résolues arrêtent la simulation.
             </p>
           </article>
         </section>

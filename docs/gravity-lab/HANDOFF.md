@@ -1,608 +1,216 @@
-# Handoff — Laboratoire gravitationnel
+# Handoff — Gravity Lab
 
-Dernier état validé : 22 août 2026, clôture de la phase 3.
+État documentaire : 7 septembre 2026, présentation portfolio de la phase 5E.
+Ce fichier est le point d’entrée pour reprendre le projet. Le code et ses tests
+décrivent le comportement actuel ; les plans de phase conservent les conventions,
+les décisions et les propositions historiques, sans promettre que chaque
+extension initialement envisagée a été réalisée.
 
-Ce document décrit l’état réel du dépôt après la phase 3. Les sections
-détaillant les phases 1 et 2 sont conservées comme historique ; la synthèse
-ci-dessous est la référence pour reprendre le projet.
+## 1. Produit et état des phases
 
-## 0. État actuel après la phase 3
+Route publique : `/projects/laboratoire-gravitationnel`, accessible depuis la
+carte Gravity Lab du portfolio. Le système binaire incliné newtonien est déjà
+appliqué ; « Lecture » permet de démarrer immédiatement.
 
-La V1 newtonienne est un laboratoire public N-corps 3D complet : brouillon et
-scénario appliqué sont séparés, les corps sont éditables de 1 à 16, les presets
-sont chargés transactionnellement et la scène propose OrbitControls, cadrage,
-suivi, trajectoires bornées, rayons visuels, grille de potentiel et vecteurs du
-champ. Le Canvas conserve `frameloop="demand"` et la télémétrie React reste
-publiée à 5 Hz.
-
-La phase 3 ajoute une expérience relativiste scientifiquement bornée :
-
-- le Newtonien de production reste inchangé sur Velocity Verlet à pas fixe ;
-- l’évaluateur EIH N-corps complet fournit les corrections conservatives 1PN
-  en coordonnées harmoniques, en SI et à l’ordre `1/c²` ;
-- les sessions `first-post-newtonian` utilisent RK4 fixe sur l’état complet
-  positions/vitesses ;
-- la comparaison synchronisée fait évoluer Newtonien/RK4 et 1PN/RK4 depuis
-  les mêmes conditions initiales, avec le même pas et le même temps simulé ;
-- le preset public Soleil–Mercure reprend les conditions barycentriques validées
-  en phase 3C et utilise `dt = 3 600 s` ;
-- la précession publique réutilise la détection/interpolation de 3C, attend
-  cinq périhélies par branche et publie principalement `1PN − Newtonien` ;
-- la mesure validée vaut environ `42,982 arcsec/siècle`, pour une référence
-  analytique d’environ `42,9824 arcsec/siècle` ;
-- la référence Mercure disparaît si ses conditions physiques validées changent.
-
-Le mode 1PN reste une approximation de champ faible et de vitesses non
-relativistes, pas la relativité générale complète. Les corps fixes et les états
-hors du domaine produit sont refusés. Les invariants conservatifs 1PN dans la
-convention du moteur sont explicitement reportés : l’interface ne substitue
-donc ni énergie ni moment cinétique newtoniens comme pseudo-invariants 1PN.
-
-## 1. Objectif général
-
-Le projet doit devenir un laboratoire gravitationnel interactif et extensible,
-présentable dans un portfolio. Son premier MVP public est un laboratoire
-newtonien N-corps en trois dimensions, et non une démonstration limitée à une
-masse centrale fixe et une particule test.
-
-À terme, l’utilisateur devra pouvoir :
-
-- afficher plusieurs corps célestes ;
-- ajouter, supprimer et sélectionner un corps ;
-- modifier son nom, sa couleur, sa masse et son rayon physique ;
-- modifier ses position et vitesse initiales sur les trois axes ;
-- rendre un corps fixe ou mobile ;
-- afficher ou masquer sa trajectoire ;
-- charger plusieurs presets ;
-- contrôler pause, reprise, reset et vitesse d’écoulement du temps ;
-- déplacer, tourner, zoomer et recentrer la caméra ;
-- consulter des diagnostics et des avertissements scientifiques explicites.
-
-La route actuelle est :
-
-```text
-/projects/laboratoire-gravitationnel
-```
-
-Elle présente le laboratoire complet ; le binaire incliné reste le scénario
-initial et plusieurs autres presets, dont Soleil–Mercure 1PN, sont disponibles.
-
-La première expérience relativiste est maintenant publique sous la forme du
-modèle EIH 1PN et de la précession de Mercure. Elle reste scientifiquement
-délimitée et ne prétend jamais résoudre en temps réel les équations complètes
-d’Einstein.
-
-## 2. Décisions scientifiques importantes
-
-### Décisions déjà implémentées
-
-- Le moteur Newtonien est générique, tridimensionnel et limité à 16 corps ;
-  le chemin EIH 1PN respecte la même limite produit.
-- Les conditions initiales contiennent réellement `x`, `y`, `z`, `vx`, `vy`
-  et `vz`.
-- Les calculs internes utilisent les unités SI et des tableaux typés
-  `Float64Array`.
-- La constante utilisée est
-  `G = 6.6743e-11 m³·kg⁻¹·s⁻²`.
-- La gravitation est calculée paire par paire en `O(N²)`, sans corps central
-  privilégié ni branche spéciale pour deux corps.
-- La loi en `1/r²` est utilisée sans adoucissement gravitationnel.
-- L’intégrateur Newtonien de production est Velocity Verlet à pas fixe ;
-  le chemin 1PN et les deux branches comparatives utilisent RK4 fixe.
-- Un corps fixe reste immobile, doit avoir une vitesse initiale nulle, mais
-  continue d’attirer les autres corps.
-- Une configuration contient entre 1 et 16 corps, avec identifiants uniques,
-  masses strictement positives, rayons physiques finis et positifs ou nuls,
-  vecteurs 3D finis et aucune superposition physique initiale.
-- Une collision ne provoque ni fusion, ni rebond. La simulation conserve le
-  dernier état valide et s’arrête avec une explication.
-- La collision est recherchée sur le segment relatif balayé pendant le drift
-  du pas. Cela empêche de manquer raisonnablement un contact situé entre deux
-  positions de fin de pas non collisionnelles. Cette garde porte sur le segment
-  numérique, pas sur la trajectoire physique continue exacte.
-- Une rencontre trop proche pour le pas courant est arrêtée explicitement à
-  partir de deux indicateurs :
-
-  ```text
-  q_v = déplacement relatif pendant le pas / séparation minimale balayée
-  q_g = Δt × sqrt(G × (m_i + m_j) / séparation_minimale³)
-  ```
-
-- Le preset actuel utilise `q_v <= 0.02` et `q_g <= 0.02`.
-- Le pas physique ne dépend jamais directement du delta d’affichage. Accélérer
-  le temps augmente le nombre de pas fixes, pas leur taille.
-- Un trou de frame actif supérieur à `0.25 s` ou une demande supérieure à
-  32 sous-pas sur une image met la simulation en pause sans rattrapage caché.
-- Les diagnostics scientifiques disponibles dans le noyau sont l’énergie
-  cinétique, potentielle et totale, la quantité de mouvement, le moment
-  cinétique, le barycentre et la présence éventuelle de corps fixes.
-
-### Contraintes scientifiques déjà décidées pour la suite
-
-- Aucune valeur utilisateur ne doit être corrigée, plafonnée ou remplacée
-  silencieusement.
-- Une collision ou une rencontre non résolue doit rester explicite ; aucune
-  fusion et aucun adoucissement silencieux ne doivent être ajoutés au MVP.
-- Les unités physiques canoniques doivent rester en SI, même si l’interface
-  propose des unités astronomiques plus pratiques.
-- Le futur laboratoire newtonien doit détecter les vitesses relativistes et les
-  champs trop intenses au lieu de laisser croire que le modèle reste valide.
-- La première expérience relativiste prévue est une comparaison entre une
-  orbite newtonienne et une correction post-newtonienne conduisant à la
-  précession du périhélie.
-- Avant de coder cette expérience, il faudra documenter précisément l’équation
-  1PN retenue, son domaine de validité, ses unités, la détection du périhélie,
-  la formule analytique de validation et la méthode séparant précession
-  physique et erreur numérique.
-- Les futurs modules relativistes seront créés uniquement lorsqu’ils auront une
-  responsabilité réelle. Ne pas créer à l’avance de fichiers vides pour RK45,
-  Schwarzschild, les géodésiques lumineuses ou la dilatation temporelle.
-
-### Propositions encore à approuver
-
-Le dernier plan recommande les niveaux ci-dessous, mais ils ne sont ni approuvés
-définitivement ni présents dans le code :
-
-| Indicateur | Recommandé | Avertissement | Refus/pause |
-| --- | ---: | ---: | ---: |
-| `β = v/c` | `< 0.01` | `>= 0.03` | `>= 0.1` |
-| Champ/compacité sans dimension | `< 1e-4` | `>= 1e-3` | `>= 1e-2` |
-
-La compacité envisagée est évaluée au minimum par paire avec
-`G(m_i + m_j)/(r_ij c²)`, complétée si nécessaire par une mesure locale du
-potentiel. Ces seuils et leur justification doivent être validés avant leur
-intégration.
-
-## 3. Phase 1A terminée — noyau scientifique
-
-Commit :
-
-```text
-161005e8f3ef0dde0ab76170b6dcc9ca2c797043
-feat: add tested 3D n-body simulation core
-```
-
-La phase 1A a livré :
-
-- les types des corps, configurations, états, diagnostics et arrêts ;
-- les vecteurs 3D et les constantes SI ;
-- la validation des configurations ;
-- le calcul newtonien N-corps 3D générique ;
-- Velocity Verlet à pas fixe avec buffers de travail réutilisables ;
-- la détection balayée des collisions et des rencontres non résolues ;
-- les diagnostics newtoniens ;
-- `SimulationEngine`, moteur mutable indépendant du rendu ;
-- `FixedStepScheduler`, scheduler à accumulateur indépendant du framerate ;
-- le preset scientifique du système binaire incliné ;
-- Vitest et 31 tests à ce stade.
-
-Les tests scientifiques incluent notamment :
-
-- accélération analytique en 3D et loi inverse carrée ;
-- équilibre des forces internes pour trois corps ;
-- invariance par translation, rotation 3D et permutation des corps ;
-- diagnostics analytiques ;
-- collision traversée entre deux extrémités de pas ;
-- déterminisme pour plusieurs découpages du delta d’affichage ;
-- stabilité du binaire sur 50 périodes avec 1 024, 2 048 et 4 096 pas par
-  période ;
-- pour 2 048 pas par période : erreur énergétique `< 1e-4`, impulsion relative
-  `< 1e-12`, erreur vectorielle du moment cinétique `< 1e-9`, déplacement du
-  barycentre et déviation du plan `< 1e-10` ;
-- réversibilité temporelle sur 4 096 pas aller puis retour.
-
-Ces seuils sont propres aux scénarios testés. Ils ne garantissent pas la
-précision d’une configuration arbitraire créée par un utilisateur.
-
-## 4. Phase 1B terminée — visualisation du prototype
-
-Commit :
-
-```text
-69061461a858319f47d74804a6649e5d01e0a223
-feat: add gravity simulation prototype visualization
-```
-
-La phase 1B a livré :
-
-- la route directe `/projects/laboratoire-gravitationnel` ;
-- une page Next.js conservée en Server Component pour les métadonnées ;
-- une frontière cliente limitée à l’expérience interactive ;
-- Three.js et React Three Fiber ;
-- un Canvas avec `frameloop="demand"` ;
-- les deux étoiles mobiles du système binaire incliné ;
-- une caméra perspective fixe, une grille, les axes et un marqueur du
-  barycentre ;
-- les commandes Pause, Reprendre et Réinitialiser ;
-- les diagnostics visibles : état, temps simulé, énergie totale, dérive
-  énergétique relative et norme du moment cinétique ;
-- les messages d’arrêt scientifique et de scheduler ;
-- `SimulationReadView` comme frontière de lecture entre le moteur mutable et le
-  rendu ;
-- une télémétrie React périodique limitée à `0.2 s`, soit 5 Hz, avec publication
-  immédiate pour les actions et arrêts urgents ;
-- 17 tests supplémentaires, portant le total actuel à 48 tests réussis lors de
-  la dernière validation complète.
-
-Le preset affiché contient deux étoiles mobiles d’une masse solaire chacune,
-séparées de `0.2 UA`. Leur orbite est inclinée de 30°, commence à une phase de
-35° et utilise 2 048 pas fixes par période. La présentation fait durer une
-période orbitale environ 24 secondes réelles.
-
-### Correctif pause/reprise avec `frameloop="demand"`
-
-Une pause volontaire pouvait initialement être interprétée comme un trou de
-frame : la première image demandée après reprise contenait tout le temps mural
-écoulé pendant la pause.
-
-Le correctif réel se trouve dans `FixedStepScheduler.rebaseFrameClock()` :
-
-- une reprise réussie réarme l’horloge ;
-- le premier delta d’affichage suivant est ignoré ;
-- le reliquat fractionnaire de l’accumulateur est conservé ;
-- aucun temps passé en pause n’est rattrapé ;
-- la frame suivante progresse normalement ;
-- la protection contre un véritable trou de frame reste active.
-
-Un reset remet l’accumulateur à zéro, réarme l’horloge, restaure les conditions
-initiales, synchronise la vue de lecture et laisse la simulation en pause.
-
-Des tests couvrent la pause longue, le reset en pause, plusieurs cycles
-pause/reprise, le vrai trou de frame, la reprise après un arrêt de sécurité et
-le cas d’un appel redondant à `resume()`.
-
-## 5. Architecture actuelle
-
-Le flux principal est :
-
-```text
-NewtonianSimulationConfig
-        ↓ validation
-SimulationEngine
-        ↓ Velocity Verlet / modèle newtonien / diagnostics
-FixedStepScheduler
-        ↓
-GravityPrototypeRuntime
-        ↓ copie contrôlée
-SimulationReadView
-        ↓ écrit dans les références des meshes
-React Three Fiber / Three.js
-        ↓ télémétrie réduite
-Interface React
-```
-
-### Noyau
-
-- `core` contient le contrat de données, les unités, les vecteurs et la
-  validation.
-- `physics` contient le modèle newtonien, les diagnostics et les gardes de
-  rencontre.
-- `integrators` contient Velocity Verlet.
-- `runtime/SimulationEngine.ts` possède l’état mutable, les buffers
-  préalloués, les statuts et le dernier arrêt.
-- `runtime/FixedStepScheduler.ts` transforme le temps mural en un nombre borné
-  de pas physiques fixes.
-
-Le noyau n’importe ni React, ni React Three Fiber, ni Three.js.
-
-### Frontière avec le rendu
-
-`SimulationReadView` possède un unique buffer privé de positions, synchronisé
-explicitement depuis `SimulationEngine`. Il écrit ensuite trois scalaires dans
-la position mutable d’un mesh. Les positions ne transitent donc pas par le
-state React à chaque image et aucun nouvel ensemble complet d’objets n’est
-alloué à chaque frame.
-
-Cette vue n’expose actuellement que les positions. Les futures vitesses,
-accélérations et données par corps devront suivre la même logique contrôlée,
-sans exposer les buffers mutables du moteur.
-
-### Boucle de rendu
-
-- Le Canvas fonctionne à la demande.
-- Il invalide une nouvelle image uniquement tant que le runtime est en cours.
-- En pause, aucune boucle continue n’est entretenue.
-- Pause et reset demandent une image isolée pour présenter l’état final ou
-  initial.
-- Les meshes sont mis à jour impérativement à partir de leurs références.
-- La télémétrie React périodique est publiée à 5 Hz, et non à chaque frame.
-
-## 6. Principaux fichiers
-
-| Fichier | Responsabilité actuelle |
+| Phase | État présent dans le dépôt |
 | --- | --- |
-| `src/features/gravity-lab/core/types.ts` | Contrats des corps, configuration, état, diagnostics et statuts |
-| `src/features/gravity-lab/core/vector3.ts` | Vecteurs 3D TypeScript |
-| `src/features/gravity-lab/core/units.ts` | Constantes et unités SI |
-| `src/features/gravity-lab/core/validation.ts` | Validation des configurations initiales |
-| `src/features/gravity-lab/physics/newtonian.ts` | Accélérations N-corps 3D |
-| `src/features/gravity-lab/physics/encounters.ts` | Collisions balayées et rencontres non résolues |
-| `src/features/gravity-lab/physics/diagnostics.ts` | Diagnostics newtoniens |
-| `src/features/gravity-lab/integrators/velocityVerlet.ts` | Intégrateur à pas fixe et buffers candidats |
-| `src/features/gravity-lab/runtime/SimulationEngine.ts` | État mutable, cycle de simulation et arrêts |
-| `src/features/gravity-lab/runtime/FixedStepScheduler.ts` | Accumulateur, budget de pas et garde des trous de frame |
-| `src/features/gravity-lab/runtime/SimulationReadView.ts` | Frontière de lecture réutilisable pour le rendu |
-| `src/features/gravity-lab/runtime/GravityPrototypeRuntime.ts` | Façade du prototype, scheduler et télémétrie |
-| `src/features/gravity-lab/presets/inclinedBinary.ts` | Preset du système binaire incliné |
-| `src/features/gravity-lab/rendering/GravityCanvas.tsx` | Canvas R3F et mise à jour impérative des meshes |
-| `src/features/gravity-lab/ui/GravityLabPrototype.tsx` | Commandes et diagnostics du prototype |
-| `src/app/projects/laboratoire-gravitationnel/page.tsx` | Route, métadonnées et contenu serveur |
+| 1A / 1B | Noyau newtonien 3D et première scène, terminés |
+| 2 | Scénarios immuables, éditeur 1–16 corps, presets, caméra, trajectoires, grille/champ et inspecteurs, implémentés |
+| 3 | EIH 1PN, RK4, sessions, comparaison et mesure Mercure, clôture consignée dans le plan 3 |
+| 4B / 4C | Schwarzschild massif et lumière, expériences headless et tests analytiques |
+| 4D.1 / 4D.2 / 4E.1 | Scène séparée, Flamm, orbite massive, trois rayons et contrôles publics |
+| 4F | Étape d’audit historique ; ce handoff ne remplace pas un rapport d’audit de performance ni n’en invente le verdict |
+| 5A–5D | Onboarding, expériences vitrines, terminologie et finition produit |
+| 5E | Présentation du portfolio, metadata et actualisation documentaire ; aucune nouvelle physique |
 
-Les tests sont colocalisés à côté de ces modules dans neuf fichiers
-`*.test.ts`.
+Repères historiques conservés : le noyau 1A a livré 31 tests
+(`161005e8f3ef0dde0ab76170b6dcc9ca2c797043`) ; la scène 1B a porté ce
+total à 48 (`69061461a858319f47d74804a6649e5d01e0a223`). Ces nombres
+décrivent ces étapes, pas la suite actuelle.
 
-## 7. Branche Git et état de référence
+Plans de référence :
+[phase 2](PHASE_2_PLAN.md), [EIH 1PN / phase 3](PHASE_3_PLAN.md),
+[Schwarzschild / phase 4](PHASE_4_PLAN.md).
 
-Branche :
+## 2. Trois cadres scientifiques distincts
 
-```text
-feature/gravity-lab
-```
+| Cadre | Calcul et portée |
+| --- | --- |
+| Newtonien | N-corps 3D classique, 1–16 corps, Velocity Verlet à pas fixe |
+| EIH 1PN | Équations N-corps complètes retenues en coordonnées harmoniques, ordre `1/c²`, champ faible et vitesses non relativistes ; RK4 fixe |
+| Schwarzschild | Géométrie exacte spécialisée extérieure à une masse sphérique fixe, non rotative et non chargée ; particules test et lumière, sans réaction sur la source |
 
-État de référence avant les corrections de clôture non commitées :
+Le N-corps utilise des positions/vitesses en SI et des buffers `Float64Array`.
+L’évaluateur newtonien est en `O(N²)`, l’EIH implémenté en `O(N³)`.
+Aucun modèle ne dépend de React ou Three.js.
 
-- `HEAD` : `8c2142f` (`feat: add synchronized newtonian 1pn comparison`) ;
-- `HEAD` identique à `origin/feature/gravity-lab` ;
-- les phases 1, 2 et 3E.1–3E.3 sont commitées ;
-- la mesure publique 3E.4 et les corrections de clôture restent volontairement
-  non commitées dans l’espace de travail.
+La comparaison optionnelle utilise **RK4 des deux côtés** : Newtonien et 1PN
+partent des mêmes conditions, avec le même pas et le même temps simulé.
+Le chemin newtonien normal reste sur Velocity Verlet.
 
-Les actualisations de clôture de ce fichier ne sont pas commitées par Codex.
-Il faudra donc versionner puis pousser explicitement l’ensemble de la phase
-3E.4 et de sa clôture pour le retrouver après un nouveau clone.
+Schwarzschild conserve une frontière SI mais intègre des coordonnées normalisées
+`T = ct/r_s`, `ρ = r/r_s`, avec `r_s = 2GM/c²`. La formulation
+hamiltonienne sur positions et moments conjugués impose `2H = -1` (massif)
+ou `2H = 0` (lumière). H, E et L sont exposés comme diagnostics.
+La garde extérieure vaut par défaut `ρ = 1 + 1e-6` : aucun franchissement
+d’horizon n’est calculé. Le rayon coordonné n’est pas une distance propre.
 
-## 8. Tests et commandes de validation
+## 3. Expériences disponibles et résultats vérifiables
 
-La validation de clôture contient 59 fichiers de test et 440 cas Vitest. La
-suite complète, le lint, le build Next.js et `git diff --check` réussissent.
+Le catalogue contient exactement cinq presets : binaire incliné, orbite
+circulaire à deux corps, étoile–planète quasi circulaire, survol hyperbolique,
+Soleil–Mercure 1PN. Chaque factory retourne un scénario indépendant validé.
+Schwarzschild est un module séparé, pas un sixième preset N-corps.
 
-Commandes définies dans `package.json` :
+- **Binaire incliné** : deux masses solaires séparées de 0,2 UA, inclinaison
+  30°, phase initiale 35°, 2 048 pas par période ; les tests contrôlent
+  conservation, plan orbital, réversibilité et convergence.
+- **Soleil–Mercure isolé** : source commune
+  `experiments/mercuryPerihelionExperiment.ts`, pas public 3 600 s.
+  La différence 1PN − Newtonien mesurée sur douze périhélies vaut
+  environ **42,981894″/siècle**, contre **42,982421″/siècle** analytiques
+  (erreur relative ≈ 1,224e-5). Convergence testée à 7 200 / 3 600 / 1 800 s.
+  Il s’agit d’une extrapolation par orbite, pas d’un siècle simulé.
+- **Mesure publique Mercure** : détection/interpolation réutilisée de 3C,
+  au moins cinq périhélies par branche ; valeur principale 1PN − Newtonien.
+  Reset efface la mesure ; la référence est invalidée si les conditions
+  physiques ne correspondent plus à l’expérience validée.
+- **Schwarzschild** : tests de métrique, lapse statique, contrainte,
+  E/L, orbites massives et convergence. ISCO = 3 r_s ; sphère de photons
+  instable = 1,5 r_s ; paramètre d’impact critique
+  `b_c = 3√3 GM/c²`.
+- **Lumière** : contrôle faible champ `α ≈ 4GM/(bc²)`. Au cas testé
+  `b = 100 r_s`, les pas affines 8 / 4 / 2 donnent un rapport de
+  convergence entre 14 et 18 ; l’écart à l’approximation de premier ordre
+  reste inférieur à 2 %. Tests de diffusion/capture à 1,1 / 1,001 / 0,999 b_c.
+
+Sources : tests colocalisés de `velocityVerlet`,
+`mercuryPerihelionExperiment`, `massiveSchwarzschildExperiment` et
+`nullSchwarzschildExperiment`. Les résultats quantitatifs de clôture et le
+benchmark 1PN N=2/4/8/16 restent dans la section 10 du plan 3, avec leur
+machine de mesure. Ils ne garantissent pas le débit d’un navigateur mobile.
+
+## 4. Architecture actuelle et fichiers de reprise
+
+Tous les modules du laboratoire sont sous `src/features/gravity-lab/`.
+
+| Frontière | Principaux fichiers et responsabilités |
+| --- | --- |
+| Données / compilation | `core/scenario.ts`, `scenarioCompiler.ts`, `parsing.ts`, `units.ts` : brouillon, unités, AppliedScenario immuable, validation |
+| Physique N-corps | `physics/newtonian.ts`, `firstPostNewtonian.ts`, `gravityModel.ts` |
+| Validité / diagnostics | `physics/newtonianValidity.ts`, `timeStepRecommendation.ts`, `diagnostics.ts` |
+| Intégrateurs | `integrators/velocityVerlet.ts`, `fixedStepRk4.ts` |
+| Sessions | `runtime/GravityLabSession.ts`, `GravityPrototypeRuntime.ts`, `SimulationEngine.ts`, `Rk4SimulationEngine.ts` |
+| Cadence / transactions | `runtime/FixedStepScheduler.ts`, `schedulerPolicy.ts`, `candidateStateGuard.ts`, `SynchronizedGravityComparison.ts` |
+| Frontière graphique | `runtime/SimulationReadView.ts` : buffer de lecture réutilisé ; les positions ne passent pas par le state React par frame |
+| Mesure | `physics/periapsisMeasurement.ts`, `experiments/mercuryPerihelionExperiment.ts`, `publicMercuryPrecessionMeasurement.ts` |
+| Schwarzschild | `physics/schwarzschildMetric.ts`, `schwarzschildGeodesic.ts`, `massiveSchwarzschildGeodesic.ts`, `nullSchwarzschildGeodesic.ts` |
+| Expériences Schwarzschild | `experiments/schwarzschildGeodesicRk4.ts`, `massiveSchwarzschildExperiment.ts`, `nullSchwarzschildExperiment.ts`, `schwarzschildVisualizationExperiment.ts` |
+| Rendu | `rendering/GravityCanvas.tsx`, politiques caméra/rayons/grille/champ, `trajectoryCollector.ts` |
+| Rendu Schwarzschild | `rendering/relativity/schwarzschildRenderPolicy.ts`, `SchwarzschildCanvas.tsx` |
+| UI | `ui/gravityLabReducer.ts`, `gravityLabApplication.ts`, `GravityLabPrototype.tsx`, `GravityLabWorkspace.tsx`, `BodyDraftEditor.tsx` |
+| Catalogue / pédagogie | `presets/catalog.ts`, `ui/GravityPresetCatalog.tsx`, `GravityLabOnboarding.tsx`, `gravityLabHelp.ts` |
+
+Entrées portfolio : `src/data/projectsData.ts`,
+`src/app/projects/laboratoire-gravitationnel/page.tsx` (Server Component,
+contenu éditorial et metadata). La stack réelle est Next.js, React, TypeScript,
+Three.js / React Three Fiber, Tailwind CSS et Vitest. Aucun backend scientifique.
+
+Flux : ScenarioDraft → compilation → AppliedScenario → remplacement
+transactionnel de session → moteur/intégrateur → SimulationReadView → R3F.
+Le brouillon peut changer sans toucher à la session active. Apply valide puis
+crée une session à t=0 en pause ; un échec laisse l’état précédent intact.
+Reset restaure le scénario appliqué. Les événements d’anciennes sessions sont
+filtrés ; les branches comparatives avancent ensemble ou aucune ne commit.
+
+## 5. Rendu et garanties produit
+
+- Canvas à la demande (`frameloop="demand"`), télémétrie React à 5 Hz.
+- Cadence recalculée à chaque application depuis le pas scientifique ;
+  marge scheduler de 25 %, maximum 32 sous-pas/frame, delta maximal 0,25 s.
+  Les préférences des presets sont plafonnées ; le pas n’est jamais agrandi
+  pour accélérer l’affichage.
+- La reprise réarme l’horloge via `rebaseFrameClock()` : le premier delta
+  accumulé pendant la pause est ignoré, sans rattrapage caché.
+- Trajectoires bornées à 512 points/corps, échantillonnées à 10 Hz au maximum
+  en temps réel. Hide/show conserve l’historique avec rupture de segment ;
+  effacement, reset et remplacement le vident.
+- Rayons amplifiés ou à l’échelle : transformation graphique uniquement.
+  Grille d’influence newtonienne qualitative et vecteurs indépendants ; aucune
+  courbure relativiste n’est déduite de cette grille.
+- Schwarzschild : orbite massive à 5 r_s et trois rayons physiques pré-calculés,
+  buffers bornés, aucune intégration par frame. Masquer la scène démonte le
+  Canvas et libère ses données visuelles.
+- Flamm : encastrement de la tranche spatiale équatoriale à temps constant ;
+  hauteur amplifiée ×1,35 pour le rendu. Les trajectoires y sont projetées,
+  sans être des géodésiques de cette surface. Ce n’est ni le potentiel ni
+  la forme complète de l’espace-temps.
+- Centre 69rem, inspecteurs fixed à partir de 1888px, launchers latéraux.
+  Sous ce seuil : panneau temporaire responsive. Panneaux fermés initialement,
+  contenu lourd démonté, état métier conservé hors panneau.
+- Focus, clavier, noms accessibles et reduced motion couverts par les
+  frontières testables ; contrôle visuel réel toujours nécessaire au navigateur.
+
+## 6. Limites à préserver
+
+Pas de relativité générale N-corps complète, de rayonnement 2,5PN, de spin ou
+de Kerr. Les invariants conservatifs 1PN n’ont pas été spécifiés dans la
+convention du moteur : énergie et moment cinétique newtoniens sont neutralisés
+dans les diagnostics de conservation 1PN. Les corps fixes y sont refusés.
+
+Les seuils produit sont implémentés dans `newtonianValidity.ts` :
+β prudence/fort/refus à 0,01 / 0,03 / 0,1 ; compacités et ψ à
+1e-4 / 1e-3 / 1e-2. Masse maximale 1e33 kg ; rayon et composante de position
+bornés à 1e18 m. Ce sont des limites du laboratoire, pas des lois universelles.
+
+Aucune correction silencieuse de saisie, fusion ou régularisation de la force
+N-corps. Le dernier état valide est conservé lors d’un refus. Les gardes
+balayées portent sur une approximation numérique de la trajectoire, sans
+garantie de détection continue exacte.
+
+Une métrique Schwarzschild exacte n’implique pas des trajectoires numériques
+exactes : RK4 reste à pas fixe, sensible au conditionnement près de l’horizon.
+La classification capture signifie un arrêt à la garde extérieure ; elle ne
+valide pas un franchissement ni une précision uniforme jusqu’à l’horizon.
+H/E/L sont des diagnostics, sans renormalisation silencieuse.
+
+Pas d’image réaliste de lentille, disque d’accrétion, import/export,
+persistance ou backend ajouté. Les anciens projets de système solaire complet,
+trois corps public, RK45 ou workers ne sont pas des fonctionnalités livrées.
+
+## 7. Commandes et validation
+
+Suite actuelle : **68 fichiers, 488 tests Vitest** (validation 5E).
+Les références analytiques, convergences, invariances, transactions, déterminisme,
+rendu statique React et cycle de vie aux frontières testables sont couverts.
+Cela ne remplace pas une suite E2E WebGL ni un audit manuel d’accessibilité.
 
 ```bash
-npm run test   # vitest run
-npm run lint   # eslint
-npm run build  # next build
-npm run dev    # next dev
-npm run start  # next start
-```
-
-Sur une nouvelle machine, `npm ci` permet de restaurer les versions verrouillées
-par `package-lock.json`, puis il faut exécuter dans cet ordre :
-
-```bash
+npm ci
 npm run test
 npm run lint
 npm run build
+git diff --check
+npm run dev
 ```
 
-`npm run dev` démarre seulement le serveur de développement Next.js. Il
-n’ouvre pas automatiquement un navigateur. Utiliser l’adresse locale affichée
-dans le terminal, puis ouvrir manuellement :
+`npm ci` restaure le lockfile. `npm run dev` démarre Next.js sans ouvrir
+le navigateur : utiliser l’adresse affichée et la route du laboratoire.
+`npm run start` sert un build de production existant.
+Aucun script E2E ou benchmark séparé ; les versions exactes sont dans
+`package-lock.json`.
 
-```text
-/projects/laboratoire-gravitationnel
-```
+## 8. Reprise Git et prochaine vérification
 
-Versions verrouillées principales au moment du handoff :
+Branche inspectée : `feature/gravity-lab`. Avant cette passe documentaire,
+HEAD était `48b0b84` ; l’espace de travail était propre. Aucun commit n’est
+créé par cette intervention. Ne pas déduire l’état distant de ce document :
+vérifier `git status --short`, `git log -5 --oneline` et les références Git.
 
-- Next.js `16.2.5` ;
-- React et React DOM `19.2.4` ;
-- React Three Fiber `9.6.1` ;
-- Three.js et `@types/three` `0.185.1` ;
-- TypeScript `5.9.3` ;
-- Vitest `4.1.10`.
-
-Aucun script séparé de typecheck, test DOM, test E2E ou benchmark n’existe
-encore.
-
-## 9. Limites connues du snapshot historique 1A/1B
-
-Cette section est conservée pour expliquer les choix ayant conduit aux phases
-suivantes. Les limitations d’interface indiquées ci-dessous ont été levées par
-les phases 2 et 3 ; les limites scientifiques toujours actives figurent dans la
-synthèse de clôture en section 0 et dans `PHASE_3_PLAN.md`.
-
-### Produit et interface
-
-- Le moteur est générique, mais l’interface n’affiche actuellement que deux
-  corps issus d’un seul preset.
-- Il n’existe encore ni ajout, ni suppression, ni sélection, ni édition de
-  corps.
-- Il n’existe aucun brouillon de configuration ni cycle explicite
-  « valider puis appliquer ».
-- La caméra est fixe ; aucun orbit control, zoom utilisateur ou auto-fit.
-- Il n’existe aucune trajectoire persistante.
-- Le multiplicateur temporel n’est pas modifiable dans l’interface.
-- La route est accessible directement, mais la carte du projet sur la page
-  d’accueil n’a pas encore été reliée à cette expérience.
-- L’interface affiche seulement une partie des diagnostics déjà calculés par
-  le noyau.
-
-### Couplages provisoires du prototype
-
-- `GravityPrototypeRuntime` importe directement le preset binaire et sa
-  période pour ses valeurs par défaut.
-- `GravityCanvas` importe directement la séparation du binaire pour calculer
-  son échelle graphique.
-- La scène, les couleurs et les rayons visuels sont encore adaptés au binaire.
-
-Ces dépendances devront disparaître au profit d’une session remplaçable et
-d’une transformation de scène générique avant l’éditeur public.
-
-### Science et numérique
-
-- Aucun contrôle de `v/c`, de compacité ou de domaine de validité newtonien
-  n’est encore implémenté.
-- Il n’existe ni pas adaptatif, ni réduction automatique du pas, ni intégrateur
-  alternatif.
-- Le moteur ne modélise ni fusion, ni rebond, ni matériau, ni adoucissement.
-- Le balayage de collision porte sur le segment de drift numérique et ne
-  constitue pas une résolution continue exacte.
-- Les calculs utilisent directement le SI en précision binaire 64 bits, sans
-  normalisation ou recentrage numérique.
-- Le getter `SimulationEngine.state`, conservé notamment pour les tests, donne
-  encore accès à des tableaux typés dont `Readonly` ne protège pas le contenu.
-- `SimulationReadView` ne transmet que les positions.
-- Les garanties de stabilité mesurées portent principalement sur le binaire
-  incliné ; elles ne sont pas universelles.
-- Le moteur reste sur le thread principal. Aucun Web Worker ne doit être ajouté
-  avant un profilage démontrant son utilité.
-
-## 10. Fonctionnalités volontairement reportées dans le snapshot historique
-
-- éditeur complet de corps et cycle brouillon → validation → application ;
-- unités utilisateur et conversions vers le SI canonique ;
-- profils de précision et recommandation du pas fixe ;
-- vérifications de validité newtonienne par vitesse et champ faible ;
-- presets Soleil–Terre, système solaire simplifié, binaire asymétrique,
-  problème à trois corps et assistance gravitationnelle ;
-- sélection synchronisée entre liste et scène ;
-- trajectoires, buffers circulaires et contrôle de leur visibilité ;
-- caméra orbitale, zoom et auto-fit ;
-- diagnostics par corps et statuts scientifiques supplémentaires ;
-- import/export de scénarios ;
-- Web Worker, uniquement si le profilage le justifie ;
-- backend, stockage distant ou API : aucun besoin n’est établi pour le MVP ;
-- relativité, correction 1PN, Schwarzschild et géodésiques ;
-- liaison définitive depuis la carte du projet du portfolio.
-
-## 11. Feuille de route historique des phases 2 et 3
-
-Les phases décrites ci-dessous sont maintenant terminées. Elles restent dans le
-handoff pour conserver la justification des responsabilités et du découpage.
-
-Le plan détaillé et la source de vérité documentaire de la phase 2 sont
-consignés dans [`PHASE_2_PLAN.md`](./PHASE_2_PLAN.md).
-
-### Phase 2A — configuration et gardes scientifiques
-
-Résultat attendu :
-
-- contrat d’un scénario appliqué distinct de son brouillon éditable ;
-- conversions d’unités vers le SI sans dérive ni correction silencieuse ;
-- validation étendue des masses, rayons, coordonnées et vitesses ;
-- estimation d’un pas fixe à partir des temps de traversée et dynamiques ;
-- profils « rapide », « équilibré » et « précis » ;
-- indicateurs `β = v/c` et de champ faible, contrôlés à l’application puis
-  pendant la simulation ;
-- arrêt avant commit d’un état candidat hors domaine.
-
-Les propositions actuelles pour les profils sont respectivement
-`q = 0.01`, `0.005` et `0.0025`. Comme les seuils relativistes proposés, ces
-valeurs doivent être approuvées avant d’être transformées en critères
-d’acceptation.
-
-### Phase 2B — session remplaçable et éditeur
-
-Résultat attendu :
-
-- brouillon indépendant de la simulation en cours ;
-- édition structurelle uniquement en pause ;
-- ajout, suppression et sélection de 1 à 16 corps ;
-- édition du nom, de la couleur, de la masse, du rayon physique, de la position
-  3D, de la vitesse 3D et du statut fixe/mobile ;
-- action explicite « Appliquer et réinitialiser » ;
-- application validée créant une nouvelle session à `t = 0`, laissée en pause ;
-- reset restaurant la dernière configuration appliquée, jamais le brouillon ;
-- vitesse d’écoulement du temps indépendante du pas physique.
-
-### Phase 2C — catalogue de presets
-
-Ajouter, par des factories reproductibles et validées par le même pipeline :
-
-1. le binaire incliné existant ;
-2. Soleil–Terre ;
-3. un système solaire simplifié ;
-4. un binaire asymétrique ;
-5. un problème à trois corps ;
-6. une assistance gravitationnelle réelle avec planète mobile.
-
-Chaque preset doit fournir sa description scientifique, ses unités d’affichage
-préférées, son profil ou pas testé et ses paramètres de caméra, sans valeur
-cachée dans React.
-
-### Phase 2D — rendu générique, caméra et trajectoires
-
-Résultat attendu :
-
-- suppression des hypothèses propres au binaire dans le runtime et le Canvas ;
-- échelle graphique indépendante des unités SI ;
-- transformation de scène stable et auto-fit explicite ;
-- sélection des meshes ;
-- caméra orbitale et zoom ;
-- rayon graphique distinct du rayon physique ;
-- trajectoires par corps dans des buffers circulaires préalloués ;
-- aucun tableau de positions complet recréé par frame ;
-- budgets initiaux à vérifier : 1 024 points par corps sur ordinateur, 512 sur
-  mobile, échantillonnage plafonné à 30 Hz et 15 Hz respectivement.
-
-`@react-three/drei` pourra être ajouté à cette phase si sa version compatible
-est vérifiée et si `OrbitControls` justifie réellement la dépendance.
-
-### Phase 2E — diagnostics, accessibilité et finition publique
-
-Résultat attendu :
-
-- panneaux desktop et sections mobiles accessibles ;
-- commandes essentielles toujours disponibles ;
-- quantité de mouvement, moment cinétique, barycentre et mesures du corps
-  sélectionné ;
-- messages distincts pour collision, rencontre non résolue, domaine newtonien,
-  erreur numérique, budget de sous-pas et trou de frame ;
-- conservation du dernier état valide ;
-- télémétrie toujours réduite, sans state React par image ;
-- profilage desktop/mobile, DPR et complexité graphique bornés ;
-- liaison de la carte du portfolio vers la route publique.
-
-### Expérience relativiste ultérieure
-
-Après stabilisation du laboratoire newtonien public :
-
-- spécifier et faire valider l’expérience 1PN ;
-- comparer orbite newtonienne et orbite corrigée ;
-- mesurer la précession du périhélie ;
-- vérifier sa convergence numérique et sa formule analytique ;
-- présenter clairement le domaine de validité et les limites.
-
-Cette expérience doit rester distincte du moteur N-corps libre. Les expériences
-Schwarzschild, déviation de la lumière, sphère de photons et horizon ne seront
-conçues qu’au moment de leur réalisation effective.
-
-## 12. Prochaine étape recommandée au snapshot historique
-
-Commencer uniquement la phase 2A, sans toucher encore au Canvas ni construire
-l’éditeur complet.
-
-Ordre recommandé :
-
-1. vérifier la branche et un espace de travail propre ;
-2. faire approuver les seuils `β`, de champ faible et les trois profils de pas ;
-3. formaliser le scénario appliqué, le brouillon et les conversions d’unités ;
-4. étendre la validation sans corriger silencieusement les entrées ;
-5. ajouter les gardes de validité newtonienne sur l’état initial et les états
-   candidats ;
-6. ajouter les tests scientifiques et de convergence ;
-7. exécuter `npm run test`, `npm run lint` et `npm run build` ;
-8. faire valider cette sous-phase avant de commencer la phase 2B.
-
-## 13. Contraintes à ne pas enfreindre
-
-- Conserver un moteur newtonien N-corps 3D générique, jamais spécialisé autour
-  de variables telles que `sun` et `earth`.
-- Garder la physique, l’intégrateur et l’état de simulation indépendants de
-  React, React Three Fiber et Three.js.
-- Ne jamais corriger, borner, arrondir ou remplacer silencieusement une valeur
-  saisie par l’utilisateur.
-- Garder les positions, vitesses et calculs en SI ; toute échelle de rendu est
-  exclusivement graphique.
-- Ne jamais faire dépendre le pas physique du framerate ou du multiplicateur de
-  temps.
-- Conserver le dernier état valide lors d’un arrêt scientifique ou numérique.
-- Ne pas introduire de fusion ou d’adoucissement gravitationnel silencieux.
-- Prévoir la relativité comme une expérience distincte, avec modèle et
-  validation explicitement documentés.
-- Ne pas créer de backend, API, base de données ou Worker sans besoin mesuré et
-  démontré.
-- Ne pas créer de modules futurs vides.
-- Développer phase par phase et obtenir une validation avant de passer à la
-  suivante.
+Reprise recommandée : lire ce handoff, exécuter les validations, puis vérifier
+le parcours depuis la carte du portfolio, l’édition/application, Mercure,
+Schwarzschild et les panneaux à 320/375px, tablette et ≥1888px.
+Les metadata locales contiennent title/description/Open Graph ; aucune URL
+canonique, image sociale ou convention Twitter n’est inventée.
+La suite de la phase 5 nécessite un périmètre validé ; ne pas ajouter de physique
+ou modifier un seuil dans une passe éditoriale.

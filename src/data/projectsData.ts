@@ -31,16 +31,18 @@ export const projects = [
     ],
   },
   {
-    title: "Simulateur scientifique interactif",
+    title: "Gravity Lab — laboratoire gravitationnel",
     description:
-      "Projet prévu autour de la simulation ou de la visualisation d’un phénomène scientifique, afin de relier développement logiciel, mathématiques, physique et interface interactive.",
-    status: "Prévu",
+      "Laboratoire 3D interactif : éditez un système de 1 à 16 corps, comparez Newton et EIH 1PN ou explorez les géodésiques de Schwarzschild. La précession relativiste de Mercure, environ 42,98″ par siècle, est retrouvée numériquement. Physique pure, sessions et rendu sont séparés et testés.",
+    status: "Disponible",
     stack: [
-      "Python",
-      "Mathématiques",
-      "Physique",
-      "Visualisation",
-      "Interface interactive",
+      "Next.js",
+      "React",
+      "TypeScript",
+      "Three.js",
+      "React Three Fiber",
+      "Vitest",
     ],
+    demoUrl: "/projects/laboratoire-gravitationnel",
   },
 ];

@@ -2,10 +2,11 @@
 
 Date de spécification : 20 août 2026.
 
-Ce document fixe les décisions de la phase 3A. Il ne décrit pas une
-implémentation déjà présente. À la date ci-dessus, le moteur de production reste
-strictement newtonien, utilise Velocity Verlet à pas fixe et aucune interface
-relativiste n'existe.
+La phase 3 est terminée ; les résultats de clôture figurent en section 10.
+Les sections de spécification conservent les décisions de la phase 3A et leur
+formulation prospective. Au 20 août 2026, le moteur était encore uniquement
+newtonien ; ce constat historique ne décrit plus l’état actuel.
+Consulter [HANDOFF.md](HANDOFF.md) pour l’architecture livrée et les phases suivantes.
 
 ## 1. Périmètre et vocabulaire
 

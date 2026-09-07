@@ -2,11 +2,12 @@
 
 Date de spécification : 23 août 2026.
 
-Ce document fixe les décisions scientifiques et architecturales de la phase 4A.
-Il ne décrit pas une implémentation déjà présente et n'autorise pas la création
-anticipée de modules vides. À cette date, le laboratoire public contient le
-Newtonien N-corps et l'approximation EIH 1PN de la phase 3 ; aucune métrique,
-géodésique ou visualisation relativiste de phase 4 n'est encore implémentée.
+Ce document conserve les décisions scientifiques et architecturales de 4A.
+La métrique, les géodésiques et la scène publique sont désormais implémentées
+jusqu’à 4E.1 ; voir la section 13 pour l’état constaté le 7 septembre 2026.
+Les sections prospectives et la roadmap restent l’historique de conception,
+pas la liste des fonctionnalités livrées. Elles n’autorisent pas la création
+anticipée de modules vides. [HANDOFF.md](HANDOFF.md) est le point de reprise actuel.
 
 ## 1. Frontière scientifique
 
@@ -560,3 +561,38 @@ documentées.
   curved Time, and curved Space-Time in Schwarzschild geodetic
   geometry*](https://arxiv.org/abs/1812.03259), géométrie de la section
   équatoriale et limites du paraboloïde de Flamm.
+
+## 13. État livré constaté en phase 5E
+
+Les conventions ci-dessus ont donné lieu aux modules suivants, indépendants
+des sessions N-corps Newtonien/1PN :
+
+- 4B/4C : `physics/schwarzschildMetric.ts`, `schwarzschildGeodesic.ts`,
+  adaptateurs massifs/nulles et `experiments/schwarzschildGeodesicRk4.ts` ;
+  coordonnées normalisées, contraintes `2H = -1 / 0`, diagnostics H/E/L,
+  garde extérieure par défaut `r/r_s = 1 + 1e-6`.
+- 4D.1/4D.2 : `experiments/schwarzschildVisualizationExperiment.ts` prépare
+  l’orbite massive à `5 r_s` et les trois rayons `1,1 / 1,001 / 0,999 b_c`.
+  Les paramètres d’impact proviennent des références 4C ; la préparation
+  visuelle commence à `8 r_s`, tandis que le test de classification 4C
+  commence à `100 r_s`. Ce ne sont pas des courbes graphiques inventées.
+- `rendering/relativity/schwarzschildRenderPolicy.ts` projette ces données et
+  le diagramme de Flamm, avec amplification verticale graphique ×1,35.
+- 4E.1 : `SchwarzschildCanvas.tsx` expose une scène distincte à la demande,
+  des contrôles Flamm/orbite/rayons, une légende et des aides. Masquer la scène
+  libère les données visuelles ; aucun calcul géodésique n’est exécuté par frame.
+
+Les tests colocalisés contrôlent la métrique, le lapse statique, les invariants
+sur les cas contrôlés, les orbites massives, l’ISCO, la sphère de photons
+instable, la déviation faible champ, la diffusion/capture et les projections.
+Le cas de déviation à `b = 100 r_s` converge aux pas affines 8/4/2 ; l’écart
+à `4GM/(bc²)` est inférieur à 2 %, incluant les limites de cette approximation.
+
+La solution métrique est exacte dans son domaine ; les trajectoires RK4 sont
+numériques. Les tests ne garantissent pas une erreur uniforme près de l’horizon
+ni pour une configuration arbitraire. L’arrêt sur garde ne simule aucun
+franchissement. La surface Flamm ne représente pas l’espace-temps complet.
+
+Les propositions de pas adaptatif, faisceaux étendus ou expériences supplémentaires
+de la roadmap ne sont pas livrées. Le présent état documentaire n’est pas un
+nouvel audit 4F et ne revendique aucun benchmark navigateur non consigné.

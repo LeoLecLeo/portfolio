@@ -1,5 +1,11 @@
 # Plan de phase 2 — Laboratoire gravitationnel
 
+> Mise à jour de lecture — 7 septembre 2026 : la phase 2 est implémentée.
+> Ce plan conserve le périmètre, les décisions et les états intermédiaires
+> de sa rédaction. Les mentions « état actuel », « futur » et les propositions
+> ci-dessous ne constituent pas un inventaire du produit livré ; consulter
+> [HANDOFF.md](HANDOFF.md) pour cet inventaire et les limites présentes.
+
 ## 1. Objet et sources de vérité
 
 Ce document est la source de vérité documentaire pour le périmètre, les
@@ -13,7 +19,7 @@ les sources de vérité sont :
 1. le code et les tests présents dans le dépôt ;
 2. `git log` et `git status`.
 
-`docs/gravity-lab/HANDOFF.md` reste le bilan détaillé des phases 1A et 1B. Pour
+`docs/gravity-lab/HANDOFF.md` décrit l’état courant et les jalons historiques. Pour
 le périmètre, les décisions et l’ordre de la phase 2, le présent document est
 normatif.
 
