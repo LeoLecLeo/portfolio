@@ -65,7 +65,7 @@ describe("fixed-step scheduler", () => {
     const result = scheduler.tick(1);
 
     expect(result.stopReason).toBe("frame-gap");
-    expect(result.message).toMatch(/no hidden catch-up/);
+    expect(result.message).toMatch(/aucun rattrapage caché/);
     expect(engine.status).toBe("paused");
     expect(engine.state.timeSeconds).toBe(0);
   });

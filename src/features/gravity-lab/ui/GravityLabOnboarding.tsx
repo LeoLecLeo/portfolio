@@ -21,24 +21,6 @@ const GETTING_STARTED_STEPS = Object.freeze([
   }),
 ] as const);
 
-const SCIENTIFIC_FAMILIES = Object.freeze([
-  Object.freeze({
-    name: "Newtonien",
-    description:
-      "Simulation N-corps 3D classique, intégrée avec Velocity Verlet.",
-  }),
-  Object.freeze({
-    name: "Relativité 1PN",
-    description:
-      "Première approximation post-newtonienne : équations EIH N-corps en champ faible et à vitesses non relativistes, intégrées avec RK4. Ce n’est pas la relativité générale complète.",
-  }),
-  Object.freeze({
-    name: "Schwarzschild",
-    description:
-      "Solution exacte spécialisée à l’extérieur d’une masse sphérique fixe, non rotative et non chargée : particules test, lumière, horizon, sphère de photons et ISCO.",
-  }),
-] as const);
-
 export function GravityLabOnboarding() {
   return (
     <section
@@ -100,30 +82,6 @@ export function GravityLabOnboarding() {
         ))}
       </ol>
 
-      <div className="p-4 sm:p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          Trois familles scientifiques
-        </p>
-        <p className="mt-1 max-w-3xl text-xs leading-relaxed text-muted-foreground">
-          Newtonien et 1PN font évoluer des systèmes N-corps ; Schwarzschild est
-          une expérience géométrique spécialisée et indépendante.
-        </p>
-        <ul className="mt-3 grid gap-2 md:grid-cols-3">
-          {SCIENTIFIC_FAMILIES.map((family) => (
-            <li
-              key={family.name}
-              className="min-w-0 rounded-lg border border-border/50 bg-secondary/20 px-3 py-2.5"
-            >
-              <h3 className="text-sm font-semibold text-foreground">
-                {family.name}
-              </h3>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                {family.description}
-              </p>
-            </li>
-          ))}
-        </ul>
-      </div>
     </section>
   );
 }

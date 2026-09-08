@@ -18,7 +18,7 @@ describe("gravity-lab contextual help", () => {
       "Lecture",
       "Stop",
       "Appliquer et réinitialiser",
-      "Reset physique",
+      "Réinitialiser la physique",
     ]);
     expect(SCIENTIFIC_DIAGNOSTIC_HELP.map(({ term }) => term)).toEqual([
       "Énergie totale",

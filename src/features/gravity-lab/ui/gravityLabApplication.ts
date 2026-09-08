@@ -117,14 +117,12 @@ export function applyGravityLabDraft(
           state.draftPreferredSimulatedSecondsPerRealSecond,
       },
     };
-  } catch (error) {
+  } catch {
     return {
       ok: false,
       report: compilation.report,
       message:
-        error instanceof Error
-          ? `La nouvelle session n’a pas pu être créée : ${error.message}`
-          : "La nouvelle session n’a pas pu être créée.",
+        "La nouvelle session n’a pas pu être créée. Le scénario et la session précédents ont été conservés.",
     };
   }
 }

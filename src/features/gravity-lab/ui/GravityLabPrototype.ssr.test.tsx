@@ -34,6 +34,8 @@ describe("GravityLabPrototype SSR controls", () => {
     expect(markup).not.toContain(
       "Non suivi — invariant 1PN non spécifié"
     );
+    expect(markup).not.toContain("schwarzschild-scene-title");
+    expect(markup).not.toContain("Extérieur de Schwarzschild");
   });
 
   it("does not present Newtonian angular momentum as a 1PN invariant", () => {

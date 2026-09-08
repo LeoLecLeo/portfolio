@@ -356,7 +356,8 @@ describe("gravity-lab draft application", () => {
     const result = applyGravityLabDraft(edited, host);
     expect(result).toMatchObject({
       ok: false,
-      message: expect.stringMatching(/synthetic construction failure/),
+      message:
+        "La nouvelle session n’a pas pu être créée. Le scénario et la session précédents ont été conservés.",
     });
     expect(host.snapshot).toBe(previousSnapshot);
     expect(edited.appliedScenario).toBe(initial.appliedScenario);

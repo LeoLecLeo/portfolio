@@ -179,7 +179,9 @@ describe("mutable Newtonian simulation engine", () => {
     expect(engine.advanceOneStep()).toBe(false);
     expect(engine.status).toBe("unresolved-encounter");
     expect(engine.stopEvent?.kind).toBe("unresolved-encounter");
-    expect(engine.stopEvent?.message).toMatch(/No gravitational softening/);
+    expect(engine.stopEvent?.message).toMatch(
+      /Aucun adoucissement gravitationnel/
+    );
     expect(Array.from(engine.state.positionsM)).toEqual(
       Array.from(lastValidPositions)
     );
@@ -248,7 +250,7 @@ describe("mutable Newtonian simulation engine", () => {
     expect(engine.advanceOneStep()).toBe(false);
     expect(engine.status).toBe("error");
     expect(engine.stopEvent?.message).toMatch(
-      /simulation time would become non-finite/
+      /dernier état valide a été conservé/
     );
     expect(engine.state.bodyIds).toEqual(lastValid.bodyIds);
     expect(engine.state.massesKg).toEqual(lastValid.massesKg);

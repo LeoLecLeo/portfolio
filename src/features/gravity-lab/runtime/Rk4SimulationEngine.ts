@@ -342,14 +342,14 @@ export class Rk4SimulationEngine {
 
     if (!Number.isSafeInteger(nextStepCount)) {
       this.#stopFromNumericalError(
-        "Numerical integration stopped because the RK4 step count would exceed the safe integer range."
+        "L’intégration numérique RK4 a été arrêtée : le compteur de pas dépasserait la plage des entiers sûrs."
       );
       return false;
     }
 
     if (!Number.isFinite(nextTimeSeconds)) {
       this.#stopFromNumericalError(
-        "Numerical integration stopped because the RK4 simulation time would become non-finite."
+        "L’intégration numérique RK4 a été arrêtée : le temps simulé deviendrait non fini."
       );
       return false;
     }
@@ -388,11 +388,9 @@ export class Rk4SimulationEngine {
       this.#preparedNextStepCount = nextStepCount;
       this.#preparedNextTimeSeconds = nextTimeSeconds;
       return true;
-    } catch (error) {
+    } catch {
       this.#stopFromNumericalError(
-        error instanceof Error
-          ? `Numerical RK4 integration stopped: ${error.message}`
-          : "Numerical RK4 integration stopped because of an unknown error."
+        "L’intégration numérique RK4 a été arrêtée avant la validation du prochain état ; le dernier état valide a été conservé."
       );
       return false;
     }
@@ -451,7 +449,7 @@ export class Rk4SimulationEngine {
     if (rejection.kind === "numerical-error") {
       const bodyId = this.#state.bodyIds[rejection.bodyIndex];
       this.#stopFromNumericalError(
-        `Numerical RK4 integration stopped because ${rejection.buffer} contains a non-finite ${rejection.axis} component for body "${bodyId}".`,
+        `L’intégration numérique RK4 a été arrêtée : la composante ${rejection.axis} du corps « ${bodyId} » n’est pas finie. Le dernier état valide a été conservé.`,
         {
           buffer: rejection.buffer,
           vectorIndex: rejection.vectorIndex,
@@ -496,7 +494,9 @@ export class Rk4SimulationEngine {
       }),
     });
     const modelLabel =
-      this.#modelId === "first-post-newtonian" ? "1PN" : "Newtonian";
+      this.#modelId === "first-post-newtonian"
+        ? "Le modèle 1PN"
+        : "Le modèle newtonien";
 
     this.#status = "newtonian-domain-violation";
     this.#rejectedNewtonianValidity = rejection.report;
@@ -507,9 +507,9 @@ export class Rk4SimulationEngine {
         this.#state.timeSeconds + this.#config.timeStepSeconds,
       violation,
       message:
-        `${modelLabel} product-domain limit reached for ${violation.metric} ` +
-        `(${violation.value}, limit ${violation.limit}). The RK4 candidate ` +
-        "was rejected and the last valid state was preserved.",
+        `${modelLabel} a atteint la limite du domaine d’utilisation pour ` +
+        `${violation.metric} (${violation.value}, limite ${violation.limit}). ` +
+        "L’état candidat RK4 a été refusé et le dernier état valide a été conservé.",
     });
   }
 
@@ -549,8 +549,8 @@ export class Rk4SimulationEngine {
         minimumSeparationM: encounter.minimumSeparationM,
         contactDistanceM: encounter.contactDistanceM,
         message:
-          `Collision detected between "${firstBodyId}" and "${secondBodyId}". ` +
-          "The RK4 session was stopped at the last valid state; no merge is modelled.",
+          `Collision détectée entre « ${firstBodyId} » et « ${secondBodyId} ». ` +
+          "La session RK4 a été arrêtée au dernier état valide ; aucune fusion n’est modélisée.",
       });
       return;
     }
@@ -566,8 +566,8 @@ export class Rk4SimulationEngine {
       relativeDisplacementRatio: encounter.relativeDisplacementRatio,
       dynamicalStepRatio: encounter.dynamicalStepRatio,
       message:
-        `Encounter between "${firstBodyId}" and "${secondBodyId}" cannot be ` +
-        "resolved safely with the current RK4 step. No gravitational softening was applied.",
+        `La rencontre entre « ${firstBodyId} » et « ${secondBodyId} » ne peut pas ` +
+        "être résolue de manière sûre avec le pas RK4 actuel. Aucun adoucissement gravitationnel n’a été appliqué.",
     });
   }
 }

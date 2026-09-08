@@ -76,7 +76,7 @@ describe("gravity prototype runtime", () => {
     expect(urgentTelemetry).toBe(true);
     expect(telemetry.status).toBe("paused");
     expect(telemetry.timeSeconds).toBe(0);
-    expect(telemetry.schedulerMessage).toMatch(/no hidden catch-up/);
+    expect(telemetry.schedulerMessage).toMatch(/aucun rattrapage caché/);
   });
 
   it("reports a substep-budget stop", () => {
@@ -94,7 +94,7 @@ describe("gravity prototype runtime", () => {
 
     expect(urgentTelemetry).toBe(true);
     expect(telemetry.status).toBe("paused");
-    expect(telemetry.schedulerMessage).toMatch(/substeps exceeded/);
+    expect(telemetry.schedulerMessage).toMatch(/sous-pas demandé dépasse/);
   });
 
   it("maps a collision stop to dedicated telemetry", () => {
@@ -137,7 +137,7 @@ describe("gravity prototype runtime", () => {
     const telemetry = runtime.telemetry();
 
     expect(telemetry.status).toBe("collision");
-    expect(telemetry.collisionMessage).toMatch(/Collision detected/);
+    expect(telemetry.collisionMessage).toMatch(/Collision détectée/);
     expect(telemetry.unresolvedEncounterMessage).toBeNull();
     expect(runtime.resume()).toBe(false);
     expect(runtime.telemetry().status).toBe("collision");
@@ -276,7 +276,7 @@ describe("gravity prototype runtime", () => {
     const telemetry = runtime.telemetry();
     expect(telemetry.status).toBe("paused");
     expect(telemetry.timeSeconds).toBe(timeBeforeGap);
-    expect(telemetry.schedulerMessage).toMatch(/no hidden catch-up/);
+    expect(telemetry.schedulerMessage).toMatch(/aucun rattrapage caché/);
   });
 
   it("does not hide a real gap after a redundant resume call", () => {
@@ -289,7 +289,7 @@ describe("gravity prototype runtime", () => {
     expect(runtime.advanceFrame(1)).toBe(true);
     expect(runtime.telemetry().status).toBe("paused");
     expect(runtime.telemetry().schedulerMessage).toMatch(
-      /no hidden catch-up/
+      /aucun rattrapage caché/
     );
   });
 
@@ -362,7 +362,7 @@ describe("gravity prototype runtime", () => {
     const telemetry = runtime.telemetry();
     expect(telemetry.status).toBe("newtonian-domain-violation");
     expect(telemetry.newtonianDomainMessage).toMatch(
-      /last valid state was preserved/
+      /dernier état valide a été conservé/
     );
     expect(telemetry.newtonianDomainViolation).toMatchObject({
       metric: "beta",

@@ -263,11 +263,9 @@ export class SimulationEngine {
         this.#workspace
       );
       return true;
-    } catch (error) {
+    } catch {
       this.#stopFromNumericalError(
-        error instanceof Error
-          ? `Numerical integration stopped: ${error.message}`
-          : "Numerical integration stopped because of an unknown error."
+        "L’intégration numérique a été arrêtée avant la validation du prochain état ; le dernier état valide a été conservé."
       );
       return false;
     }
@@ -293,9 +291,8 @@ export class SimulationEngine {
     if (rejection.kind === "numerical-error") {
       const bodyId = this.#state.bodyIds[rejection.bodyIndex];
       this.#stopFromNumericalError(
-        `Numerical integration stopped because ${rejection.buffer} ` +
-          `contains a non-finite ${rejection.axis} component for ` +
-          `body "${bodyId}".`,
+        `L’intégration numérique a été arrêtée : la composante ${rejection.axis} ` +
+          `du corps « ${bodyId} » n’est pas finie. Le dernier état valide a été conservé.`,
         {
           buffer: rejection.buffer,
           vectorIndex: rejection.vectorIndex,
@@ -343,18 +340,22 @@ export class SimulationEngine {
     });
     const responsible =
       stableResponsibility.kind === "body"
-        ? `body "${stableResponsibility.bodyId}"`
-        : `pair "${stableResponsibility.firstBodyId}" / ` +
-          `"${stableResponsibility.secondBodyId}"`;
+        ? `le corps « ${stableResponsibility.bodyId} »`
+        : `la paire « ${stableResponsibility.firstBodyId} » / ` +
+          `« ${stableResponsibility.secondBodyId} »`;
     const frameText =
       stableViolation.velocityFrame === undefined
         ? ""
-        : ` in the ${stableViolation.velocityFrame} velocity frame`;
+        : stableViolation.velocityFrame === "barycentric"
+          ? " dans le référentiel barycentrique"
+          : stableViolation.velocityFrame === "relative"
+            ? " dans le référentiel relatif de la paire"
+            : " dans le référentiel du scénario";
     const betaPolicyText =
       stableViolation.metric === "beta"
-        ? " The beta thresholds are a pedagogical policy based on the " +
-          "expected order of beta-squared corrections, not a universal " +
-          "error guarantee."
+        ? " Les seuils bêta constituent une politique pédagogique fondée sur " +
+          "l’ordre attendu des corrections en bêta au carré, et non une " +
+          "garantie universelle sur l’erreur."
         : "";
 
     this.#status = "newtonian-domain-violation";
@@ -366,10 +367,10 @@ export class SimulationEngine {
         this.#state.timeSeconds + this.#config.timeStepSeconds,
       violation: stableViolation,
       message:
-        `Newtonian-domain limit reached for ${stableViolation.metric} at ` +
-        `${responsible}${frameText} (${stableViolation.value}, limit ` +
-        `${stableViolation.limit}). The candidate was rejected and the last ` +
-        `valid state was preserved.${betaPolicyText}`,
+        `Limite du domaine newtonien atteinte pour ${stableViolation.metric}, ` +
+        `${responsible}${frameText} (${stableViolation.value}, limite ` +
+        `${stableViolation.limit}). L’état candidat a été refusé et le dernier ` +
+        `état valide a été conservé.${betaPolicyText}`,
     });
   }
 
@@ -410,8 +411,8 @@ export class SimulationEngine {
         minimumSeparationM: encounter.minimumSeparationM,
         contactDistanceM: encounter.contactDistanceM,
         message:
-          `Collision detected between "${firstBodyId}" and "${secondBodyId}". ` +
-          "The simulation was paused at the last valid state; no merge is modelled.",
+          `Collision détectée entre « ${firstBodyId} » et « ${secondBodyId} ». ` +
+          "La simulation a été arrêtée au dernier état valide ; aucune fusion n’est modélisée.",
       });
       return;
     }
@@ -427,9 +428,9 @@ export class SimulationEngine {
       relativeDisplacementRatio: encounter.relativeDisplacementRatio,
       dynamicalStepRatio: encounter.dynamicalStepRatio,
       message:
-        `Encounter between "${firstBodyId}" and "${secondBodyId}" cannot be ` +
-        "resolved safely with the current fixed time step. No gravitational " +
-        "softening was applied.",
+        `La rencontre entre « ${firstBodyId} » et « ${secondBodyId} » ne peut pas ` +
+        "être résolue de manière sûre avec le pas fixe actuel. Aucun adoucissement " +
+        "gravitationnel n’a été appliqué.",
     });
   }
 }

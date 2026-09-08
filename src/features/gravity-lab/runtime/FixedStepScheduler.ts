@@ -109,7 +109,7 @@ export class FixedStepScheduler {
         simulatedSecondsAdvanced: 0,
         stopReason: "frame-gap",
         message:
-          "Simulation paused after an excessive frame gap; no hidden catch-up was attempted.",
+          "Simulation mise en pause après un intervalle d’image trop long ; aucun rattrapage caché n’a été effectué.",
       };
     }
 
@@ -131,7 +131,7 @@ export class FixedStepScheduler {
         simulatedSecondsAdvanced: 0,
         stopReason: "substep-budget",
         message:
-          "Simulation paused because the requested substeps exceeded the explicit per-frame budget.",
+          "Simulation mise en pause : le nombre de sous-pas demandé dépasse le budget explicite par image.",
       };
     }
 

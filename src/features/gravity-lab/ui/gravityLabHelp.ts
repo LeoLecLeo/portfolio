@@ -38,7 +38,7 @@ export const SIMULATION_CONTROL_HELP = Object.freeze([
       "Valide le brouillon puis, en cas de succès, crée une nouvelle session à t = 0 et en pause.",
   }),
   Object.freeze({
-    term: "Reset physique",
+    term: "Réinitialiser la physique",
     description:
       "Restaure à t = 0 les conditions initiales du scénario déjà appliqué, sans appliquer le brouillon.",
   }),

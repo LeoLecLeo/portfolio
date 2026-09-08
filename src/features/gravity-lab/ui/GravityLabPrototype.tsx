@@ -11,7 +11,6 @@ import {
 } from "react";
 
 import { GravityCanvas } from "../rendering/GravityCanvas";
-import { SchwarzschildCanvas } from "../rendering/relativity/SchwarzschildCanvas";
 import {
   TELEMETRY_INTERVAL_SECONDS,
   type PrototypeTelemetry,
@@ -606,7 +605,7 @@ export function GravityLabPrototype({
               onClick={reset}
               className="col-span-2 min-w-0 rounded-md border border-transparent bg-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-border/60 hover:bg-secondary/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:col-span-1 motion-reduce:transition-none"
             >
-              Reset physique
+              Réinitialiser la physique
             </button>
           </div>
         </div>
@@ -667,7 +666,6 @@ export function GravityLabPrototype({
             renderRevision={renderRevision}
             trajectoryResetRevision={trajectoryResetRevision}
           />
-          <SchwarzschildCanvas />
         </GravityWorkspaceMain>
 
         <GravityWorkspaceInspector
