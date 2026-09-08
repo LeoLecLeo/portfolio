@@ -33,7 +33,7 @@ export const projects = [
   {
     title: "Gravity Lab — laboratoire gravitationnel",
     description:
-      "Laboratoire 3D interactif : éditez un système de 1 à 16 corps, comparez Newton et EIH 1PN ou explorez les géodésiques de Schwarzschild. La précession relativiste de Mercure, environ 42,98″ par siècle, est retrouvée numériquement. Physique pure, sessions et rendu sont séparés et testés.",
+      "Laboratoire 3D interactif : éditez un système de 1 à 16 corps et comparez Newton aux premières corrections relativistes EIH 1PN. La précession de Mercure, environ 42,98″ par siècle, est retrouvée numériquement. Physique pure, sessions et rendu sont séparés et testés.",
     status: "Disponible",
     stack: [
       "Next.js",

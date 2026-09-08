@@ -19,8 +19,9 @@ npm run dev
 
 Laboratoire gravitationnel interactif disponible à
 `/projects/laboratoire-gravitationnel`, depuis la carte du projet sur l’accueil.
-Il réunit gravitation newtonienne N-corps, approximation EIH 1PN et expérience
-Schwarzschild indépendante pour les particules test et la lumière.
+La page publique réunit actuellement la gravitation newtonienne N-corps et
+l’approximation EIH 1PN. Les modules Schwarzschild restent conservés dans le
+code et sa documentation scientifique, sans être exposés dans l’interface.
 
 La comparaison Soleil–Mercure retrouve environ 42,98 secondes d’arc par siècle
 de précession relativiste, avec contrôle newtonien et convergence numérique.

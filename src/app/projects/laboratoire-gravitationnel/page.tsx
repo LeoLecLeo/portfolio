@@ -6,7 +6,7 @@ import { GravityLabPrototype } from "@/features/gravity-lab/ui/GravityLabPrototy
 
 const title = "Gravity Lab — simulateur gravitationnel interactif | Léo Lecuyer";
 const description =
-  "Explorez la gravitation N-corps, les corrections relativistes EIH 1PN et les géodésiques de Schwarzschild dans un laboratoire 3D interactif.";
+  "Explorez la gravitation N-corps et les corrections relativistes EIH 1PN dans un laboratoire 3D interactif, éditable et scientifiquement validé.";
 
 export const metadata: Metadata = {
   title,
@@ -43,13 +43,13 @@ export default function GravityLabPage() {
             Laboratoire gravitationnel
           </p>
           <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">
-            Gravity Lab — de Newton à Schwarzschild
+            Gravity Lab — de Newton aux corrections 1PN
           </h1>
           <p className="mt-5 text-base leading-7 text-muted-foreground sm:text-lg">
             Comment rendre la gravitation observable sans sacrifier la rigueur
             du calcul ? Ce laboratoire associe un moteur N-corps éditable,
-            les premières corrections relativistes EIH 1PN et une expérience
-            Schwarzschild distincte pour les particules test et la lumière.
+            les premières corrections relativistes EIH 1PN, avec des scénarios
+            validés et des visualisations interactives.
           </p>
         </header>
 
@@ -87,8 +87,6 @@ export default function GravityLabPage() {
             <p className="mt-2">
               Le Newtonien simule 1–16 corps avec Velocity Verlet. EIH 1PN
               reste limité au champ faible et aux vitesses non relativistes.
-              Schwarzschild décrit exactement une géométrie extérieure
-              spécialisée, dont les géodésiques sont intégrées numériquement.
               Collisions et rencontres non résolues arrêtent la simulation.
             </p>
           </article>
