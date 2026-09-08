@@ -4,7 +4,7 @@ import Link from "next/link";
 import { GravityLabOnboarding } from "@/features/gravity-lab/ui/GravityLabOnboarding";
 import { GravityLabPrototype } from "@/features/gravity-lab/ui/GravityLabPrototype";
 
-const title = "Gravity Lab — simulateur gravitationnel interactif | Léo Lecuyer";
+const title = "Laboratoire gravitationnel — simulateur gravitationnel interactif | Léo Lecuyer";
 const description =
   "Explorez la gravitation N-corps et les corrections relativistes EIH 1PN dans un laboratoire 3D interactif, éditable et scientifiquement validé.";
 

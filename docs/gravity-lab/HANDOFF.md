@@ -9,7 +9,7 @@ extension initialement envisagée a été réalisée.
 ## 1. Produit et état des phases
 
 Route publique : `/projects/laboratoire-gravitationnel`, accessible depuis la
-carte Gravity Lab du portfolio. Le système binaire incliné newtonien démarre
+carte Laboratoire gravitationnel du portfolio. Le système binaire incliné newtonien démarre
 automatiquement dès que le Canvas est prêt ; il est immédiatement observable
 et manipulable. Pour essayer un autre scénario : « Stop » → choisir un preset
 → « Appliquer et réinitialiser » → « Lecture ».
@@ -20,7 +20,7 @@ et manipulable. Pour essayer un autre scénario : « Stop » → choisir un pres
 | 2 | Scénarios immuables, éditeur 1–16 corps, presets, caméra, trajectoires, grille/champ et inspecteurs, implémentés |
 | 3 | EIH 1PN, RK4, sessions, comparaison et mesure Mercure, clôture consignée dans le plan 3 |
 | 4B / 4C | Schwarzschild massif et lumière, expériences headless et tests analytiques |
-| 4D.1 / 4D.2 / 4E.1 | Scène séparée, Flamm, orbite massive, trois rayons et contrôles publics |
+| 4D.1 / 4D.2 / 4E.1 | Implémentation Schwarzschild conservée et testée dans le dépôt ; point d’entrée public actuellement masqué |
 | 4F | Étape d’audit historique ; ce handoff ne remplace pas un rapport d’audit de performance ni n’en invente le verdict |
 | 5A–5D | Onboarding, expériences vitrines, terminologie et finition produit |
 | 5E | Présentation du portfolio, metadata et actualisation documentaire ; aucune nouvelle physique |
@@ -182,7 +182,7 @@ trois corps public, RK45 ou workers ne sont pas des fonctionnalités livrées.
 
 ## 7. Commandes et validation
 
-Suite actuelle : **68 fichiers, 488 tests Vitest** (validation 5E).
+Suite actuelle : **68 fichiers, 487 tests Vitest** (validation 5E).
 Les références analytiques, convergences, invariances, transactions, déterminisme,
 rendu statique React et cycle de vie aux frontières testables sont couverts.
 Cela ne remplace pas une suite E2E WebGL ni un audit manuel d’accessibilité.
@@ -210,8 +210,8 @@ créé par cette intervention. Ne pas déduire l’état distant de ce document 
 vérifier `git status --short`, `git log -5 --oneline` et les références Git.
 
 Reprise recommandée : lire ce handoff, exécuter les validations, puis vérifier
-le parcours depuis la carte du portfolio, l’édition/application, Mercure,
-Schwarzschild et les panneaux à 320/375px, tablette et ≥1888px.
+le parcours depuis la carte du portfolio, l’édition/application, Mercure et les
+panneaux à 320/375px, tablette et ≥1888px.
 Les metadata locales contiennent title/description/Open Graph ; aucune URL
 canonique, image sociale ou convention Twitter n’est inventée.
 La suite de la phase 5 nécessite un périmètre validé ; ne pas ajouter de physique
