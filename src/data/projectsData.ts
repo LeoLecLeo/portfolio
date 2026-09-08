@@ -17,6 +17,21 @@ export const projects = [
     demoUrl: "https://ai-document-assistant.leolecuyer.com",
   },
   {
+    title: "Laboratoire gravitationnel",
+    description:
+      "Laboratoire 3D interactif : éditez un système de 1 à 16 corps et comparez Newton aux premières corrections relativistes EIH 1PN.",
+    status: "v1",
+    stack: [
+      "Next.js",
+      "React",
+      "TypeScript",
+      "Three.js",
+      "React Three Fiber",
+      "Vitest",
+    ],
+    demoUrl: "/projects/laboratoire-gravitationnel",
+  },
+  {
     title: "Modèle IA scientifique",
     description:
       "Projet en cours visant à entraîner un modèle de machine learning sur un problème scientifique, avec préparation des données, visualisation des prédictions, analyse des erreurs et évaluation des performances.",
@@ -28,19 +43,6 @@ export const projects = [
       "pandas",
       "scikit-learn",
       "Matplotlib",
-    ],
-  },
-  {
-    title: "Simulateur scientifique interactif",
-    description:
-      "Projet prévu autour de la simulation ou de la visualisation d’un phénomène scientifique, afin de relier développement logiciel, mathématiques, physique et interface interactive.",
-    status: "Prévu",
-    stack: [
-      "Python",
-      "Mathématiques",
-      "Physique",
-      "Visualisation",
-      "Interface interactive",
     ],
   },
 ];
