@@ -1016,8 +1016,14 @@ export const GravityCanvas = memo(function GravityCanvas({
           <legend className="px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Affichage des astres
           </legend>
-          <div className="space-y-2">
-            <label className="flex cursor-pointer items-center gap-2">
+          <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+            <label
+              className={
+                visualRadiusMode === "amplified"
+                  ? "flex min-w-0 cursor-pointer items-start gap-2 rounded-md border border-primary/55 bg-primary/10 px-2.5 py-2 text-primary focus-within:ring-1 focus-within:ring-primary/70"
+                  : "flex min-w-0 cursor-pointer items-start gap-2 rounded-md border border-border/55 bg-secondary/25 px-2.5 py-2 text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground focus-within:ring-1 focus-within:ring-primary/70 motion-reduce:transition-none"
+              }
+            >
               <input
                 type="radio"
                 name="gravity-visual-radius-mode"
@@ -1025,11 +1031,19 @@ export const GravityCanvas = memo(function GravityCanvas({
                 checked={visualRadiusMode === "amplified"}
                 aria-describedby="gravity-radius-mode-status"
                 onChange={() => setVisualRadiusMode("amplified")}
-                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="mt-0.5 shrink-0 accent-current focus-visible:outline-none"
               />
-              Rayons amplifiés
+              <span className="min-w-0 text-xs font-semibold">
+                Rayons amplifiés
+              </span>
             </label>
-            <label className="flex cursor-pointer items-center gap-2">
+            <label
+              className={
+                visualRadiusMode === "physical-scale"
+                  ? "flex min-w-0 cursor-pointer items-start gap-2 rounded-md border border-primary/55 bg-primary/10 px-2.5 py-2 text-primary focus-within:ring-1 focus-within:ring-primary/70"
+                  : "flex min-w-0 cursor-pointer items-start gap-2 rounded-md border border-border/55 bg-secondary/25 px-2.5 py-2 text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground focus-within:ring-1 focus-within:ring-primary/70 motion-reduce:transition-none"
+              }
+            >
               <input
                 type="radio"
                 name="gravity-visual-radius-mode"
@@ -1037,9 +1051,11 @@ export const GravityCanvas = memo(function GravityCanvas({
                 checked={visualRadiusMode === "physical-scale"}
                 aria-describedby="gravity-radius-mode-status"
                 onChange={() => setVisualRadiusMode("physical-scale")}
-                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="mt-0.5 shrink-0 accent-current focus-visible:outline-none"
               />
-              Rayons à l’échelle
+              <span className="min-w-0 text-xs font-semibold">
+                Rayons à l’échelle
+              </span>
             </label>
           </div>
           <p

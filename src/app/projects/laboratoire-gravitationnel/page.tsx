@@ -39,18 +39,9 @@ export default function GravityLabPage() {
         </Link>
 
         <header className="mb-10 mt-8 max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-primary">
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
             Laboratoire gravitationnel
-          </p>
-          <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">
-            Gravity Lab — de Newton aux corrections 1PN
           </h1>
-          <p className="mt-5 text-base leading-7 text-muted-foreground sm:text-lg">
-            Comment rendre la gravitation observable sans sacrifier la rigueur
-            du calcul ? Ce laboratoire associe un moteur N-corps éditable,
-            les premières corrections relativistes EIH 1PN, avec des scénarios
-            validés et des visualisations interactives.
-          </p>
         </header>
 
         <GravityLabOnboarding />

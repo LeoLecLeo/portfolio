@@ -470,58 +470,13 @@ export function GravityLabPrototype({
   return (
     <section
       className="min-w-0 space-y-5"
-      aria-labelledby="gravity-prototype-title"
+      aria-labelledby="gravity-simulation-controls-title"
     >
-      <header className="flex flex-col gap-4 border-b border-border/45 pb-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Laboratoire gravitationnel · N-corps 3D
-          </p>
-          <h2
-            id="gravity-prototype-title"
-            className="mt-1 text-2xl font-semibold tracking-[-0.02em]"
-          >
-            Session de simulation
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            La scène montre le scénario appliqué ; les paramètres se
-            préparent séparément dans le brouillon.
-          </p>
-          <ContextualHelp
-            summary="Comprendre les trois états"
-            items={SCENARIO_STATE_HELP}
-          />
-        </div>
-        <div className="flex flex-wrap gap-2 text-xs sm:justify-end">
-          <span className="rounded-full border border-border/60 bg-card/45 px-3 py-1.5 font-medium text-muted-foreground">
-            Scénario simulé · {session.bodies.length} corps
-          </span>
-          <span className="rounded-full border border-primary/25 bg-primary/5 px-3 py-1.5 font-medium text-primary/90">
-            {gravityModelLabel(telemetry.modelId)} ·{" "}
-            {gravityIntegratorLabel(telemetry.integratorId)}
-          </span>
-          <span
-            id="draft-state-message"
-            role="status"
-            aria-atomic="true"
-            className={
-              hasUnappliedChanges
-                ? "rounded-full border border-amber-400/35 bg-amber-400/8 px-3 py-1.5 font-medium text-amber-700 dark:text-amber-300"
-                : "rounded-full border border-emerald-500/30 bg-emerald-500/8 px-3 py-1.5 font-medium text-emerald-700 dark:text-emerald-300"
-            }
-          >
-            {hasUnappliedChanges
-              ? "Brouillon · modifications non appliquées"
-              : "Brouillon · synchronisé"}
-          </span>
-        </div>
-      </header>
-
       <section
         aria-labelledby="gravity-simulation-controls-title"
         className="min-w-0 overflow-hidden rounded-xl border border-border/55 bg-card/45 p-4 shadow-[0_1px_0_0_rgba(255,255,255,0.035)_inset]"
       >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <p
               id="gravity-simulation-controls-title"
@@ -548,6 +503,27 @@ export function GravityLabPrototype({
               ? null
               : ` · ${statusLabel(telemetry.status, telemetry.modelId)}`}
             </p>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span>Scénario simulé · {session.bodies.length} corps</span>
+              <span>
+                {gravityModelLabel(telemetry.modelId)} ·{" "}
+                {gravityIntegratorLabel(telemetry.integratorId)}
+              </span>
+              <span
+                id="draft-state-message"
+                role="status"
+                aria-atomic="true"
+                className={
+                  hasUnappliedChanges
+                    ? "font-medium text-amber-700 dark:text-amber-300"
+                    : "font-medium text-emerald-700 dark:text-emerald-300"
+                }
+              >
+                {hasUnappliedChanges
+                  ? "Brouillon · modifications non appliquées"
+                  : "Brouillon · synchronisé"}
+              </span>
+            </div>
             <p
               id="apply-availability-message"
               className={
@@ -571,9 +547,16 @@ export function GravityLabPrototype({
                 invokeGravityLabMainControl("resume", mainControlHandlers)
               }
               disabled={mainControlState.resumeDisabled}
-              className="min-w-0 rounded-md bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground shadow-[0_8px_22px_-12px_color-mix(in_oklab,var(--primary)_65%,transparent)] transition-[background-color,opacity,transform] hover:bg-primary/90 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-35 disabled:shadow-none motion-reduce:transition-none"
+              className="min-w-0 rounded-md border border-border/65 bg-secondary/55 px-3.5 py-2 text-sm font-semibold transition-colors hover:border-primary/30 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-35 motion-reduce:transition-none"
             >
-              <span aria-hidden="true">▶ </span>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 16 16"
+                className="mr-1 inline-block size-3 align-[-0.05em]"
+                fill="#ffffff"
+              >
+                <path d="M3.5 2.25v11.5L13 8 3.5 2.25Z" />
+              </svg>
               Lecture
             </button>
             <button
@@ -585,7 +568,9 @@ export function GravityLabPrototype({
               disabled={mainControlState.pauseDisabled}
               className="min-w-0 rounded-md border border-border/65 bg-secondary/55 px-3.5 py-2 text-sm font-medium transition-colors hover:border-primary/30 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-35 motion-reduce:transition-none"
             >
-              <span aria-hidden="true">■ </span>
+              <span aria-hidden="true" className="text-white">
+                ■{" "}
+              </span>
               Stop
             </button>
             <button
@@ -626,10 +611,16 @@ export function GravityLabPrototype({
             {applicationConfirmation}
           </p>
         )}
-        <ContextualHelp
-          summary="Comprendre les commandes"
-          items={SIMULATION_CONTROL_HELP}
-        />
+        <div className="mt-3 grid min-w-0 items-start gap-3 md:grid-cols-2 [&>details]:mt-0">
+          <ContextualHelp
+            summary="Comprendre les trois états"
+            items={SCENARIO_STATE_HELP}
+          />
+          <ContextualHelp
+            summary="Comprendre les commandes"
+            items={SIMULATION_CONTROL_HELP}
+          />
+        </div>
       </section>
 
       <GravityLabWorkspace>
@@ -910,7 +901,7 @@ export function GravityLabPrototype({
           </section>
 
           <section className="min-w-0 border-l-2 border-chart-2/25 py-0.5 pl-4">
-            <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-chart-2/85">
+            <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/75">
               Conservation
             </h4>
             <dl className="mt-3 space-y-3 text-sm">
@@ -955,7 +946,7 @@ export function GravityLabPrototype({
           </section>
 
           <section className="min-w-0 border-l-2 border-chart-3/25 py-0.5 pl-4">
-            <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-chart-3/85">
+            <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/75">
               Intégration
             </h4>
             <dl className="mt-3 space-y-3 text-sm">

@@ -29,6 +29,16 @@ describe("GravityLabPrototype SSR controls", () => {
     ).not.toContain("disabled");
     expect(markup).toContain("État courant :");
     expect(markup).toContain(">Pause</strong>");
+    expect(markup).not.toContain("Session de simulation");
+    expect(markup).toContain("Scénario simulé · 2 corps");
+    expect(markup).toContain("Brouillon · synchronisé");
+    expect(markup).toContain("Comprendre les trois états");
+    expect(markup.indexOf("Comprendre les trois états")).toBeGreaterThan(
+      markup.indexOf("Réinitialiser la physique")
+    );
+    expect(markup.indexOf("Comprendre les commandes")).toBeGreaterThan(
+      markup.indexOf("Réinitialiser la physique")
+    );
     expect(markup).toMatch(/Newtonien[^<]*Velocity Verlet/);
     expect(markup).toContain("kg·m²·s⁻¹");
     expect(markup).not.toContain(

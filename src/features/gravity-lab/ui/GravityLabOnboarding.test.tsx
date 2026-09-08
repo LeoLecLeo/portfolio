@@ -32,6 +32,9 @@ describe("GravityLabOnboarding", () => {
     const recommendation = markup.match(/<aside\b[^>]*>([\s\S]*?)<\/aside>/)?.[1];
     expect(recommendation).toContain("Le système binaire incliné Newtonien");
     expect(recommendation).toContain("démarre automatiquement");
+    expect(recommendation).not.toMatch(
+      /<strong[^>]*>démarre automatiquement<\/strong>/
+    );
     expect(recommendation).toContain("dès que la scène est prête");
     expect(recommendation).toContain("immédiatement la caméra et les visualisations");
     expect(recommendation).not.toContain("Lecture");

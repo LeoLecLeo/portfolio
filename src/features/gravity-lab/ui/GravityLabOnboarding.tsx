@@ -50,9 +50,8 @@ export function GravityLabOnboarding() {
         >
           <p className="font-semibold text-primary">Démarrage immédiat</p>
           <p className="mt-1 leading-relaxed text-muted-foreground">
-            Le système binaire incliné Newtonien{" "}
-            <strong className="text-foreground">démarre automatiquement</strong>{" "}
-            dès que la scène est prête. Observez son orbite 3D et manipulez
+            Le système binaire incliné Newtonien démarre automatiquement dès
+            que la scène est prête. Observez son orbite 3D et manipulez
             immédiatement la caméra et les visualisations.
           </p>
         </aside>

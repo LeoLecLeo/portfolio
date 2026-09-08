@@ -238,7 +238,16 @@ export function GravityWorkspaceInspector({
               aria-hidden="true"
               className="grid size-7 shrink-0 place-items-center rounded-md border border-border/55 bg-secondary/40 text-base text-muted-foreground transition-colors group-hover:border-primary/25 group-hover:text-primary motion-reduce:transition-none"
             >
-              +
+              <svg
+                viewBox="0 0 16 16"
+                className="size-3.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+              >
+                <path d="M8 3v10M3 8h10" />
+              </svg>
             </span>
           </span>
         </button>

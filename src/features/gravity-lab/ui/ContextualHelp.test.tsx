@@ -23,5 +23,8 @@ describe("ContextualHelp", () => {
     expect(markup).toContain("<dt");
     expect(markup).toContain("Grandeur");
     expect(markup).toContain("Explication contextuelle.");
+    expect(markup).toContain("group/help");
+    expect(markup).toContain("group-open/help:rotate-45");
+    expect(markup).not.toContain(" group-open:rotate-45");
   });
 });

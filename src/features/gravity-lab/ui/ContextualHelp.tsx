@@ -14,13 +14,13 @@ export const ContextualHelp = memo(function ContextualHelp({
   items = [],
 }: ContextualHelpProps) {
   return (
-    <details className="group mt-3 min-w-0 overflow-hidden rounded-md border border-border/45 bg-background/20 text-xs">
+    <details className="group/help mt-3 min-w-0 overflow-hidden rounded-md border border-border/45 bg-background/20 text-xs">
       <summary className="cursor-pointer list-none rounded-md px-3 py-2 font-medium text-muted-foreground transition-colors hover:bg-secondary/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary motion-reduce:transition-none [&::-webkit-details-marker]:hidden">
         <span className="flex items-center justify-between gap-2">
           <span className="min-w-0 break-words">{summary}</span>
           <span
             aria-hidden="true"
-            className="text-base transition-transform group-open:rotate-45 motion-reduce:transition-none"
+            className="text-base transition-transform group-open/help:rotate-45 motion-reduce:transition-none"
           >
             +
           </span>
